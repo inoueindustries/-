@@ -327,7 +327,7 @@
         <dt>成長</dt><dd>ネジを集めてレベルアップ、改善を1つ選ぶ</dd>
         <dt>ステージ</dt><dd>下のカードか数字キー 1〜4 で選ぶ</dd>
         <dt>休憩</dt><dd>P・Esc キー（BGMの音量もここで変えられます）</dd>
-        <dt>音</dt><dd>BGMは3曲から選べる。画面右上の「曲」でBGM、「音」で効果音をオン・オフ</dd>
+        <dt>音</dt><dd>BGMは13曲から選べる。画面右上の「曲」でBGM、「音」で効果音をオン・オフ</dd>
       </dl>
       <div class="stages" id="stages" role="radiogroup" aria-label="ステージを選ぶ"></div>
       <p class="roster" id="roster"></p>
@@ -718,6 +718,7 @@
     yoru:    { name: '夜想', note: '静かなピアノとコーラス' },
     shissou: { name: '疾走', note: 'ドラムと弦で駆けるハイブリッド' },
     gensou:  { name: '幻想', note: 'ハープとフルートのワルツ' },
+    tekko:   { name: '鉄工所', note: 'プレス機が定期的にガーンと鳴るだけのシンプルな音' },
     // 持ち込み曲。1回目は頭から流し、その後は 1:13.5〜2:25.5（72秒）を継ぎ目なくループ。読めないときは自動演奏の「シネマ」
     cinema:  { name: 'Voria te no me ro', note: '壮大なコーラスとオーケストラ（持ち込み曲）', file: 'bgm/voria_te_no_me_ro.mp3', loop: [73.46794, 145.46798], gain: 0.9 },
     // 持ち込み曲。1回目は頭から流し、その後は 0:53.7〜2:10.5（76.8秒）を継ぎ目なくループ。読めないときは自動演奏の「ファンタジー戦記」
@@ -997,6 +998,28 @@
       const g2 = gainNode(0.3); g2.connect(g);
       osc('triangle', f * 1.5, 0, g2, t, t + 0.4);
     }
+    // 鉄工所用：プレス機の「ガーン」。低い衝撃＋金属の響き（倍音をずらして鐘っぽく）＋打撃のノイズ
+    function press(t, amp = 0.3, base = 150) {
+      const o = actx.createOscillator(), g = actx.createGain();
+      o.type = 'sine';
+      o.frequency.setValueAtTime(90, t); o.frequency.exponentialRampToValueAtTime(34, t + 0.25);
+      g.gain.setValueAtTime(amp * 1.4, t); g.gain.exponentialRampToValueAtTime(0.0001, t + 0.6);
+      o.connect(g).connect(busDrum); o.start(t); o.stop(t + 0.65);
+      const ring = actx.createGain(); env(ring, t, amp * 0.5, 0.002, amp * 0.12, 0.25, t + 1.8);
+      const lp = filter('lowpass', 2400, 0.7); ring.connect(lp).connect(busDrum);
+      [[1, 1], [1.59, 0.7], [2.14, 0.5], [2.83, 0.35], [3.91, 0.22], [5.4, 0.12]].forEach(([r, a2], k) => {
+        const pg = gainNode(a2); pg.connect(ring);
+        osc('sine', base * r, k * 3, pg, t, t + (1.8 - k * 0.2));
+      });
+      const ng = actx.createGain(); env(ng, t, amp * 0.8, 0.001, 0.0001, 0.09, t + 0.12);
+      const bp = filter('bandpass', 1100, 0.9); bp.connect(ng).connect(busDrum);
+      noise(bp, t, t + 0.14);
+    }
+    function airHiss(t, dur, amp = 0.025) {          // プレスが上がるときの「シュー」
+      const g = actx.createGain(); env(g, t, amp, 0.05, amp * 0.4, dur * 0.6, t + dur);
+      const hp = filter('highpass', 3200); hp.connect(g).connect(busDrum);
+      noise(hp, t, t + dur + 0.05);
+    }
     function riser(t, dur) {                     // 盛り上げの「シュワー」
       const bp = filter('bandpass', 400, 2), g = actx.createGain();
       bp.frequency.setValueAtTime(300, t); bp.frequency.exponentialRampToValueAtTime(6000, t + dur);
@@ -1018,6 +1041,18 @@
 
     // ---- 曲 ----
     const SONGS = {
+      // 鉄工所：プレス機が2秒ごとに「ガーン」と鳴るだけ。進むと空気の抜ける音と、遠くのもう1台が加わる
+      tekko: {
+        bpm: 60, beats: 4,
+        play(i, t, sec) {
+          const wob = () => 1 + (Math.random() - 0.5) * 0.02;
+          press(t, 0.3, 150 * wob());
+          press(t + BEAT * 2, 0.27, 150 * wob());
+          if (sec >= 1) { airHiss(t + BEAT * 0.9, 0.7); airHiss(t + BEAT * 2.9, 0.7); }
+          if (sec === 2) press(t + BEAT * 1.25, 0.08, 230 * wob());   // 遠くのもう1台
+          if (sec === 3 && i % 2) press(t + BEAT * 3.25, 0.06, 260 * wob());
+        },
+      },
       yoru: {
         bpm: 76, beats: 4,
         // [ベース音, アルペジオに使う6音]（MIDIノート番号）
