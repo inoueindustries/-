@@ -182,6 +182,18 @@
   .vol { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; font-size: 14px; }
   .vol input { flex: 1 1 160px; accent-color: var(--safety); }
   .vol output { font-family: var(--display); font-variant-numeric: tabular-nums; min-width: 3ch; text-align: right; }
+  .buff { font-size: 12px; color: var(--sodium); min-height: 1em; }
+  .rsec { display: grid; gap: 8px; }
+  .rtext { margin: 0; font-size: 14px; line-height: 1.75; }
+  .rlist { margin: 0; padding-left: 1.2em; display: grid; gap: 4px; font-size: 14px; line-height: 1.7; }
+  .itemgrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 8px; }
+  .ritem { display: grid; grid-template-columns: 34px 1fr; gap: 10px; align-items: center; padding: 8px 10px; background: var(--panel-2); border: 1px solid var(--line); border-radius: 4px; }
+  .ritem .ico { width: 34px; height: 34px; display: grid; place-items: center; font-family: var(--display); font-size: 18px; color: var(--safety); background: #0b0f13; border: 1px solid var(--line); border-radius: 3px; }
+  .ritem b { display: block; font-size: 14px; }
+  .ritem small { display: block; font-size: 12px; color: #c4ccd4; line-height: 1.5; }
+  .rtable { width: 100%; border-collapse: collapse; font-size: 13px; color: var(--ink); }
+  .rtable th, .rtable td { color: var(--ink); font-size: 13px; padding: 8px 10px; border-bottom: 1px solid var(--line); vertical-align: top; line-height: 1.6; }
+  .rtable th { text-align: left; white-space: nowrap; color: var(--safety); font-weight: 700; }
   .hudleft .pay { color: var(--safety); font-size: 13px; }
   .card.lucky {
     border-color: var(--safety);
@@ -263,6 +275,7 @@
       <div class="clockbox">
         <span class="timer" id="timerText">00:00</span>
         <span class="shift" id="shiftText">工場時刻 22:00</span>
+        <span class="buff" id="buffText"></span>
       </div>
       <div class="hudright">
         <button class="iconbtn" id="bgmBtn" type="button" aria-label="BGMのオン・オフ" aria-pressed="true">曲</button>
@@ -299,6 +312,7 @@
       <div class="actions">
         <button class="btn" id="startBtn" type="button">作業開始</button>
         <button class="btn ghost" id="shopBtn" type="button">設備投資・福利厚生</button>
+        <button class="btn ghost" id="rulesBtn" type="button">ルールと給料</button>
       </div>
     </div>
   </div>
@@ -310,7 +324,7 @@
       <p class="eyebrow" id="lvEyebrow">LEVEL UP</p>
       <h2>改善提案をひとつ採用</h2>
       <div class="cards" id="cards"></div>
-      <p class="hint">数字キー 1〜3 でも選べます</p>
+      <p class="hint">数字キー 1〜4 でも選べます</p>
     </div>
   </div>
 
@@ -326,12 +340,17 @@
         <input type="range" id="bgmVol" min="0" max="100" step="5">
         <output id="bgmVolOut" for="bgmVol"></output>
       </div>
+      <div class="slipwrap">
+        <p class="sliphead">今夜の給料（途中経過）</p>
+        <table class="slip" id="slipPause"></table>
+      </div>
       <div class="bgmpick">
         <span class="label">BGM</span>
         <div class="seg" id="bgmPickPause" role="radiogroup" aria-label="BGMを選ぶ"></div>
       </div>
       <div class="actions">
         <button class="btn" id="resumeBtn" type="button">再開する</button>
+        <button class="btn ghost" id="pauseRules" type="button">ルール</button>
         <button class="btn ghost" id="quitBtn" type="button">タイトルへ</button>
       </div>
     </div>
@@ -352,6 +371,41 @@
       <h3 class="shopsec">福利厚生（ずっと効く強化）</h3>
       <div class="shoplist" id="shopPerks"></div>
       <div class="actions"><button class="btn" id="shopClose" type="button">タイトルへ戻る</button></div>
+    </div>
+  </div>
+
+  <!-- ルール -->
+  <div class="overlay" id="ovRules" hidden>
+    <div class="panel">
+      <div class="stripe"></div>
+      <p class="eyebrow">RULES</p>
+      <h2>ルールと給料のしくみ</h2>
+      <section class="rsec">
+        <h3 class="shopsec">目的</h3>
+        <p class="rtext">工場時刻 22:00 から 06:00 の定時まで生き延びるとクリア（実際の時間で10分）。HPが0になると「ライン停止」で終わりです。倒れても、働いた分の給料はもらえます。</p>
+      </section>
+      <section class="rsec">
+        <h3 class="shopsec">遊び方</h3>
+        <ul class="rlist">
+          <li>操作は移動だけ。武器は自動で攻撃します。</li>
+          <li>敵が落とすネジを拾うとレベルアップ。「改善提案」を1つ選びます（武器4種・強化6種、各Lv5まで）。</li>
+          <li>金色の「ラッキー！」カードは、3段階まとめてレベルアップ。</li>
+          <li>HPが35%を切っているときのレベルアップでは、4枚目に「救急箱（HP全回復）」が加わります。</li>
+          <li>1分ごとに敵の「嵐」、経過 02:00・05:00・08:00 にボスが出ます。ボスを倒すとHP全回復と特別ボーナス箱（金色）。</li>
+        </ul>
+      </section>
+      <section class="rsec">
+        <h3 class="shopsec">アイテムBOX</h3>
+        <p class="rtext">フィールドに赤い工具箱が置かれます。触れると開いて、次のどれかが出ます。画面の外にある箱は、画面の端の矢印で場所がわかります。</p>
+        <div class="itemgrid" id="rulesItems"></div>
+        <p class="rtext">HPが30%を切ると、近くに白い救急箱（HP全回復）が届きます（40秒に1回まで）。敵がまれに落とす小銭（¥）も給料に入ります。</p>
+      </section>
+      <section class="rsec">
+        <h3 class="shopsec">給料（スコア）の内訳</h3>
+        <table class="rtable" id="rulesPay"></table>
+        <p class="rtext" id="rulesExample"></p>
+      </section>
+      <div class="actions"><button class="btn" id="rulesClose" type="button">閉じる</button></div>
     </div>
   </div>
 
@@ -487,6 +541,18 @@
   };
   const MAXLV = 5;
   const COFFEE = { icon: '缶', name: '缶コーヒー', desc: 'HPを30回復' };
+  const MEDKIT = { icon: '救', name: '救急箱', desc: 'HPを全回復（HPが少ないときだけ出る）' };
+
+  // アイテムBOXの中身。w は出やすさ
+  const ITEMS = {
+    magnet: { icon: '磁', name: '強力マグネット', desc: '落ちているネジを全部回収', w: 3 },
+    bento:  { icon: '弁', name: '夜食の弁当', desc: 'HPを30回復', w: 3 },
+    medkit: { icon: '救', name: '救急箱', desc: 'HPを全回復', w: 0.6 },
+    money:  { icon: '¥', name: '大入り袋', desc: '💰 給料に ¥300〜¥800（夜勤手当の倍率つき）', w: 2.2 },
+    estop:  { icon: '止', name: '非常停止ボタン', desc: '6秒間、敵が全員止まる', w: 1.4 },
+    clean:  { icon: '掃', name: '5S一斉清掃', desc: '画面内の敵に大ダメージ', w: 1.4 },
+    drink:  { icon: '活', name: '栄養ドリンク', desc: '10秒間、移動と攻撃が速くなる', w: 1.4 },
+  };
 
   // ---------- 保存（この端末のみ） ----------
   const bestKey = (id) => (id === 'screw' ? 'yakin-best' : 'yakin-best-' + id);
@@ -521,6 +587,12 @@
     hurt:  [150, () => tone(160, 0.18, 'sawtooth', 0.06, -90)],
     level: [300, () => { tone(660, 0.1, 'square', 0.04); setTimeout(() => tone(990, 0.16, 'square', 0.04), 90); }],
     lucky: [300, () => { [784, 988, 1175, 1568].forEach((f, i) => setTimeout(() => tone(f, 0.14, 'square', 0.045), i * 80)); }],
+    box:   [150, () => { [660, 880, 1320].forEach((f, i) => setTimeout(() => tone(f, 0.1, 'triangle', 0.05), i * 60)); }],
+    coin:  [60,  () => { tone(1568, 0.05, 'square', 0.03); setTimeout(() => tone(2093, 0.09, 'square', 0.03), 50); }],
+    bossdown: [1000, () => {
+      tone(70, 1.3, 'sine', 0.16, -30); tone(220, 0.5, 'sawtooth', 0.06, -170);
+      [523, 659, 784, 1047, 1319].forEach((f, i) => setTimeout(() => tone(f, 0.24, 'square', 0.045), 260 + i * 110));
+    }],
     buy:   [120, () => { tone(1320, 0.06, 'square', 0.035); setTimeout(() => tone(1760, 0.12, 'square', 0.035), 60); }],
     boss:  [800, () => tone(90, 0.8, 'sawtooth', 0.07, 40)],
   };
@@ -955,6 +1027,8 @@
   let anim = 0;   // 見た目のアニメーション用の時計（一時停止中も進む）
   let P, lv = {}, enemies, bullets, gems, texts, parts, bolts;
   let time, kills, spawnT, rivetT, sparkT, weldT, spanA, pending, nextSwarm, bossIdx, shake, weldPulse;
+  // アイテムBOX・拾得金・ギミック・ボス撃破演出
+  let boxes = [], pops = [], found = 0, freezeT = 0, buffT = 0, boxT = 0, medCool = 0, fx = null, flash = 0;
 
   // ---------- 給料・貯金・設備投資（この端末に保存） ----------
   const WAGE = 1200;          // 基本の時給（円）
@@ -992,15 +1066,15 @@
     const base = Math.floor(hours * wage);
     const killPay = k * KILL_PAY;
     const bonus = win ? CLEAR_PAY : 0;
-    const total = Math.floor((base + killPay + bonus) * stage.pay);
-    return { hours, wage, base, killPay, bonus, total };
+    const total = Math.floor((base + killPay + bonus) * stage.pay) + found;
+    return { hours, wage, base, killPay, bonus, found, total };
   }
 
   const stat = {
-    get speed() { return 150 * (1 + 0.1 * lv.boots + 0.04 * ml('legs')); },
+    get speed() { return 150 * (1 + 0.1 * lv.boots + 0.04 * ml('legs')) * (buffT > 0 ? 1.4 : 1); },
     get maxHp() { return 100 + 20 * lv.heart + 10 * ml('body'); },
     get magnet() { return 70 * (1 + 0.35 * lv.magnet + 0.1 * ml('mag')); },
-    get cd() { return Math.max(0.4, 1 - 0.08 * lv.oil - 0.03 * ml('dandori')); },
+    get cd() { return Math.max(0.4, 1 - 0.08 * lv.oil - 0.03 * ml('dandori')) * (buffT > 0 ? 0.7 : 1); },
     get dmg() { return 1 + 0.12 * lv.gloves + 0.05 * ml('arm'); },
     get armor() { return lv.armor; },
     get xp() { return 1 + 0.08 * ml('keiken'); },
@@ -1017,6 +1091,7 @@
     enemies = []; bullets = []; gems = []; texts = []; parts = []; bolts = [];
     time = 0; kills = 0; spawnT = 0.6; rivetT = 0.2; sparkT = 1; weldT = 0; spanA = 0;
     pending = 0; nextSwarm = 60; bossIdx = 0; shake = 0; weldPulse = 0;
+    boxes = []; pops = []; found = 0; freezeT = 0; buffT = 0; boxT = 12; medCool = 0; fx = null; flash = 0;
     renderGear();
   }
   function xpFor(l) { return Math.floor(5 + (l - 1) * 4 + Math.pow(l - 1, 1.6) * 0.8); }
@@ -1068,8 +1143,47 @@
     return R.basic;
   }
   function dropGem(x, y, v) {
-    if (gems.length > 400) { gems[(Math.random() * gems.length) | 0].v += v; return; }
+    if (gems.length > 400) { const g = gems[(Math.random() * gems.length) | 0]; if (!g.coin) { g.v += v; return; } }
     gems.push({ x, y, v, pull: false, sp: 120, got: false });
+  }
+  // 💰 小銭（拾うと給料に加算）
+  function dropCoin(x, y, yenV) { gems.push({ x, y, v: yenV, coin: true, pull: false, sp: 120, got: false }); }
+  function spawnBox(forced, dist) {
+    const a = Math.random() * Math.PI * 2, R = dist ?? rand(260, 480);
+    boxes.push({ x: P.x + Math.cos(a) * R, y: P.y + Math.sin(a) * R, ph: Math.random() * 6, forced: forced || null, gold: false });
+  }
+  function pop(x, y, text, color) { if (pops.length < 30) pops.push({ x, y, text, color: color || '#ffe27a', life: 1.3 }); }
+  function pickItem() {
+    const low = P.hp < stat.maxHp * 0.35;
+    const table = Object.keys(ITEMS).map((k) => [k, k === 'medkit' && low ? 6 : ITEMS[k].w]);
+    let r = Math.random() * table.reduce((a, [, w]) => a + w, 0);
+    for (const [k, w] of table) { if ((r -= w) <= 0) return k; }
+    return 'bento';
+  }
+  const onScreen = (o) => Math.abs(o.x - P.x) < W / 2 + 40 && Math.abs(o.y - P.y) < H / 2 + 40;
+  function applyItem(k, mult = 1, quiet = false) {
+    const I = ITEMS[k];
+    if (k === 'magnet') for (const g of gems) { g.pull = true; g.sp = Math.max(g.sp, 500); }
+    else if (k === 'bento') P.hp = Math.min(stat.maxHp, P.hp + 30);
+    else if (k === 'medkit') P.hp = stat.maxHp;
+    else if (k === 'money') {
+      const v = Math.round(rand(300, 800) * stage.pay * mult / 10) * 10;
+      found += v; pop(P.x, P.y - 52, '💰 +' + yen(v));
+    } else if (k === 'estop') freezeT = 6;
+    else if (k === 'clean') {
+      flash = Math.max(flash, 0.45);
+      for (const e of enemies) if (!e.dead && onScreen(e)) hurt(e, e.boss ? 150 : 250);
+    } else if (k === 'drink') buffT = 10;
+    if (!quiet) { pop(P.x, P.y - 34, I.name, '#ffffff'); banner(I.name + '：' + I.desc); }
+  }
+  function openBox(b) {
+    b.open = true;
+    sfx('box');
+    burst(b.x, b.y, b.gold ? COL.safety : '#e5484d', 16);
+    if (b.gold) {
+      applyItem('money', 4, true); applyItem('magnet', 1, true); applyItem('medkit', 1, true);
+      banner('💰 特別ボーナス箱！ 大入り袋×4・全回収・HP全回復');
+    } else applyItem(b.forced || pickItem());
   }
   function burst(x, y, color, n) {
     if (reduceMotion) n = Math.ceil(n / 3);
@@ -1092,13 +1206,34 @@
       dropGem(e.x, e.y, e.xp);
       burst(e.x, e.y, e.color, e.boss ? 40 : 6);
       sfx('pop');
-      if (e.boss) {
-        for (let i = 0; i < 12; i++) dropGem(e.x + rand(-60, 60), e.y + rand(-60, 60), 5);
-        P.hp = stat.maxHp;
-        if (!enemies.some((o) => o.boss && !o.dead)) BGM.boss(false);
-        banner(stage.bossOut);
-      }
+      if (e.boss) bossDown(e);
+      else if (Math.random() < 0.012) dropCoin(e.x, e.y, Math.round(100 * stage.pay));
     }
+  }
+
+  // ボス撃破：スローモーション・白フラッシュ・衝撃波・「撃退」の判子・ボーナス箱
+  function bossDown(e) {
+    fx = { t: 0, x: e.x, y: e.y, name: ETYPES[e.type].name };
+    flash = 1;
+    if (!reduceMotion) shake = 16;
+    sfx('bossdown');
+    for (let i = 0; i < 14; i++) dropGem(e.x + rand(-70, 70), e.y + rand(-70, 70), 5);
+    for (let i = 0; i < 5; i++) dropCoin(e.x + rand(-60, 60), e.y + rand(-60, 60), Math.round(200 * stage.pay));
+    boxes.push({ x: e.x, y: e.y + 12, ph: 0, gold: true, forced: null });
+    const colors = ['#f2c230', '#ff8a3d', '#7fe3ff', '#ffffff', e.color];
+    for (let i = 0; i < (reduceMotion ? 30 : 110); i++) {
+      const a = Math.random() * Math.PI * 2, sp = rand(80, 520);
+      parts.push({ x: e.x, y: e.y, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp, life: rand(0.6, 1.4), color: colors[i % colors.length], size: rand(3, 7) });
+    }
+    // 衝撃波で画面内のザコを一掃（撃破手当もつく）
+    for (const o of enemies) {
+      if (o.boss || o.dead || !onScreen(o)) continue;
+      const d = Math.hypot(o.x - e.x, o.y - e.y) || 1;
+      hurt(o, o.hp / stat.dmg + 1, (o.x - e.x) / d * 600, (o.y - e.y) / d * 600);
+    }
+    P.hp = stat.maxHp;
+    if (!enemies.some((o) => o.boss && !o.dead)) BGM.boss(false);
+    banner(stage.bossOut);
   }
 
   function gainXp(v) {
@@ -1116,8 +1251,9 @@
     if (state === 'play' && (e.code === 'KeyP' || e.code === 'Escape')) pause();
     else if (state === 'pause' && (e.code === 'KeyP' || e.code === 'Escape')) resume();
     else if (state === 'shop' && e.code === 'Escape') closeShop();
+    else if (state === 'rules' && e.code === 'Escape') closeRules();
     else if (state === 'level') {
-      const n = { Digit1: 0, Digit2: 1, Digit3: 2, Numpad1: 0, Numpad2: 1, Numpad3: 2 }[e.code];
+      const n = { Digit1: 0, Digit2: 1, Digit3: 2, Digit4: 3, Numpad1: 0, Numpad2: 1, Numpad3: 2, Numpad4: 3 }[e.code];
       if (n !== undefined && choices[n]) choose(choices[n], luckyFlags[n]);
     } else if (state === 'title' && e.code === 'Enter' && !(document.activeElement && document.activeElement.classList.contains('stage'))) { e.preventDefault(); start(); }
     else if (state === 'title') {
@@ -1198,6 +1334,11 @@
       if (d > far && !e.boss) {
         const a = Math.random() * Math.PI * 2, R = spawnRing();
         e.x = P.x + Math.cos(a) * R; e.y = P.y + Math.sin(a) * R; continue;
+      }
+      if (freezeT > 0) {   // 非常停止中は動かない
+        e.x += e.vx * dt; e.y += e.vy * dt; e.vx *= damp; e.vy *= damp;
+        if (e.flash > 0) e.flash -= dt;
+        continue;
       }
       if (stage.belts && !e.boss) e.x += beltAt(e.y) * BELT_SPEED * dt;
       if (e.type === 'takt') e.spd += dt * 1.2;   // 時間とともに速くなる
@@ -1336,9 +1477,35 @@
         const s = Math.min(g.sp * dt, d);
         g.x += dx / d * s; g.y += dy / d * s;
       }
-      if (d < P.r + 8) { g.got = true; gainXp(g.v); }
+      if (d < P.r + 8) {
+        g.got = true;
+        if (g.coin) { found += g.v; sfx('coin'); pop(g.x, g.y - 12, '💰 +' + yen(g.v)); }
+        else gainXp(g.v);
+      }
     }
     gems = gems.filter((g) => !g.got);
+
+    // アイテムBOX
+    boxT -= dt; medCool -= dt;
+    if (freezeT > 0) freezeT -= dt;
+    if (buffT > 0) buffT -= dt;
+    if (boxT <= 0) {
+      boxT = rand(22, 30);
+      if (boxes.length < 3) spawnBox();
+    }
+    if (P.hp < stat.maxHp * 0.3 && medCool <= 0 && !boxes.some((b) => b.forced === 'medkit')) {
+      medCool = 40;
+      spawnBox('medkit', rand(170, 240));
+      banner('🚑 救急箱が届いた！ 白い箱を拾うとHP全回復');
+    }
+    for (const b of boxes) {
+      const d = Math.hypot(b.x - P.x, b.y - P.y);
+      if (d > 1600 && !b.forced && !b.gold) b.gone = true;
+      else if (d < P.r + 18) openBox(b);
+    }
+    boxes = boxes.filter((b) => !b.open && !b.gone);
+    for (const t of pops) { t.y -= 26 * dt; t.life -= dt; }
+    pops = pops.filter((t) => t.life > 0);
 
     // 演出
     for (const t of texts) { t.y -= 30 * dt; t.life -= dt; }
@@ -1812,7 +1979,87 @@
     ctx.fillStyle = ratio > 0.35 ? COL.good : COL.hazard; ctx.fillRect(bx, by, w * ratio, 4);
   }
 
+  function drawBox(b) {
+    const x = b.x, y = b.y + (reduceMotion ? 0 : Math.sin(anim * 3 + b.ph) * 2);
+    const glow = 0.18 + (reduceMotion ? 0 : Math.sin(anim * 4 + b.ph) * 0.08);
+    ctx.fillStyle = b.gold ? `rgba(242,194,48,${glow + 0.1})` : b.forced ? `rgba(95,208,138,${glow})` : `rgba(242,194,48,${glow})`;
+    ctx.beginPath(); ctx.arc(x, y, b.gold ? 34 : 26, 0, Math.PI * 2); ctx.fill();
+    shadow(b.x, b.y + 14, 15);
+    const body = b.gold ? '#e2b33a' : b.forced ? '#f4f1e8' : '#c8413a';
+    ctx.strokeStyle = b.gold ? '#8a6d12' : '#3a2320'; ctx.lineWidth = 3;
+    ctx.beginPath(); ctx.arc(x, y - 10, 6, Math.PI, 0); ctx.stroke();          // 取っ手
+    ctx.fillStyle = body;
+    ctx.beginPath(); ctx.roundRect(x - 15, y - 9, 30, 21, 3); ctx.fill();
+    ctx.fillStyle = 'rgba(0,0,0,.18)'; ctx.fillRect(x - 15, y - 9, 30, 6);
+    ctx.lineWidth = 1.5; ctx.strokeStyle = 'rgba(0,0,0,.4)';
+    ctx.beginPath(); ctx.roundRect(x - 15, y - 9, 30, 21, 3); ctx.stroke();
+    if (b.forced) {     // 救急箱：緑十字
+      ctx.fillStyle = '#15803d'; ctx.fillRect(x - 2.5, y - 4, 5, 13); ctx.fillRect(x - 6.5, y, 13, 5);
+    } else {
+      ctx.fillStyle = b.gold ? '#5a4610' : '#ffffff';
+      ctx.font = '14px DotGothic16, monospace'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+      ctx.fillText(b.gold ? '¥' : '?', x, y + 3);
+    }
+  }
+  // 画面外のアイテムBOXを指す矢印
+  function drawBoxArrows() {
+    for (const b of boxes) {
+      const dx = b.x - P.x, dy = b.y - P.y;
+      if (Math.abs(dx) < W / 2 - 10 && Math.abs(dy) < H / 2 - 10) continue;
+      const a = Math.atan2(dy, dx), m = 30;
+      const k = Math.min((W / 2 - m) / Math.abs(Math.cos(a) || 1e-6), (H / 2 - m) / Math.abs(Math.sin(a) || 1e-6));
+      const x = W / 2 + Math.cos(a) * k, y = H / 2 + Math.sin(a) * k;
+      ctx.save(); ctx.translate(x, y); ctx.rotate(a);
+      ctx.fillStyle = b.gold ? COL.safety : b.forced ? COL.good : '#e5484d';
+      ctx.beginPath(); ctx.moveTo(12, 0); ctx.lineTo(-6, -9); ctx.lineTo(-6, 9); ctx.closePath(); ctx.fill();
+      ctx.restore();
+    }
+  }
+  function drawBossFxWorld() {
+    if (!fx) return;
+    for (let i = 0; i < 3; i++) {
+      const p = (fx.t - i * 0.12) / 1.1;
+      if (p <= 0 || p >= 1) continue;
+      ctx.strokeStyle = i === 1 ? `rgba(255,255,255,${1 - p})` : `rgba(242,194,48,${1 - p})`;
+      ctx.lineWidth = 14 * (1 - p) + 1;
+      ctx.beginPath(); ctx.arc(fx.x, fx.y, p * 720, 0, Math.PI * 2); ctx.stroke();
+    }
+    if (fx.t < 1.6 && !reduceMotion) {
+      ctx.fillStyle = `rgba(255,226,122,${0.2 * (1 - fx.t / 1.6)})`;
+      for (let i = 0; i < 12; i++) {
+        const a = fx.t * 0.8 + i * Math.PI / 6;
+        ctx.beginPath(); ctx.moveTo(fx.x, fx.y); ctx.arc(fx.x, fx.y, 1000, a, a + 0.12); ctx.closePath(); ctx.fill();
+      }
+    }
+  }
+  function drawBossFxScreen() {
+    if (flash > 0) { ctx.fillStyle = `rgba(255,255,255,${flash * 0.75})`; ctx.fillRect(0, 0, W, H); }
+    if (!fx) return;
+    const t = fx.t;
+    const s = t < 0.22 ? 3 - 2 * (t / 0.22) : 1;               // 判子をドンと押す
+    const alpha = t > 2.1 ? Math.max(0, 1 - (t - 2.1) / 0.5) : 1;
+    const w = 210, h = 130;
+    ctx.save();
+    ctx.globalAlpha = alpha;
+    ctx.translate(W / 2, H * 0.46); ctx.rotate(-0.12); ctx.scale(s, s);
+    ctx.fillStyle = 'rgba(40,8,8,.45)'; ctx.fillRect(-w / 2 + 6, -h / 2 + 6, w, h);
+    ctx.fillStyle = 'rgba(255,245,235,.92)'; ctx.fillRect(-w / 2, -h / 2, w, h);
+    ctx.strokeStyle = '#d7263d'; ctx.lineWidth = 8; ctx.strokeRect(-w / 2, -h / 2, w, h);
+    ctx.lineWidth = 2; ctx.strokeRect(-w / 2 + 10, -h / 2 + 10, w - 20, h - 20);
+    ctx.fillStyle = '#d7263d'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.font = '64px DotGothic16, monospace'; ctx.fillText('撃退', 0, -8);
+    ctx.font = '14px DotGothic16, monospace'; ctx.fillText(fx.name, 0, h / 2 - 24);
+    ctx.restore();
+  }
+
   function drawGem(g) {
+    if (g.coin) {
+      ctx.fillStyle = '#f2c230'; ctx.beginPath(); ctx.arc(g.x, g.y, 6.5, 0, Math.PI * 2); ctx.fill();
+      ctx.strokeStyle = '#8a6d12'; ctx.lineWidth = 1.5; ctx.stroke();
+      ctx.fillStyle = '#5a4610'; ctx.font = '9px DotGothic16, monospace'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+      ctx.fillText('¥', g.x, g.y + 0.5);
+      return;
+    }
     const r = g.v >= 20 ? 7 : g.v >= 4 ? 6 : 4.5;
     ctx.fillStyle = g.v >= 20 ? COL.weld : g.v >= 4 ? COL.safety : '#a9bccb';
     poly(g.x, g.y, 6, r, 0); ctx.fill();
@@ -1855,8 +2102,14 @@
 
     const vx0 = cx - W / 2 - 60, vx1 = cx + W / 2 + 60, vy0 = cy - H / 2 - 60, vy1 = cy + H / 2 + 60;
     const inView = (o) => o.x > vx0 && o.x < vx1 && o.y > vy0 && o.y < vy1;
+    drawBossFxWorld();
+    for (const b of boxes) if (inView(b)) drawBox(b);
     for (const g of gems) if (inView(g)) drawGem(g);
     for (const e of enemies) if (inView(e)) drawEnemy(e);
+    if (freezeT > 0) {   // 非常停止中の敵は青く凍る
+      ctx.fillStyle = 'rgba(127,227,255,.3)';
+      for (const e of enemies) if (inView(e)) { ctx.beginPath(); ctx.arc(e.x, e.y, e.r * 1.1, 0, Math.PI * 2); ctx.fill(); }
+    }
 
     // リベット
     for (const b of bullets) {
@@ -1873,6 +2126,10 @@
       }
     }
 
+    if (buffT > 0) {     // 栄養ドリンクのオーラ
+      ctx.strokeStyle = `rgba(255,138,61,${0.35 + Math.sin(anim * 12) * 0.15})`; ctx.lineWidth = 3;
+      ctx.beginPath(); ctx.arc(P.x, P.y, 24 + Math.sin(anim * 8) * 2, 0, Math.PI * 2); ctx.stroke();
+    }
     drawPlayer();
 
     for (const b of bolts) {
@@ -1892,6 +2149,13 @@
       ctx.strokeText(t.v, t.x, t.y); ctx.fillStyle = '#ffffff'; ctx.fillText(t.v, t.x, t.y);
     }
     ctx.globalAlpha = 1;
+    ctx.font = '15px DotGothic16, monospace'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.lineWidth = 4;
+    for (const t of pops) {
+      ctx.globalAlpha = Math.min(1, t.life * 2);
+      ctx.strokeStyle = 'rgba(0,0,0,.85)'; ctx.strokeText(t.text, t.x, t.y);
+      ctx.fillStyle = t.color; ctx.fillText(t.text, t.x, t.y);
+    }
+    ctx.globalAlpha = 1;
     ctx.restore();
 
     // ナトリウム灯の周辺減光
@@ -1899,6 +2163,9 @@
     vg.addColorStop(0, 'rgba(5,7,10,0)');
     vg.addColorStop(1, 'rgba(5,7,10,.7)');
     ctx.fillStyle = vg; ctx.fillRect(0, 0, W, H);
+
+    if (state !== 'title') drawBoxArrows();
+    drawBossFxScreen();
 
     if (joy && state === 'play') {
       ctx.strokeStyle = 'rgba(233,237,241,.35)'; ctx.lineWidth = 2;
@@ -1924,6 +2191,10 @@
     setText('payText', '給料 ' + yen(payFor(time, kills, false).total));
     setText('timerText', fmt(time));
     setText('shiftText', '工場時刻 ' + shiftClock(time));
+    const buffs = [];
+    if (freezeT > 0) buffs.push('非常停止 ' + Math.ceil(freezeT) + '秒');
+    if (buffT > 0) buffs.push('栄養ドリンク ' + Math.ceil(buffT) + '秒');
+    setText('buffText', buffs.join('　'));
   }
   function renderGear() {
     const el = $('gear');
@@ -1947,7 +2218,7 @@
   }
 
   // ---------- 画面遷移 ----------
-  const OVERLAYS = ['ovTitle', 'ovLevel', 'ovPause', 'ovOver', 'ovShop'];
+  const OVERLAYS = ['ovTitle', 'ovLevel', 'ovPause', 'ovOver', 'ovShop', 'ovRules'];
   function showOverlay(id) { for (const o of OVERLAYS) $(o).hidden = o !== id; }
 
   function start() {
@@ -1961,7 +2232,11 @@
     $('hud').hidden = false; $('gear').hidden = false;
     banner('22:00 ' + stage.name + ' 夜勤スタート');
   }
-  function pause() { state = 'pause'; joy = null; BGM.duck(true); showOverlay('ovPause'); $('resumeBtn').focus(); }
+  function pause() {
+    state = 'pause'; joy = null; BGM.duck(true);
+    fillSlip($('slipPause'), payFor(time, kills, false), false, false);
+    showOverlay('ovPause'); $('resumeBtn').focus();
+  }
   function resume() { if (state === 'pause') BGM.duck(false); state = 'play'; showOverlay(null); last = performance.now(); }
   function toTitle() {
     state = 'title'; BGM.stop(); showOverlay('ovTitle');
@@ -1983,14 +2258,15 @@
       picks.push(pool.splice(Math.min(idx, pool.length - 1), 1)[0]);
     }
     if (picks.length < 3) picks.push('coffee');
+    if (P.hp < stat.maxHp * 0.35) picks.push('medkit');   // HPピンチなら4枚目に全回復
     choices = picks;
     // ラッキーボーナス：武器のカードがまれに「3段階アップ」になる
     luckyFlags = picks.map((k) => !!(UPG[k] && UPG[k].w && lv[k] + 1 < MAXLV && Math.random() < stat.luck));
     const cards = $('cards');
     cards.innerHTML = '';
     picks.forEach((k, n) => {
-      const u = k === 'coffee' ? COFFEE : UPG[k];
-      const cur = k === 'coffee' ? 0 : lv[k];
+      const u = k === 'coffee' ? COFFEE : k === 'medkit' ? MEDKIT : UPG[k];
+      const cur = UPG[k] ? lv[k] : 0;
       const desc = Array.isArray(u.desc) ? u.desc[cur] : u.desc;
       const lucky = luckyFlags[n];
       const btn = document.createElement('button');
@@ -2000,6 +2276,7 @@
       btn.querySelector('b').textContent = u.name;
       const tag = btn.querySelector('.tag');
       if (lucky) { tag.className = 'luckytag'; tag.textContent = 'ラッキー！ ' + (cur ? 'Lv.' + cur : '新規') + ' → Lv.' + Math.min(MAXLV, cur + 3); }
+      else if (k === 'medkit') { tag.className = 'new'; tag.textContent = 'HPピンチ'; }
       else if (k !== 'coffee') {
         if (cur === 0) { tag.className = 'new'; tag.textContent = '新規'; }
         else { tag.className = 'lvl'; tag.textContent = 'Lv.' + cur + ' → ' + (cur + 1); }
@@ -2017,6 +2294,7 @@
   function choose(k, lucky) {
     if (state !== 'level') return;
     if (k === 'coffee') P.hp = Math.min(stat.maxHp, P.hp + 30);
+    else if (k === 'medkit') { P.hp = stat.maxHp; banner('救急箱：HP全回復'); }
     else if (lucky) {
       const before = lv[k];
       lv[k] = Math.min(MAXLV, lv[k] + 3);
@@ -2050,26 +2328,78 @@
     const pay = payFor(time, kills, win);
     meta.money += pay.total; meta.earned += pay.total;
     saveMeta();
+    fillSlip($('slip'), pay, win, true);
+    showOverlay('ovOver');
+    $('retryBtn').focus();
+  }
+  function fillSlip(table, pay, win, withBank) {
     const rows = [
       ['基本給（時給 ' + yen(pay.wage) + ' × ' + pay.hours.toFixed(1) + '時間）', yen(pay.base)],
       ['撃破手当（' + kills + '体 × ' + yen(KILL_PAY) + '）', yen(pay.killPay)],
       ['定時退勤手当', win ? yen(pay.bonus) : '—'],
-      ['夜勤手当（' + stage.level + '）', '× ' + stage.pay],
+      ['夜勤手当（' + stage.level + '）', '上の3つ × ' + stage.pay],
+      ['拾得金（💰 大入り袋・小銭）', '＋' + yen(pay.found)],
     ];
-    const slip = $('slip');
-    slip.innerHTML = '';
+    table.innerHTML = '';
     const addRow = (a, b, cls) => {
       const tr = document.createElement('tr'); if (cls) tr.className = cls;
       const th = document.createElement('th'); th.textContent = a;
       const td = document.createElement('td'); td.textContent = b;
-      tr.append(th, td); slip.appendChild(tr);
+      tr.append(th, td); table.appendChild(tr);
     };
     for (const [a, b] of rows) addRow(a, b);
-    addRow('支給額', yen(pay.total), 'total');
-    addRow('貯金', yen(meta.money), 'bank');
-    showOverlay('ovOver');
-    $('retryBtn').focus();
+    addRow(withBank ? '支給額' : '今の時点の支給額', yen(pay.total), 'total');
+    if (withBank) addRow('貯金', yen(meta.money), 'bank');
   }
+
+  // ---------- ルール画面 ----------
+  let rulesBack = null;
+  function openRules() {
+    rulesBack = { state, overlay: OVERLAYS.find((o) => !$(o).hidden) || null, focus: document.activeElement };
+    state = 'rules';
+    renderRules();
+    showOverlay('ovRules');
+    $('rulesClose').focus();
+  }
+  function closeRules() {
+    if (!rulesBack) return;
+    state = rulesBack.state;
+    showOverlay(rulesBack.overlay);
+    if (rulesBack.focus && rulesBack.focus.focus) rulesBack.focus.focus();
+    rulesBack = null;
+  }
+  function renderRules() {
+    const grid = $('rulesItems');
+    grid.innerHTML = '';
+    for (const k in ITEMS) {
+      const it = document.createElement('div'); it.className = 'ritem';
+      it.innerHTML = '<span class="ico"></span><span><b></b><small></small></span>';
+      it.querySelector('.ico').textContent = ITEMS[k].icon;
+      it.querySelector('b').textContent = ITEMS[k].name;
+      it.querySelector('small').textContent = ITEMS[k].desc;
+      grid.appendChild(it);
+    }
+    const wage = WAGE * (1 + 0.1 * ml('raise'));
+    const t = $('rulesPay');
+    t.innerHTML = '';
+    const rows = [
+      ['基本給', '時給 ' + yen(wage) + ' × 勤務時間。ゲームの1分が工場の48分なので、10分で8時間分（' + yen(wage * 8) + '）' + (ml('raise') ? '　※昇給交渉で時給アップ中' : '')],
+      ['撃破手当', '倒した敵1体につき ' + yen(KILL_PAY)],
+      ['定時退勤手当', '06:00まで生き延びると ' + yen(CLEAR_PAY)],
+      ['夜勤手当', '上の3つの合計に倍率をかける：初級 ×' + STAGES.screw.pay + '／中級 ×' + STAGES.smt.pay + '／上級 ×' + STAGES.line.pay],
+      ['拾得金 💰', '大入り袋・小銭・ボス撃破のボーナス箱。拾った額（倍率込み）がそのまま加算'],
+      ['支給額', '合計が貯金に入り、「設備投資・福利厚生」で強化に使えます'],
+    ];
+    for (const [a, b] of rows) {
+      const tr = document.createElement('tr');
+      const th = document.createElement('th'); th.textContent = a;
+      const td = document.createElement('td'); td.textContent = b;
+      tr.append(th, td); t.appendChild(tr);
+    }
+    const ex = (wage * 8 + 800 * KILL_PAY + CLEAR_PAY);
+    $('rulesExample').textContent = '例：初級で朝まで生き延び、800体倒した場合　(' + yen(wage * 8) + ' ＋ ' + yen(800 * KILL_PAY) + ' ＋ ' + yen(CLEAR_PAY) + ') × 1 ＝ ' + yen(ex) + '（＋拾得金）。上級なら同じ働きで ' + yen(ex * STAGES.line.pay) + '。';
+  }
+
   function renderMoney() {
     $('moneyTitle').textContent = '貯金 ' + yen(meta.money) + '　（設備投資で強化できます）';
   }
@@ -2164,6 +2494,9 @@
   $('startBtn').addEventListener('click', start);
   $('shopBtn').addEventListener('click', openShop);
   $('shopClose').addEventListener('click', closeShop);
+  $('rulesBtn').addEventListener('click', openRules);
+  $('pauseRules').addEventListener('click', openRules);
+  $('rulesClose').addEventListener('click', closeRules);
   $('retryBtn').addEventListener('click', start);
   $('titleBtn').addEventListener('click', toTitle);
   $('quitBtn').addEventListener('click', toTitle);
@@ -2215,7 +2548,9 @@
     const dt = Math.min(0.05, (now - last) / 1000);
     last = now;
     anim += dt;
-    if (state === 'play') { update(dt); updateHud(); }
+    if (state === 'play') { update(dt * (fx && fx.t < 0.9 ? 0.25 : 1)); updateHud(); }
+    if (fx) { fx.t += dt; if (fx.t > 2.6) fx = null; }
+    if (flash > 0) flash = Math.max(0, flash - dt * 1.6);
     else if (state === 'title') { P.walk += dt * 0.3; }
     draw();
     requestAnimationFrame(loop);
