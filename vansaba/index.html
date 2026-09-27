@@ -209,6 +209,19 @@
     box-shadow: 0 0 18px rgba(255,226,122,.35);
   }
   .gear span.aw { border-color: #ffe27a; color: #ffe27a; box-shadow: 0 0 8px rgba(255,226,122,.5); }
+  .card.awnear { border-color: #b98cff; box-shadow: inset 0 0 0 1px #b98cff, 0 0 14px rgba(185,140,255,.35); }
+  .awbadge {
+    justify-self: start; margin-top: 4px;
+    font-family: var(--display); font-size: 13px; line-height: 1.4; color: #ffffff;
+    background: linear-gradient(90deg, #7b4fd6, #d7263d);
+    padding: 3px 8px; border-radius: 3px;
+    animation: awpulse 1.2s ease-in-out infinite;
+  }
+  @keyframes awpulse { 50% { filter: brightness(1.35); } }
+  .awline {
+    margin: 0; font-family: var(--display); font-size: 13px; line-height: 1.6; color: #e2d0ff;
+    background: #221a30; border: 1px solid #7b4fd6; padding: 6px 10px; border-radius: 3px;
+  }
   .card.lucky {
     border-color: var(--safety);
     background: linear-gradient(120deg, #3a2f10, #1b222a 45%, #3a2f10);
@@ -270,7 +283,7 @@
   }
   @media (prefers-reduced-motion: reduce) {
     .banner, .xpfill { transition: none; }
-    .card.lucky, .card.awaken { animation: none; }
+    .card.lucky, .card.awaken, .awbadge { animation: none; }
   }
 </style>
 
@@ -342,6 +355,7 @@
       <div class="stripe"></div>
       <p class="eyebrow" id="lvEyebrow">LEVEL UP</p>
       <h2>改善提案をひとつ採用</h2>
+      <p class="awline" id="lvAwake" hidden></p>
       <div class="cards" id="cards"></div>
       <p class="hint">数字キー 1〜4 でも選べます</p>
     </div>
@@ -3164,19 +3178,37 @@
   }
 
   // 検定1級を持っている武器について、覚醒の条件をカードに書き添える
-  function awakenHint(k) {
-    if (AWAKE[k] && ml('cap_' + k) >= 2 && !awake[k]) return '（Lv10＋' + UPG[AWAKE[k].partner].name + 'Lv5で覚醒）';
+  // その改善が関わる覚醒（検定1級を持っていて、まだ覚醒していないもの）と、残りのレベル数
+  function awakenInfo(k) {
     for (const w in AWAKE) {
-      if (AWAKE[w].partner === k && ml('cap_' + w) >= 2 && !awake[w]) return '（' + UPG[w].name + 'の覚醒に Lv5 が必要）';
+      if (ml('cap_' + w) < 2 || awake[w]) continue;
+      const p = AWAKE[w].partner;
+      if (k !== w && k !== p) continue;
+      const needW = Math.max(0, 10 - lv[w]), needP = Math.max(0, 5 - lv[p]);
+      return { w, p, needW, needP, remain: needW + needP };
     }
-    return '';
+    return null;
+  }
+  function awakenHint(k) {
+    const a = awakenInfo(k);
+    return a ? '（覚醒条件：' + UPG[a.w].name + ' Lv10＋' + UPG[a.p].name + ' Lv5）' : '';
+  }
+  // カードに目立たせて出す「覚醒まであと○」
+  function awakenBadge(k) {
+    const a = awakenInfo(k);
+    if (!a) return '';
+    const parts = [];
+    if (a.needW) parts.push(UPG[a.w].name + ' あと' + a.needW);
+    if (a.needP) parts.push(UPG[a.p].name + ' あと' + a.needP);
+    return '🔥 ' + AWAKE[a.w].name + ' まであと ' + a.remain + '（' + parts.join('・') + '）';
   }
   function awakenProgress() {
     const rows = [];
     for (const w in AWAKE) {
       if (ml('cap_' + w) < 2) continue;
       const p = AWAKE[w].partner;
-      rows.push(awake[w] ? UPG[w].name + '：覚醒済み' : UPG[w].name + ' Lv' + lv[w] + '/10・' + UPG[p].name + ' Lv' + lv[p] + '/5');
+      const remain = Math.max(0, 10 - lv[w]) + Math.max(0, 5 - lv[p]);
+      rows.push(awake[w] ? UPG[w].name + '：覚醒済み' : UPG[w].name + ' Lv' + lv[w] + '/10・' + UPG[p].name + ' Lv' + lv[p] + '/5（あと' + remain + '）');
     }
     return rows.length ? '覚醒の進み具合　' + rows.join('　／　') : '';
   }
@@ -3217,7 +3249,7 @@
       const lucky = luckyFlags[n];
       const btn = document.createElement('button');
       btn.type = 'button'; btn.className = 'card' + (u.w ? ' w' : '') + (lucky ? ' lucky' : '') + (awk ? ' awaken' : '');
-      btn.innerHTML = '<span class="ico"></span><span class="txt"><span><b></b><span class="tag"></span></span><small></small></span><kbd></kbd>';
+      btn.innerHTML = '<span class="ico"></span><span class="txt"><span><b></b><span class="tag"></span></span><small></small><span class="awbadge" hidden></span></span><kbd></kbd>';
       btn.querySelector('.ico').textContent = u.icon;
       btn.querySelector('b').textContent = u.name;
       const tag = btn.querySelector('.tag');
@@ -3230,11 +3262,19 @@
         else { tag.className = 'lvl'; tag.textContent = 'Lv.' + cur + ' → ' + (cur + 1); }
       }
       btn.querySelector('small').textContent = (lucky ? '3段階まとめてレベルアップ！' : desc) + awakenHint(k);
+      const badge = awakenBadge(k);
+      if (badge && !awk) {
+        const el = btn.querySelector('.awbadge');
+        el.textContent = badge; el.hidden = false;
+        btn.classList.add('awnear');
+      }
       btn.querySelector('kbd').textContent = n + 1;
       btn.addEventListener('click', () => choose(k, lucky));
       cards.appendChild(btn);
     });
     $('lvEyebrow').textContent = bonusAwaken ? 'AWAKENING ・ 覚醒の条件がそろった！' : 'LEVEL UP ・ Lv.' + (P.level - pending + 1);
+    const prog = awakenProgress();
+    $('lvAwake').textContent = prog; $('lvAwake').hidden = !prog;
     showOverlay('ovLevel');
     const first = cards.querySelector('button');
     if (first) first.focus({ preventScroll: true });
