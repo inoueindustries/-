@@ -172,6 +172,11 @@
   .card kbd { font-family: var(--display); font-size: 13px; color: var(--muted); border: 1px solid var(--line); border-radius: 3px; padding: 2px 7px; }
   .bgmpick { display: grid; gap: 6px; }
   .bgmpick .label { font-family: var(--display); font-size: 12px; color: var(--muted); letter-spacing: .08em; }
+  .bgmtoggle { display: flex; align-items: center; justify-content: space-between; gap: 10px; width: 100%; text-align: left; padding: 9px 12px; border: 1px solid var(--weld); border-radius: 4px; background: #1a2129; color: inherit; font: inherit; cursor: pointer; }
+  .bgmtoggle:hover { background: #222b35; }
+  .bgmtoggle:focus-visible { outline: 2px solid var(--weld); outline-offset: 2px; }
+  .bgmtoggle .cur { font-family: var(--display); font-size: 15px; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .bgmtoggle .more { font-size: 12px; color: var(--muted); white-space: nowrap; flex: none; }
   .seg { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 6px; }
   .seg button {
     display: grid; gap: 2px; align-content: start; text-align: left;
@@ -333,7 +338,8 @@
       <p class="roster" id="roster"></p>
       <div class="bgmpick">
         <span class="label">BGM（押すと試聴できます）</span>
-        <div class="seg" id="bgmPickTitle" role="radiogroup" aria-label="BGMを選ぶ"></div>
+        <button type="button" class="bgmtoggle" id="bgmToggleTitle" aria-expanded="false" aria-controls="bgmPickTitle"><span class="cur"></span><span class="more"></span></button>
+        <div class="seg" id="bgmPickTitle" role="radiogroup" aria-label="BGMを選ぶ" hidden></div>
       </div>
       <div class="bgmpick">
         <span class="label">レベルアップ時のボイス（押すと試聴できます）</span>
@@ -380,7 +386,8 @@
       </div>
       <div class="bgmpick">
         <span class="label">BGM</span>
-        <div class="seg" id="bgmPickPause" role="radiogroup" aria-label="BGMを選ぶ"></div>
+        <button type="button" class="bgmtoggle" id="bgmTogglePause" aria-expanded="false" aria-controls="bgmPickPause"><span class="cur"></span><span class="more"></span></button>
+        <div class="seg" id="bgmPickPause" role="radiogroup" aria-label="BGMを選ぶ" hidden></div>
       </div>
       <div class="bgmpick">
         <span class="label">レベルアップ時のボイス</span>
@@ -3679,8 +3686,11 @@
     $('bgmBtn').setAttribute('aria-pressed', String(BGM.on));
     $('bgmVol').value = Math.round(BGM.vol * 100);
     $('bgmVolOut').textContent = Math.round(BGM.vol * 100);
-    for (const boxId of ['bgmPickTitle', 'bgmPickPause']) {
-      const box = $(boxId);
+    for (const [boxId, tgId] of [['bgmPickTitle', 'bgmToggleTitle'], ['bgmPickPause', 'bgmTogglePause']]) {
+      const box = $(boxId), tg = $(tgId);
+      tg.querySelector('.cur').textContent = '♪ ' + BGM_STYLES[BGM.style].name;
+      tg.querySelector('.more').textContent = box.hidden ? '曲を選ぶ ▼（全' + Object.keys(BGM_STYLES).length + '曲）' : '閉じる ▲';
+      tg.setAttribute('aria-expanded', String(!box.hidden));
       box.innerHTML = '';
       for (const id in BGM_STYLES) {
         const btn = document.createElement('button');
@@ -3728,6 +3738,14 @@
     renderBgmUi();
     const cur = $(boxId).querySelector('[aria-checked="true"]');
     if (cur) cur.focus();
+  }
+  // BGMの一覧は普段は畳んでおき、ボタンで開閉する
+  for (const [boxId, tgId] of [['bgmPickTitle', 'bgmToggleTitle'], ['bgmPickPause', 'bgmTogglePause']]) {
+    $(tgId).addEventListener('click', () => {
+      $(boxId).hidden = !$(boxId).hidden;
+      renderBgmUi();
+      if (!$(boxId).hidden) { const cur = $(boxId).querySelector('[aria-checked="true"]'); if (cur) cur.scrollIntoView({ block: 'nearest' }); }
+    });
   }
   $('bgmBtn').addEventListener('click', () => { BGM.toggle(); renderBgmUi(); });
   $('bgmVol').addEventListener('input', (e) => { BGM.setVol(Number(e.target.value) / 100); renderBgmUi(); });
