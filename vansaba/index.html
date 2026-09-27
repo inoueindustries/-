@@ -404,6 +404,7 @@
           <li>武器と強化は最初 Lv5 まで。「設備投資・福利厚生」の自己投資（講習・研修）で Lv10 まで上げられます。</li>
           <li>覚醒：検定1級を取った武器が Lv10、相棒の強化が Lv5 になると「覚醒」カードが出ます（リベット銃＋潤滑油／回転スパナ＋熟練の手袋／溶接アーク＋健康診断／高圧放電＋マグネット）。</li>
           <li>取れる改善がなくなると「表彰状」カード（威力+2%・最大HP+5）が何度でも出ます。</li>
+          <li>HPが満タンのときに「缶コーヒー」を選ぶと、飲まずに我慢して ¥150 を貯金します（給料の拾得金に入ります）。</li>
           <li>HPが35%を切っているときのレベルアップでは、4枚目に「救急箱（HP全回復）」が加わります。</li>
           <li>1分ごとに敵の「嵐」、経過 02:00・05:00・08:00 にボスが出ます。ボスを倒すとHP全回復と特別ボーナス箱（金色）。</li>
         </ul>
@@ -575,6 +576,7 @@
   const canAwaken = (k) => !!AWAKE[k] && !awake[k] && ml('cap_' + k) >= 2 && lv[k] >= 10 && lv[AWAKE[k].partner] >= 5;
   const MAXLV = 5;
   const COFFEE = { icon: '缶', name: '缶コーヒー', desc: 'HPを30回復' };
+  const COFFEE_SAVE = 150;   // HP満タンのときは我慢して貯金する額（円）
   const MEDKIT = { icon: '救', name: '救急箱', desc: 'HPを全回復（HPが少ないときだけ出る）' };
 
   // アイテムBOXの中身。w は出やすさ
@@ -2523,7 +2525,9 @@
       while (r > weights[idx]) { r -= weights[idx]; idx++; }
       picks.push(pool.splice(Math.min(idx, pool.length - 1), 1)[0]);
     }
-    while (picks.length < 3) picks.push(picks.includes('award') ? 'coffee' : 'award');   // 取れる物がなければ表彰状
+    // 取れる物がなければ表彰状と缶コーヒー（同じカードは1枚ずつ）
+    if (picks.length < 3) picks.push('award');
+    if (picks.length < 3) picks.push('coffee');
     if (P.hp < stat.maxHp * 0.35) picks.push('medkit');   // HPピンチなら4枚目に全回復
     choices = picks;
     // ラッキーボーナス：武器のカードがまれに「3段階アップ」になる
@@ -2534,7 +2538,9 @@
       const awk = k.startsWith('awaken:') ? k.slice(7) : null;
       const u = awk ? { ...AWAKE[awk], w: true } : k === 'coffee' ? COFFEE : k === 'medkit' ? MEDKIT : k === 'award' ? AWARD : UPG[k];
       const cur = UPG[k] ? lv[k] : 0;
-      const desc = Array.isArray(u.desc) ? u.desc[cur] : u.desc;
+      const desc = k === 'coffee' && P.hp >= stat.maxHp
+        ? 'HP満タンなので飲まずに我慢。¥' + COFFEE_SAVE + ' を貯金する'
+        : Array.isArray(u.desc) ? u.desc[cur] : u.desc;
       const lucky = luckyFlags[n];
       const btn = document.createElement('button');
       btn.type = 'button'; btn.className = 'card' + (u.w ? ' w' : '') + (lucky ? ' lucky' : '') + (awk ? ' awaken' : '');
@@ -2562,7 +2568,14 @@
   }
   function choose(k, lucky) {
     if (state !== 'level') return;
-    if (k === 'coffee') P.hp = Math.min(stat.maxHp, P.hp + 30);
+    if (k === 'coffee') {
+      if (P.hp >= stat.maxHp) {   // HP満タンなら飲まずに我慢して貯金
+        found += COFFEE_SAVE;
+        pop(P.x, P.y - 52, '💰 +' + yen(COFFEE_SAVE));
+        sfx('coin');
+        banner('缶コーヒーを我慢して ' + yen(COFFEE_SAVE) + ' 貯金');
+      } else P.hp = Math.min(stat.maxHp, P.hp + 30);
+    }
     else if (k === 'medkit') { P.hp = stat.maxHp; banner('救急箱：HP全回復'); }
     else if (k.startsWith('awaken:')) {
       const w = k.slice(7);
@@ -2627,7 +2640,7 @@
       ['撃破手当（' + kills + '体 × ' + yen(KILL_PAY) + '）', yen(pay.killPay)],
       ['定時退勤手当', win ? yen(pay.bonus) : '—'],
       ['夜勤手当（' + stage.level + '）', '上の3つ × ' + stage.pay],
-      ['拾得金（💰 大入り袋・小銭）', '＋' + yen(pay.found)],
+      ['拾得金（💰 大入り袋・小銭・缶コーヒー我慢）', '＋' + yen(pay.found)],
     ];
     table.innerHTML = '';
     const addRow = (a, b, cls) => {
