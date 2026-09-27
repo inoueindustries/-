@@ -420,6 +420,7 @@
           <li>取れる改善がなくなると「表彰状」カード（威力+2%・最大HP+5）が何度でも出ます。</li>
           <li>3ステージすべてを定時退勤すると「管理職モード」が解放されます（全工場の敵とボスが出る最上級。夜勤手当×3）。</li>
           <li>上級と管理職モードには超大ボス「リコール大魔王」が出ます。弾を撃ち、手下を呼びます。倒すと特別報奨金（¥5,000×夜勤手当）。</li>
+          <li>まれに「⚠ クレーム発生」イベントが起き、倒せない敵「クレーム電話」が苦情（弾）を投げてきます。近くに出るオレンジの箱3つのどれかに「対策書」が入っていて、見つけると消えます（クレーム対応手当つき）。</li>
           <li>HPが満タンのときに「缶コーヒー」を選ぶと、飲まずに我慢して ¥150 を貯金します（給料の拾得金に入ります）。</li>
           <li>HPが35%を切っているときのレベルアップでは、4枚目に「救急箱（HP全回復）」が加わります。</li>
           <li>1分ごとに敵の「嵐」、経過 02:00・05:00・08:00 にボスが出ます。ボスを倒すとHP全回復と特別ボーナス箱（金色）。</li>
@@ -511,6 +512,8 @@
     tag:    { name: '不良札', r: 8, hp: 7, spd: 122, dmg: 5, xp: 1, color: '#e5484d', face: { brows: true, ey: -0.35, size: 0.28 } },
     lot:    { name: '不良ロット', r: 20, hp: 70, spd: 38, dmg: 14, xp: 4, color: '#b08a5a', face: { lid: true, ey: 0.35, size: 0.22 } },
     takt:   { name: 'タクトタイム大王', r: 44, hp: 1800, spd: 52, dmg: 26, xp: 40, color: '#f4f1e8', boss: true },
+    // イベント敵：倒せない。オレンジの箱の中の「対策書」を見つけると消える
+    claim:  { name: 'クレーム電話', r: 22, hp: 1, spd: 72, dmg: 18, xp: 0, color: '#d7263d', face: { brows: true, ey: 0.18, size: 0.24 } },
     // 超大ボス（上級・管理職モードだけ）
     recall: { name: 'リコール大魔王', r: 78, hp: 9000, spd: 40, dmg: 40, xp: 120, color: '#3b2350', boss: true, sup: true },
   };
@@ -546,7 +549,7 @@
       name: '管理職モード', level: '最上級', lv: 4, sub: '全ライン統括',
       desc: '3つの工場の不良品がまとめて押し寄せ、ボス3体が順番に巡回。リコール大魔王も2回現れる。',
       roles: { basic: ['bug', 'tomb', 'choco'], fast: ['chip', 'solder', 'tag'], tank: ['rust', 'ic', 'lot'], boss: ['boss', 'reflow', 'takt'] },
-      hp: 2.4, spd: 1.25, spawn: 1.9, dmg: 1.6, xp: 1.6, pay: 3, belts: true,
+      hp: 3.2, spd: 1.32, spawn: 2.3, dmg: 1.9, xp: 1.6, pay: 3, belts: true,
       swarm: '全ラインから不良品が押し寄せる！', bossIn: '巡回ボスがやって来た！', bossOut: '巡回ボス撃退！ HP全回復',
       bgm: { tempo: 1.22, tr: 1 },
       superAt: [300, 540],
@@ -1468,7 +1471,7 @@
   const LINES = {
     male:   { level: ['よし、レベルアップだ！', 'まだまだいけるぞ！', '改善完了！'], lucky: ['おっ、ラッキー！', 'ツイてるぞ！'], awaken: ['覚醒！ 全力でいくぞ！'] },
     female: { level: ['レベルアップ！', 'いい調子です！', '改善、完了です！'], lucky: ['ラッキー！', 'やったね！'], awaken: ['覚醒！ 見せてあげる！'] },
-    boy:    { level: ['やったー！ レベルアップ！', '強くなったぞ！', 'まだまだー！'], lucky: ['ラッキー！ やったぁ！'], awaken: ['かくせい！ いっけぇー！'] },
+    boy:    { level: ['やったー！ レベルアップ！', '強くなったぞ！', 'まだまだー！'], lucky: ['ラッキー！ やったぁ！', 'ツイてるー！'], awaken: ['かくせい！ いっけぇー！'] },
   };
   let voiceId = 'off', lastSay = 0;
   try { const v = localStorage.getItem('yakin-voice'); if (VOICES[v]) voiceId = v; } catch (e) {}
@@ -1517,6 +1520,7 @@
   let anim = 0;   // 見た目のアニメーション用の時計（一時停止中も進む）
   let P, lv = {}, enemies, bullets, gems, texts, parts, bolts;
   let superIdx = 0, ebullets = [], warnT = 0;   // 超大ボスまわり
+  let claim = null, claimT = 40;               // クレーム対応イベント
   let time, kills, spawnT, rivetT, sparkT, weldT, spanA, pending, nextSwarm, bossIdx, shake, weldPulse;
   // アイテムBOX・拾得金・ギミック・ボス撃破演出
   let boxes = [], pops = [], found = 0, freezeT = 0, buffT = 0, boxT = 0, medCool = 0, fx = null, flash = 0;
@@ -1556,7 +1560,7 @@
     { id: 'legs',    icon: '足', name: '足腰を鍛える', desc: '移動速度 +4%', max: 5, base: 800 },
     { id: 'mag',     icon: '磁', name: '磁石付き軍手', desc: 'ネジの回収範囲 +10%', max: 5, base: 600 },
     { id: 'keiken',  icon: '経', name: '現場経験', desc: '手に入る経験値 +8%', max: 5, base: 1000 },
-    { id: 'luck',    icon: '福', name: '幸運のお守り', desc: 'ラッキーボーナスの確率 +3%', max: 5, base: 1200 },
+    { id: 'luck',    icon: '福', name: '幸運のお守り', desc: 'ラッキーボーナスの確率 +2%', max: 5, base: 1200 },
     { id: 'raise',   icon: '昇', name: '昇給交渉', desc: '時給 +10%', max: 5, base: 1500 },
   ];
   const shopCost = (it, l) => (it.costs ? it.costs[Math.min(l, it.costs.length - 1)] : Math.round(it.base * Math.pow(l + 1, 1.6) / 100) * 100);
@@ -1580,7 +1584,7 @@
     get armor() { return pl('armor'); },
     get guard() { return Math.max(0.5, 1 - 0.04 * pl('belt')); },
     get xp() { return 1 + 0.08 * ml('keiken') + 0.08 * pl('note'); },
-    get luck() { return 0.08 + 0.03 * ml('luck'); },
+    get luck() { return 0.04 + 0.02 * ml('luck'); },   // 基本4%、お守り1段階ごとに+2%
   };
 
   function reset() {
@@ -1594,10 +1598,10 @@
     time = 0; kills = 0; spawnT = 0.6; rivetT = 0.2; sparkT = 1; weldT = 0; spanA = 0;
     pending = 0; nextSwarm = 60; bossIdx = 0; superIdx = 0; ebullets = []; warnT = 0; shake = 0; weldPulse = 0;
     boxes = []; pops = []; found = 0; freezeT = 0; buffT = 0; boxT = 12; medCool = 0; fx = null; flash = 0;
-    forks = []; drillT = 0.5; forkT = 1; awake = {}; awards = 0; stormT = 0; plasmaT = 1; plasma = null; chainT = 0.5; blue = 0; awakenFx = null;
+    claim = null; claimT = 40; forks = []; drillT = 0.5; forkT = 1; awake = {}; awards = 0; stormT = 0; plasmaT = 1; plasma = null; chainT = 0.5; blue = 0; awakenFx = null;
     renderGear();
   }
-  function xpFor(l) { return Math.floor(5 + (l - 1) * 4 + Math.pow(l - 1, 1.6) * 0.8); }
+  function xpFor(l) { return Math.floor(7 + (l - 1) * 5.5 + Math.pow(l - 1, 1.7) * 1.1); }   // Lv10で約1.5倍、Lv40で約1.8倍（以前比）
 
   // ---------- 空間グリッド（当たり判定の高速化） ----------
   const grid = new Map();
@@ -1679,10 +1683,42 @@
     } else if (k === 'drink') buffT = 10;
     if (!quiet) { pop(P.x, P.y - 34, I.name, '#ffffff'); banner(I.name + '：' + I.desc); }
   }
+  function startClaim() {
+    claim = spawnEnemy('claim');
+    claim.invuln = true; claim.shotT = 2.5;
+    const ans = (Math.random() * 3) | 0, base = Math.random() * Math.PI * 2;
+    for (let k = 0; k < 3; k++) {
+      const a = base + k * Math.PI * 2 / 3, R = rand(380, 620);
+      boxes.push({ x: P.x + Math.cos(a) * R, y: P.y + Math.sin(a) * R, ph: Math.random() * 6, claim: true, answer: k === ans, gold: false, forced: null });
+    }
+    banner('⚠ クレーム発生！ オレンジの箱から「対策書」を探せ');
+    sfx('siren');
+  }
+  function resolveClaim() {
+    if (claim) {
+      burst(claim.x, claim.y, '#ffffff', 30);
+      claim.dead = true;
+      claim = null;
+    }
+    ebullets = [];
+    boxes = boxes.filter((b) => !b.claim);
+    const v = Math.round(800 * stage.pay);
+    found += v;
+    pop(P.x, P.y - 60, '📄 対策完了 +' + yen(v));
+    flash = Math.max(flash, 0.35);
+    sfx('lucky');
+    banner('📄 対策書で解決！ クレーム対応手当 ' + yen(v));
+  }
   function openBox(b) {
     b.open = true;
     sfx('box');
-    burst(b.x, b.y, b.gold ? COL.safety : '#e5484d', 16);
+    burst(b.x, b.y, b.gold ? COL.safety : b.claim ? '#ff8a3d' : '#e5484d', 16);
+    if (b.claim) {
+      if (b.answer) { resolveClaim(); return; }
+      applyItem(pickItem(), 1, true);
+      banner('ハズレ… 対策書はほかのオレンジの箱に入っている');
+      return;
+    }
     if (b.gold) {
       applyItem('money', 4, true); applyItem('magnet', 1, true); applyItem('medkit', 1, true);
       banner('💰 特別ボーナス箱！ 大入り袋×4・全回収・HP全回復');
@@ -1698,7 +1734,7 @@
 
   // ---------- ダメージ ----------
   function hurt(e, base, kx = 0, ky = 0) {
-    if (e.dead) return;
+    if (e.dead || e.invuln) return;
     const d = base * stat.dmg;
     e.hp -= d; e.flash = 0.08;
     const kb = e.boss ? 0.08 : 1;
@@ -1883,6 +1919,15 @@
       }
       if (stage.belts && !e.boss) e.x += beltAt(e.y) * BELT_SPEED * dt;
       if (e.type === 'takt') e.spd += dt * 1.2;   // 時間とともに速くなる
+      if (e.type === 'claim') {   // クレーム電話：苦情（弾）を3発ずつ投げてくる
+        e.shotT -= dt;
+        if (e.shotT <= 0) {
+          e.shotT = 1.8;
+          const aim = Math.atan2(P.y - e.y, P.x - e.x);
+          for (const k of [-0.22, 0, 0.22]) ebullets.push({ x: e.x, y: e.y, vx: Math.cos(aim + k) * 200, vy: Math.sin(aim + k) * 200, life: 3.5 });
+          sfx('eshot');
+        }
+      }
       if (e.sup) {
         e.shotT -= dt; e.sumT -= dt;
         if (e.shotT <= 0) {   // 全方向の弾＋狙い撃ち3発
@@ -1975,7 +2020,7 @@
       b.x += b.vx * dt; b.y += b.vy * dt; b.life -= dt;
       query(b.x, b.y, b.r + MAXR, near);
       for (const e of near) {
-        if (b.hit.includes(e)) continue;
+        if (e.invuln || b.hit.includes(e)) continue;
         const m = e.r + b.r;
         if ((e.x - b.x) ** 2 + (e.y - b.y) ** 2 < m * m) {
           b.hit.push(e);
@@ -2162,6 +2207,12 @@
 
     // アイテムBOX
     boxT -= dt; medCool -= dt;
+    // クレーム発生イベント（25秒ごとに低確率で抽選。上のステージほど起きやすい）
+    claimT -= dt;
+    if (claimT <= 0) {
+      claimT = 25;
+      if (time > 75 && !claim && Math.random() < 0.14 + (stage.lv - 1) * 0.04) startClaim();
+    }
     if (freezeT > 0) freezeT -= dt;
     if (buffT > 0) buffT -= dt;
     if (boxT <= 0) {
@@ -2175,7 +2226,7 @@
     }
     for (const b of boxes) {
       const d = Math.hypot(b.x - P.x, b.y - P.y);
-      if (d > 1600 && !b.forced && !b.gold) b.gone = true;
+      if (d > 1600 && !b.forced && !b.gold && !b.claim) b.gone = true;
       else if (d < P.r + 18) openBox(b);
     }
     boxes = boxes.filter((b) => !b.open && !b.gone);
@@ -2332,6 +2383,7 @@
     tomb: null, solder: null, ic: null, reflow: null,      // 電子機器工場
     choco: null, tag: null, lot: null, takt: null,         // 組立ライン
     recall: null,                                           // 超大ボス
+    claim: null,                                            // イベント敵
   };
   const SPR = {};
   for (const k in SPRITE_FILES) {
@@ -2547,6 +2599,25 @@
     },
   };
 
+  BODY.claim = function (r, body, e) {
+    // クレーム電話：怒っている赤い黒電話。頭の上に⚠、まわりに「倒せない」印の点線
+    ctx.save();
+    ctx.setLineDash([4, 4]); ctx.lineDashOffset = -anim * 20;
+    ctx.strokeStyle = 'rgba(255,255,255,.5)'; ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.arc(0, 0, r * 1.45, 0, Math.PI * 2); ctx.stroke();
+    ctx.restore();
+    ctx.fillStyle = body; ctx.strokeStyle = 'rgba(20,10,8,.45)'; ctx.lineWidth = 1.5;
+    ctx.beginPath(); ctx.moveTo(-r, r * 0.8); ctx.lineTo(-r * 0.75, -r * 0.35); ctx.lineTo(r * 0.75, -r * 0.35); ctx.lineTo(r, r * 0.8); ctx.closePath(); ctx.fill(); ctx.stroke();
+    const shake = Math.sin(anim * 30) * 2;
+    ctx.fillStyle = '#2b1414';
+    ctx.beginPath(); ctx.roundRect(-r * 1.05 + shake, -r * 0.85, r * 2.1, r * 0.34, r * 0.17); ctx.fill();
+    ctx.beginPath(); ctx.arc(-r * 0.85 + shake, -r * 0.6, r * 0.24, 0, Math.PI * 2); ctx.arc(r * 0.85 + shake, -r * 0.6, r * 0.24, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = '#f4f1e8'; ctx.beginPath(); ctx.arc(0, r * 0.45, r * 0.3, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = COL.safety;
+    const wy = -r * 1.55 + Math.sin(anim * 6) * 2;
+    ctx.beginPath(); ctx.moveTo(0, wy - r * 0.35); ctx.lineTo(r * 0.35, wy + r * 0.25); ctx.lineTo(-r * 0.35, wy + r * 0.25); ctx.closePath(); ctx.fill();
+    ctx.fillStyle = '#1c1618'; ctx.fillRect(-1.2, wy - r * 0.18, 2.4, r * 0.24); ctx.fillRect(-1.2, wy + r * 0.1, 2.4, 2.4);
+  };
   BODY.recall = function (r, body, e) {
     // リコール大魔王：NG札の冠、額に警告マーク、ぎざぎざのマント
     ctx.fillStyle = `rgba(229,72,77,${0.12 + Math.sin(anim * 4) * 0.05})`;
@@ -2760,7 +2831,7 @@
     ctx.fillStyle = b.gold ? `rgba(242,194,48,${glow + 0.1})` : b.forced ? `rgba(95,208,138,${glow})` : `rgba(242,194,48,${glow})`;
     ctx.beginPath(); ctx.arc(x, y, b.gold ? 34 : 26, 0, Math.PI * 2); ctx.fill();
     shadow(b.x, b.y + 14, 15);
-    const body = b.gold ? '#e2b33a' : b.forced ? '#f4f1e8' : '#c8413a';
+    const body = b.gold ? '#e2b33a' : b.forced ? '#f4f1e8' : b.claim ? '#ff8a3d' : '#c8413a';
     ctx.strokeStyle = b.gold ? '#8a6d12' : '#3a2320'; ctx.lineWidth = 3;
     ctx.beginPath(); ctx.arc(x, y - 10, 6, Math.PI, 0); ctx.stroke();          // 取っ手
     ctx.fillStyle = body;
@@ -2771,9 +2842,15 @@
     if (b.forced) {     // 救急箱：緑十字
       ctx.fillStyle = '#15803d'; ctx.fillRect(x - 2.5, y - 4, 5, 13); ctx.fillRect(x - 6.5, y, 13, 5);
     } else {
-      ctx.fillStyle = b.gold ? '#5a4610' : '#ffffff';
+      ctx.fillStyle = b.gold ? '#5a4610' : b.claim ? '#2b1400' : '#ffffff';
       ctx.font = '14px DotGothic16, monospace'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
       ctx.fillText(b.gold ? '¥' : '?', x, y + 3);
+    }
+    if (b.claim) {   // 上に⚠マーク
+      const wy = y - 26 + Math.sin(anim * 5 + b.ph) * 2;
+      ctx.fillStyle = COL.safety;
+      ctx.beginPath(); ctx.moveTo(x, wy - 8); ctx.lineTo(x + 8, wy + 6); ctx.lineTo(x - 8, wy + 6); ctx.closePath(); ctx.fill();
+      ctx.fillStyle = '#1c1618'; ctx.fillRect(x - 1, wy - 3, 2, 5); ctx.fillRect(x - 1, wy + 3, 2, 2);
     }
   }
   // 画面外のアイテムBOXを指す矢印
@@ -2785,7 +2862,7 @@
       const k = Math.min((W / 2 - m) / Math.abs(Math.cos(a) || 1e-6), (H / 2 - m) / Math.abs(Math.sin(a) || 1e-6));
       const x = W / 2 + Math.cos(a) * k, y = H / 2 + Math.sin(a) * k;
       ctx.save(); ctx.translate(x, y); ctx.rotate(a);
-      ctx.fillStyle = b.gold ? COL.safety : b.forced ? COL.good : '#e5484d';
+      ctx.fillStyle = b.gold ? COL.safety : b.forced ? COL.good : b.claim ? '#ff8a3d' : '#e5484d';
       ctx.beginPath(); ctx.moveTo(12, 0); ctx.lineTo(-6, -9); ctx.lineTo(-6, 9); ctx.closePath(); ctx.fill();
       ctx.restore();
     }
@@ -3015,6 +3092,7 @@
     const buffs = [];
     if (freezeT > 0) buffs.push('非常停止 ' + Math.ceil(freezeT) + '秒');
     if (buffT > 0) buffs.push('栄養ドリンク ' + Math.ceil(buffT) + '秒');
+    if (claim) buffs.push('⚠ クレーム対応中：オレンジの箱から対策書を探せ');
     setText('buffText', buffs.join('　'));
   }
   function renderGear() {
