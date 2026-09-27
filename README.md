@@ -106,4 +106,8 @@
 
 `vansaba/ChatGPTキャラデザ依頼.md` の依頼文を ChatGPT に貼って画像を作り、`vansaba/sprites/` に入れて `index.html` の `SPRITE_FILES` にファイル名を書くと、そのキャラが画像に置き換わります。
 
+- プレイヤーはステージごとに別の画像を使えます（`player_screw` / `player_smt` / `player_line` / `player_mgr`）。ない場合は `player`、それもなければプログラム描画。
+- `python3 vansaba/tools/make_sprites.py import <画像> <名前>` で、単色背景を透明化・切り抜き・256px に縮小して `vansaba/sprites/` に保存し、`sprites/sprites.json` に登録します（要 Pillow）。
+- `python3 vansaba/tools/make_sprites.py generate --provider openai|gemini` で API から一括生成もできます（`OPENAI_API_KEY` または `GEMINI_API_KEY` が必要）。
+
 調整したい数値は `index.html` の `ETYPES`（敵）、`WR / WS / WW / WK`（武器性能）、`SHIFT`（クリア時間）にまとまっています。

@@ -2407,7 +2407,8 @@
   // ChatGPT などで描いたキャラ画像を使うときは、ここにファイル名を書く（例: 'sprites/player.png'）。
   // null のままなら、下の描画コードで描いたキャラが表示される。
   const SPRITE_FILES = {
-    player: null,
+    player: null,                                           // 全ステージ共通の主人公
+    player_screw: null, player_smt: null, player_line: null, player_mgr: null,   // ステージごとの主人公（こちらが優先）
     bug: null, chip: null, rust: null, boss: null,          // ネジ工場
     tomb: null, solder: null, ic: null, reflow: null,      // 電子機器工場
     choco: null, tag: null, lot: null, takt: null,         // 組立ライン
@@ -2415,12 +2416,18 @@
     claim: null,                                            // イベント敵
   };
   const SPR = {};
-  for (const k in SPRITE_FILES) {
-    if (!SPRITE_FILES[k]) continue;
+  function loadSprite(k, src) {
     const img = new Image();
     img.onload = () => { SPR[k] = img; };
-    img.src = SPRITE_FILES[k];
+    img.src = src;
   }
+  for (const k in SPRITE_FILES) if (SPRITE_FILES[k]) loadSprite(k, SPRITE_FILES[k]);
+  // vansaba/tools/make_sprites.py などで作った sprites/sprites.json があれば、書かれている画像を読み込む
+  try {
+    fetch('sprites/sprites.json').then((r) => (r.ok ? r.json() : null)).then((j) => {
+      if (j) for (const k in j) if (k in SPRITE_FILES && typeof j[k] === 'string') loadSprite(k, j[k]);
+    }).catch(() => {});
+  } catch (e) {}
   function drawSprite(img, x, y, size, flip) {
     ctx.save(); ctx.translate(x, y);
     if (flip) ctx.scale(-1, 1);
@@ -2761,8 +2768,9 @@
     shadow(P.x, P.y + 15, 11);
     ctx.globalAlpha = faded ? 0.45 : 1;
 
-    if (SPR.player) {
-      drawSprite(SPR.player, x, y, 46, d < 0);
+    const pimg = SPR['player_' + stageId] || SPR.player;
+    if (pimg) {
+      drawSprite(pimg, x, y - 4, 50, d < 0);
     } else {
       // ステージごとの服装：初級＝作業着、中級＝静電気防止スモック、上級＝班長（白い作業帽）、管理職＝スーツ
       const O = OUTFITS[stageId] || OUTFITS.screw;
