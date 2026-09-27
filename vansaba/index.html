@@ -182,6 +182,48 @@
   .vol { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; font-size: 14px; }
   .vol input { flex: 1 1 160px; accent-color: var(--safety); }
   .vol output { font-family: var(--display); font-variant-numeric: tabular-nums; min-width: 3ch; text-align: right; }
+  .hudleft .pay { color: var(--safety); font-size: 13px; }
+  .card.lucky {
+    border-color: var(--safety);
+    background: linear-gradient(120deg, #3a2f10, #1b222a 45%, #3a2f10);
+    background-size: 220% 100%;
+    animation: shine 2.4s linear infinite;
+  }
+  @keyframes shine { from { background-position: 0% 0; } to { background-position: 220% 0; } }
+  .luckytag { font-family: var(--display); font-size: 12px; color: #15120a; background: var(--safety); padding: 1px 6px; margin-left: 6px; border-radius: 2px; }
+  .shophead { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 8px 16px; }
+  .money { margin: 0; font-family: var(--display); font-size: 22px; color: var(--safety); font-variant-numeric: tabular-nums; }
+  .shopsec { margin: 4px 0 0; font-size: 14px; color: var(--sodium); font-weight: 700; letter-spacing: .06em; }
+  .shoplist { display: grid; gap: 8px; }
+  .srow {
+    display: grid; grid-template-columns: 40px 1fr auto; gap: 12px; align-items: center;
+    padding: 10px 12px; background: var(--panel-2); border: 1px solid var(--line); border-radius: 4px;
+  }
+  .srow .ico {
+    width: 40px; height: 40px; display: grid; place-items: center;
+    font-family: var(--display); font-size: 22px; color: var(--safety);
+    background: #0b0f13; border: 1px solid var(--line); border-radius: 3px;
+  }
+  .stxt { display: grid; gap: 2px; min-width: 0; }
+  .stxt b { font-size: 15px; }
+  .stxt small { font-size: 12px; color: #c4ccd4; line-height: 1.5; }
+  .pips { font-size: 11px; letter-spacing: .15em; color: var(--weld); }
+  .buy {
+    font-family: var(--display); font-size: 15px; font-variant-numeric: tabular-nums;
+    min-width: 92px; padding: 8px 12px;
+    background: var(--safety); color: #15120a; border: 0; border-radius: 3px; cursor: pointer;
+  }
+  .buy:disabled { background: #2a323b; color: var(--muted); cursor: not-allowed; }
+  .buy:focus-visible { outline: 2px solid var(--weld); outline-offset: 2px; }
+  .slipwrap { background: #f1ede2; color: #1f1c16; border-radius: 3px; padding: 12px 14px; display: grid; gap: 6px; }
+  .sliphead { margin: 0; font-weight: 700; letter-spacing: .3em; font-size: 13px; border-bottom: 2px solid #1f1c16; padding-bottom: 4px; }
+  .slip { width: 100%; border-collapse: collapse; font-size: 13px; color: #1f1c16; }
+  .slip th, .slip td { color: #1f1c16; font-size: 13px; }
+  .slip th { text-align: left; font-weight: 500; padding: 4px 0; }
+  .slip td { text-align: right; padding: 4px 0 4px 12px; font-family: var(--display); font-variant-numeric: tabular-nums; white-space: nowrap; }
+  .slip tr + tr { border-top: 1px dashed #b9b1a0; }
+  .slip tr.total th, .slip tr.total td { font-weight: 700; font-size: 16px; border-top: 2px solid #1f1c16; }
+  .slip tr.bank th, .slip tr.bank td { color: #6b6353; }
   .hint { margin: 0; font-size: 12px; color: var(--muted); }
 
   .stats { margin: 0; display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
@@ -196,9 +238,13 @@
     .card kbd { display: none; }
     .stats dd { font-size: 18px; }
     .stages { grid-template-columns: 1fr; }
+    .srow { grid-template-columns: 34px 1fr; }
+    .srow .ico { width: 34px; height: 34px; font-size: 18px; }
+    .srow .buy { grid-column: 1 / -1; }
   }
   @media (prefers-reduced-motion: reduce) {
     .banner, .xpfill { transition: none; }
+    .card.lucky { animation: none; }
   }
 </style>
 
@@ -212,6 +258,7 @@
         <span id="lvText">Lv.1</span>
         <span class="kills" id="killText">撃破 0</span>
         <span class="kills" id="stageText"></span>
+        <span class="pay" id="payText"></span>
       </div>
       <div class="clockbox">
         <span class="timer" id="timerText">00:00</span>
@@ -248,7 +295,11 @@
         <span class="label">BGM（押すと試聴できます）</span>
         <div class="seg" id="bgmPickTitle" role="radiogroup" aria-label="BGMを選ぶ"></div>
       </div>
-      <div class="actions"><button class="btn" id="startBtn" type="button">作業開始</button></div>
+      <p class="best" id="moneyTitle"></p>
+      <div class="actions">
+        <button class="btn" id="startBtn" type="button">作業開始</button>
+        <button class="btn ghost" id="shopBtn" type="button">設備投資・福利厚生</button>
+      </div>
     </div>
   </div>
 
@@ -286,6 +337,24 @@
     </div>
   </div>
 
+  <!-- 設備投資 -->
+  <div class="overlay" id="ovShop" hidden>
+    <div class="panel">
+      <div class="stripe"></div>
+      <p class="eyebrow">INVESTMENT &amp; WELFARE</p>
+      <div class="shophead">
+        <h2>設備投資・福利厚生</h2>
+        <p class="money" id="shopMoney"></p>
+      </div>
+      <p class="lead">夜勤で稼いだ給料で、次の夜勤を楽にします。買った強化はずっと続きます。</p>
+      <h3 class="shopsec">持ち込み工具（最初から装備）</h3>
+      <div class="shoplist" id="shopTools"></div>
+      <h3 class="shopsec">福利厚生（ずっと効く強化）</h3>
+      <div class="shoplist" id="shopPerks"></div>
+      <div class="actions"><button class="btn" id="shopClose" type="button">タイトルへ戻る</button></div>
+    </div>
+  </div>
+
   <!-- 結果 -->
   <div class="overlay" id="ovOver" hidden>
     <div class="panel">
@@ -298,6 +367,10 @@
         <div><dt>到達レベル</dt><dd id="stLv">1</dd></div>
         <div><dt>撃破数</dt><dd id="stKills">0</dd></div>
       </dl>
+      <div class="slipwrap">
+        <p class="sliphead">給与明細</p>
+        <table class="slip" id="slip"></table>
+      </div>
       <p class="best" id="bestOver"></p>
       <div class="actions">
         <button class="btn" id="retryBtn" type="button">もう一度</button>
@@ -361,7 +434,7 @@
       name: 'ネジ工場', level: '初級', lv: 1, sub: '切削・プレス',
       desc: 'バリや切粉が湧く町工場。まずはここから。',
       roles: { basic: 'bug', fast: 'chip', tank: 'rust', boss: 'boss' },
-      hp: 1, spd: 1, spawn: 1, dmg: 1, xp: 1,
+      hp: 1, spd: 1, spawn: 1, dmg: 1, xp: 1, pay: 1,
       swarm: '切粉の嵐！', bossIn: '品質監査官が巡回に来た！', bossOut: '品質監査 合格！ HP全回復',
       bgm: { tempo: 1, tr: 0 },
     },
@@ -369,7 +442,7 @@
       name: '電子機器工場', level: '中級', lv: 2, sub: 'SMT実装ライン',
       desc: '基板の上を、はんだボールが高速で転がってくる。敵が硬く、数も多い。',
       roles: { basic: 'tomb', fast: 'solder', tank: 'ic', boss: 'reflow' },
-      hp: 1.35, spd: 1.1, spawn: 1.3, dmg: 1.2, xp: 1.2,
+      hp: 1.35, spd: 1.1, spawn: 1.3, dmg: 1.2, xp: 1.2, pay: 1.5,
       swarm: 'はんだボールの雨！', bossIn: 'リフロー炉の番人が目を覚ました！', bossOut: '温度プロファイル安定！ HP全回復',
       bgm: { tempo: 1.08, tr: 2 },
     },
@@ -377,7 +450,7 @@
       name: '組立ライン', level: '上級', lv: 3, sub: 'コンベア組立',
       desc: 'ベルトコンベアに押し流されながら戦う。タクトタイム大王は時間とともに速くなる。',
       roles: { basic: 'choco', fast: 'tag', tank: 'lot', boss: 'takt' },
-      hp: 1.8, spd: 1.18, spawn: 1.6, dmg: 1.4, xp: 1.4, belts: true,
+      hp: 1.8, spd: 1.18, spawn: 1.6, dmg: 1.4, xp: 1.4, pay: 2, belts: true,
       swarm: '不良札が舞い上がった！', bossIn: 'タクトタイム大王が迫ってくる！', bossOut: 'タクト達成！ HP全回復',
       bgm: { tempo: 1.16, tr: -2 },
     },
@@ -447,6 +520,8 @@
     zap:   [120, () => tone(1600, 0.18, 'sawtooth', 0.03, -1400)],
     hurt:  [150, () => tone(160, 0.18, 'sawtooth', 0.06, -90)],
     level: [300, () => { tone(660, 0.1, 'square', 0.04); setTimeout(() => tone(990, 0.16, 'square', 0.04), 90); }],
+    lucky: [300, () => { [784, 988, 1175, 1568].forEach((f, i) => setTimeout(() => tone(f, 0.14, 'square', 0.045), i * 80)); }],
+    buy:   [120, () => { tone(1320, 0.06, 'square', 0.035); setTimeout(() => tone(1760, 0.12, 'square', 0.035), 60); }],
     boss:  [800, () => tone(90, 0.8, 'sawtooth', 0.07, 40)],
   };
   function sfx(name) {
@@ -881,19 +956,64 @@
   let P, lv = {}, enemies, bullets, gems, texts, parts, bolts;
   let time, kills, spawnT, rivetT, sparkT, weldT, spanA, pending, nextSwarm, bossIdx, shake, weldPulse;
 
+  // ---------- 給料・貯金・設備投資（この端末に保存） ----------
+  const WAGE = 1200;          // 基本の時給（円）
+  const KILL_PAY = 5;         // 撃破手当（1体あたり・円）
+  const CLEAR_PAY = 3000;     // 定時退勤手当（円）
+  const meta = { money: 0, earned: 0, up: {} };
+  try {
+    const m = JSON.parse(localStorage.getItem('yakin-save') || 'null');
+    if (m) { meta.money = Math.max(0, m.money | 0); meta.earned = Math.max(0, m.earned | 0); meta.up = m.up || {}; }
+  } catch (e) {}
+  const saveMeta = () => { try { localStorage.setItem('yakin-save', JSON.stringify(meta)); } catch (e) {} };
+  const ml = (id) => meta.up[id] || 0;
+  const yen = (n) => '¥' + Math.round(n).toLocaleString('ja-JP');
+
+  // start: true は「持ち込み工具」（最初から装備）。base は1段階目の値段
+  const SHOP = [
+    { id: 'rivet',   start: true, icon: '鋲', name: 'リベット銃の改造', desc: 'リベット銃を高いレベルで持ち込む', max: 2, base: 1500 },
+    { id: 'spanner', start: true, icon: '回', name: '回転スパナを持ち込む', desc: '最初から回転スパナを装備', max: 3, base: 2500 },
+    { id: 'weld',    start: true, icon: '溶', name: '溶接機を持ち込む', desc: '最初から溶接アークを装備', max: 3, base: 2500 },
+    { id: 'spark',   start: true, icon: '電', name: '放電装置を持ち込む', desc: '最初から高圧放電を装備', max: 3, base: 3000 },
+    { id: 'body',    icon: '体', name: '体力づくり', desc: '最大HP +10', max: 5, base: 800 },
+    { id: 'arm',     icon: '力', name: '筋トレ', desc: 'すべての攻撃の威力 +5%', max: 5, base: 1000 },
+    { id: 'dandori', icon: '段', name: '段取り上手', desc: '攻撃の間隔 -3%', max: 5, base: 1000 },
+    { id: 'legs',    icon: '足', name: '足腰を鍛える', desc: '移動速度 +4%', max: 5, base: 800 },
+    { id: 'mag',     icon: '磁', name: '磁石付き軍手', desc: 'ネジの回収範囲 +10%', max: 5, base: 600 },
+    { id: 'keiken',  icon: '経', name: '現場経験', desc: '手に入る経験値 +8%', max: 5, base: 1000 },
+    { id: 'luck',    icon: '福', name: '幸運のお守り', desc: 'ラッキーボーナスの確率 +3%', max: 5, base: 1200 },
+    { id: 'raise',   icon: '昇', name: '昇給交渉', desc: '時給 +10%', max: 5, base: 1500 },
+  ];
+  const shopCost = (it, l) => Math.round(it.base * Math.pow(l + 1, 1.6) / 100) * 100;
+
+  function payFor(t, k, win) {
+    const hours = t * 0.8 / 60;                        // 工場時刻での勤務時間
+    const wage = WAGE * (1 + 0.1 * ml('raise'));
+    const base = Math.floor(hours * wage);
+    const killPay = k * KILL_PAY;
+    const bonus = win ? CLEAR_PAY : 0;
+    const total = Math.floor((base + killPay + bonus) * stage.pay);
+    return { hours, wage, base, killPay, bonus, total };
+  }
+
   const stat = {
-    get speed() { return 150 * (1 + 0.1 * lv.boots); },
-    get maxHp() { return 100 + 20 * lv.heart; },
-    get magnet() { return 70 * (1 + 0.35 * lv.magnet); },
-    get cd() { return 1 - 0.08 * lv.oil; },
-    get dmg() { return 1 + 0.12 * lv.gloves; },
+    get speed() { return 150 * (1 + 0.1 * lv.boots + 0.04 * ml('legs')); },
+    get maxHp() { return 100 + 20 * lv.heart + 10 * ml('body'); },
+    get magnet() { return 70 * (1 + 0.35 * lv.magnet + 0.1 * ml('mag')); },
+    get cd() { return Math.max(0.4, 1 - 0.08 * lv.oil - 0.03 * ml('dandori')); },
+    get dmg() { return 1 + 0.12 * lv.gloves + 0.05 * ml('arm'); },
     get armor() { return lv.armor; },
+    get xp() { return 1 + 0.08 * ml('keiken'); },
+    get luck() { return 0.08 + 0.03 * ml('luck'); },
   };
 
   function reset() {
     for (const k in UPG) lv[k] = 0;
-    lv.rivet = 1;
+    // 設備投資で買った「持ち込み工具」
+    lv.rivet = 1 + ml('rivet');
+    lv.spanner = ml('spanner'); lv.weld = ml('weld'); lv.spark = ml('spark');
     P = { x: 0, y: 0, r: 13, hp: 100, iframe: 0, face: 0, dir: 1, moving: false, walk: 0, level: 1, xp: 0, xpNext: xpFor(1) };
+    P.hp = stat.maxHp;
     enemies = []; bullets = []; gems = []; texts = []; parts = []; bolts = [];
     time = 0; kills = 0; spawnT = 0.6; rivetT = 0.2; sparkT = 1; weldT = 0; spanA = 0;
     pending = 0; nextSwarm = 60; bossIdx = 0; shake = 0; weldPulse = 0;
@@ -982,7 +1102,7 @@
   }
 
   function gainXp(v) {
-    P.xp += v * stage.xp; sfx('gem');
+    P.xp += v * stage.xp * stat.xp; sfx('gem');
     while (P.xp >= P.xpNext) {
       P.xp -= P.xpNext; P.level++; P.xpNext = xpFor(P.level); pending++;
     }
@@ -995,9 +1115,10 @@
     if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Space'].includes(e.code) && state === 'play') e.preventDefault();
     if (state === 'play' && (e.code === 'KeyP' || e.code === 'Escape')) pause();
     else if (state === 'pause' && (e.code === 'KeyP' || e.code === 'Escape')) resume();
+    else if (state === 'shop' && e.code === 'Escape') closeShop();
     else if (state === 'level') {
       const n = { Digit1: 0, Digit2: 1, Digit3: 2, Numpad1: 0, Numpad2: 1, Numpad3: 2 }[e.code];
-      if (n !== undefined && choices[n]) choose(choices[n]);
+      if (n !== undefined && choices[n]) choose(choices[n], luckyFlags[n]);
     } else if (state === 'title' && e.code === 'Enter' && !(document.activeElement && document.activeElement.classList.contains('stage'))) { e.preventDefault(); start(); }
     else if (state === 'title') {
       const n = { Digit1: 0, Digit2: 1, Digit3: 2, Numpad1: 0, Numpad2: 1, Numpad3: 2 }[e.code];
@@ -1800,6 +1921,7 @@
     $('xpfill').style.width = Math.min(100, P.xp / P.xpNext * 100).toFixed(1) + '%';
     setText('lvText', 'Lv.' + P.level);
     setText('killText', '撃破 ' + kills);
+    setText('payText', '給料 ' + yen(payFor(time, kills, false).total));
     setText('timerText', fmt(time));
     setText('shiftText', '工場時刻 ' + shiftClock(time));
   }
@@ -1825,7 +1947,7 @@
   }
 
   // ---------- 画面遷移 ----------
-  const OVERLAYS = ['ovTitle', 'ovLevel', 'ovPause', 'ovOver'];
+  const OVERLAYS = ['ovTitle', 'ovLevel', 'ovPause', 'ovOver', 'ovShop'];
   function showOverlay(id) { for (const o of OVERLAYS) $(o).hidden = o !== id; }
 
   function start() {
@@ -1844,10 +1966,10 @@
   function toTitle() {
     state = 'title'; BGM.stop(); showOverlay('ovTitle');
     $('hud').hidden = true; $('gear').hidden = true;
-    setupDemo(); renderStages(); $('startBtn').focus();
+    setupDemo(); renderStages(); renderMoney(); $('startBtn').focus();
   }
 
-  let choices = [];
+  let choices = [], luckyFlags = [];
   function openLevel() {
     state = 'level'; joy = null;
     sfx('level');
@@ -1862,25 +1984,29 @@
     }
     if (picks.length < 3) picks.push('coffee');
     choices = picks;
+    // ラッキーボーナス：武器のカードがまれに「3段階アップ」になる
+    luckyFlags = picks.map((k) => !!(UPG[k] && UPG[k].w && lv[k] + 1 < MAXLV && Math.random() < stat.luck));
     const cards = $('cards');
     cards.innerHTML = '';
     picks.forEach((k, n) => {
       const u = k === 'coffee' ? COFFEE : UPG[k];
       const cur = k === 'coffee' ? 0 : lv[k];
       const desc = Array.isArray(u.desc) ? u.desc[cur] : u.desc;
+      const lucky = luckyFlags[n];
       const btn = document.createElement('button');
-      btn.type = 'button'; btn.className = 'card' + (u.w ? ' w' : '');
+      btn.type = 'button'; btn.className = 'card' + (u.w ? ' w' : '') + (lucky ? ' lucky' : '');
       btn.innerHTML = '<span class="ico"></span><span class="txt"><span><b></b><span class="tag"></span></span><small></small></span><kbd></kbd>';
       btn.querySelector('.ico').textContent = u.icon;
       btn.querySelector('b').textContent = u.name;
       const tag = btn.querySelector('.tag');
-      if (k !== 'coffee') {
+      if (lucky) { tag.className = 'luckytag'; tag.textContent = 'ラッキー！ ' + (cur ? 'Lv.' + cur : '新規') + ' → Lv.' + Math.min(MAXLV, cur + 3); }
+      else if (k !== 'coffee') {
         if (cur === 0) { tag.className = 'new'; tag.textContent = '新規'; }
         else { tag.className = 'lvl'; tag.textContent = 'Lv.' + cur + ' → ' + (cur + 1); }
       }
-      btn.querySelector('small').textContent = desc;
+      btn.querySelector('small').textContent = lucky ? '3段階まとめてレベルアップ！' : desc;
       btn.querySelector('kbd').textContent = n + 1;
-      btn.addEventListener('click', () => choose(k));
+      btn.addEventListener('click', () => choose(k, lucky));
       cards.appendChild(btn);
     });
     $('lvEyebrow').textContent = 'LEVEL UP ・ Lv.' + (P.level - pending + 1);
@@ -1888,10 +2014,15 @@
     const first = cards.querySelector('button');
     if (first) first.focus({ preventScroll: true });
   }
-  function choose(k) {
+  function choose(k, lucky) {
     if (state !== 'level') return;
     if (k === 'coffee') P.hp = Math.min(stat.maxHp, P.hp + 30);
-    else {
+    else if (lucky) {
+      const before = lv[k];
+      lv[k] = Math.min(MAXLV, lv[k] + 3);
+      sfx('lucky');
+      banner('ラッキーボーナス！ ' + UPG[k].name + ' Lv.' + before + ' → ' + lv[k]);
+    } else {
       lv[k]++;
       if (k === 'heart') P.hp = Math.min(stat.maxHp, P.hp + 20);
     }
@@ -1916,9 +2047,88 @@
     $('stLv').textContent = P.level;
     $('stKills').textContent = kills;
     $('bestOver').textContent = stage.name + 'の最長記録（この端末） ' + fmt(best);
+    const pay = payFor(time, kills, win);
+    meta.money += pay.total; meta.earned += pay.total;
+    saveMeta();
+    const rows = [
+      ['基本給（時給 ' + yen(pay.wage) + ' × ' + pay.hours.toFixed(1) + '時間）', yen(pay.base)],
+      ['撃破手当（' + kills + '体 × ' + yen(KILL_PAY) + '）', yen(pay.killPay)],
+      ['定時退勤手当', win ? yen(pay.bonus) : '—'],
+      ['夜勤手当（' + stage.level + '）', '× ' + stage.pay],
+    ];
+    const slip = $('slip');
+    slip.innerHTML = '';
+    const addRow = (a, b, cls) => {
+      const tr = document.createElement('tr'); if (cls) tr.className = cls;
+      const th = document.createElement('th'); th.textContent = a;
+      const td = document.createElement('td'); td.textContent = b;
+      tr.append(th, td); slip.appendChild(tr);
+    };
+    for (const [a, b] of rows) addRow(a, b);
+    addRow('支給額', yen(pay.total), 'total');
+    addRow('貯金', yen(meta.money), 'bank');
     showOverlay('ovOver');
     $('retryBtn').focus();
   }
+  function renderMoney() {
+    $('moneyTitle').textContent = '貯金 ' + yen(meta.money) + '　（設備投資で強化できます）';
+  }
+  function openShop() {
+    initAudio();
+    state = 'shop';
+    showOverlay('ovShop');
+    renderShop();
+    $('shopClose').focus();
+  }
+  function closeShop() {
+    state = 'title';
+    showOverlay('ovTitle');
+    setupDemo(); renderStages(); renderMoney();
+    $('shopBtn').focus();
+  }
+  function renderShop() {
+    $('shopMoney').textContent = '貯金 ' + yen(meta.money);
+    for (const [boxId, isStart] of [['shopTools', true], ['shopPerks', false]]) {
+      const box = $(boxId);
+      box.innerHTML = '';
+      for (const it of SHOP.filter((x) => !!x.start === isStart)) {
+        const l = ml(it.id), maxed = l >= it.max, c = shopCost(it, l);
+        const row = document.createElement('div');
+        row.className = 'srow';
+        row.innerHTML = '<span class="ico"></span><div class="stxt"><b></b><small></small><span class="pips"></span></div><button type="button" class="buy"></button>';
+        row.querySelector('.ico').textContent = it.icon;
+        row.querySelector('b').textContent = it.name;
+        let now = '';
+        if (it.id === 'rivet') now = '（今は Lv.' + (1 + l) + ' で開始）';
+        else if (it.start) now = l ? '（今は Lv.' + l + ' で開始）' : '';
+        row.querySelector('small').textContent = it.desc + now;
+        row.querySelector('.pips').textContent = '■'.repeat(l) + '□'.repeat(it.max - l);
+        const btn = row.querySelector('.buy');
+        btn.id = 'buy-' + it.id;
+        if (maxed) { btn.textContent = '最大'; btn.disabled = true; }
+        else {
+          btn.textContent = yen(c);
+          btn.disabled = meta.money < c;
+          btn.setAttribute('aria-label', it.name + ' を ' + yen(c) + ' で買う');
+          btn.addEventListener('click', () => buy(it.id));
+        }
+        box.appendChild(row);
+      }
+    }
+  }
+  function buy(id) {
+    const it = SHOP.find((x) => x.id === id);
+    const l = ml(id), c = shopCost(it, l);
+    if (l >= it.max || meta.money < c) return;
+    meta.money -= c;
+    meta.up[id] = l + 1;
+    saveMeta();
+    sfx('buy');
+    renderShop();
+    const again = $('buy-' + id);
+    if (again && !again.disabled) again.focus(); else $('shopClose').focus();
+  }
+
   function renderStages() {
     const box = $('stages');
     box.innerHTML = '';
@@ -1952,6 +2162,8 @@
   }
 
   $('startBtn').addEventListener('click', start);
+  $('shopBtn').addEventListener('click', openShop);
+  $('shopClose').addEventListener('click', closeShop);
   $('retryBtn').addEventListener('click', start);
   $('titleBtn').addEventListener('click', toTitle);
   $('quitBtn').addEventListener('click', toTitle);
@@ -2021,6 +2233,7 @@
   }
   setupDemo();
   renderStages();
+  renderMoney();
   requestAnimationFrame(loop);
 })();
 </script>
