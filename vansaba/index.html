@@ -166,6 +166,19 @@
   .card .new { font-family: var(--display); font-size: 11px; color: #15120a; background: var(--sodium); padding: 1px 5px; margin-left: 6px; border-radius: 2px; }
   .card small { font-size: 13px; color: #c4ccd4; line-height: 1.5; }
   .card kbd { font-family: var(--display); font-size: 13px; color: var(--muted); border: 1px solid var(--line); border-radius: 3px; padding: 2px 7px; }
+  .bgmpick { display: grid; gap: 6px; }
+  .bgmpick .label { font-family: var(--display); font-size: 12px; color: var(--muted); letter-spacing: .08em; }
+  .seg { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
+  .seg button {
+    display: grid; gap: 2px; align-content: start; text-align: left;
+    padding: 8px 10px; background: var(--panel-2); color: var(--ink);
+    border: 1px solid var(--line); border-radius: 4px; font: inherit; cursor: pointer;
+  }
+  .seg button:hover { background: #222b35; }
+  .seg button b { font-family: var(--display); font-weight: 400; font-size: 15px; }
+  .seg button small { font-size: 11px; color: var(--muted); line-height: 1.4; }
+  .seg button[aria-checked="true"] { border-color: var(--weld); box-shadow: inset 0 0 0 1px var(--weld); }
+  .seg button:focus-visible { outline: 2px solid var(--weld); outline-offset: 2px; }
   .vol { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; font-size: 14px; }
   .vol input { flex: 1 1 160px; accent-color: var(--safety); }
   .vol output { font-family: var(--display); font-variant-numeric: tabular-nums; min-width: 3ch; text-align: right; }
@@ -227,10 +240,14 @@
         <dt>成長</dt><dd>ネジを集めてレベルアップ、改善を1つ選ぶ</dd>
         <dt>ステージ</dt><dd>下のカードか数字キー 1〜3 で選ぶ</dd>
         <dt>休憩</dt><dd>P・Esc キー（BGMの音量もここで変えられます）</dd>
-        <dt>音</dt><dd>画面右上の「曲」でBGM、「音」で効果音をオン・オフ</dd>
+        <dt>音</dt><dd>BGMは3曲から選べる。画面右上の「曲」でBGM、「音」で効果音をオン・オフ</dd>
       </dl>
       <div class="stages" id="stages" role="radiogroup" aria-label="ステージを選ぶ"></div>
       <p class="roster" id="roster"></p>
+      <div class="bgmpick">
+        <span class="label">BGM（押すと試聴できます）</span>
+        <div class="seg" id="bgmPickTitle" role="radiogroup" aria-label="BGMを選ぶ"></div>
+      </div>
       <div class="actions"><button class="btn" id="startBtn" type="button">作業開始</button></div>
     </div>
   </div>
@@ -257,6 +274,10 @@
         <label for="bgmVol">BGMの音量</label>
         <input type="range" id="bgmVol" min="0" max="100" step="5">
         <output id="bgmVolOut" for="bgmVol"></output>
+      </div>
+      <div class="bgmpick">
+        <span class="label">BGM</span>
+        <div class="seg" id="bgmPickPause" role="radiogroup" aria-label="BGMを選ぶ"></div>
       </div>
       <div class="actions">
         <button class="btn" id="resumeBtn" type="button">再開する</button>
@@ -342,7 +363,7 @@
       roles: { basic: 'bug', fast: 'chip', tank: 'rust', boss: 'boss' },
       hp: 1, spd: 1, spawn: 1, dmg: 1, xp: 1,
       swarm: '切粉の嵐！', bossIn: '品質監査官が巡回に来た！', bossOut: '品質監査 合格！ HP全回復',
-      bgm: { bpm: 76, tr: 0 },
+      bgm: { tempo: 1, tr: 0 },
     },
     smt: {
       name: '電子機器工場', level: '中級', lv: 2, sub: 'SMT実装ライン',
@@ -350,7 +371,7 @@
       roles: { basic: 'tomb', fast: 'solder', tank: 'ic', boss: 'reflow' },
       hp: 1.35, spd: 1.1, spawn: 1.3, dmg: 1.2, xp: 1.2,
       swarm: 'はんだボールの雨！', bossIn: 'リフロー炉の番人が目を覚ました！', bossOut: '温度プロファイル安定！ HP全回復',
-      bgm: { bpm: 84, tr: 2 },
+      bgm: { tempo: 1.08, tr: 2 },
     },
     line: {
       name: '組立ライン', level: '上級', lv: 3, sub: 'コンベア組立',
@@ -358,7 +379,7 @@
       roles: { basic: 'choco', fast: 'tag', tank: 'lot', boss: 'takt' },
       hp: 1.8, spd: 1.18, spawn: 1.6, dmg: 1.4, xp: 1.4, belts: true,
       swarm: '不良札が舞い上がった！', bossIn: 'タクトタイム大王が迫ってくる！', bossOut: 'タクト達成！ HP全回復',
-      bgm: { bpm: 92, tr: -2 },
+      bgm: { tempo: 1.16, tr: -2 },
     },
   };
   let stageId = 'screw';
@@ -436,45 +457,36 @@
   }
 
   // ---------- BGM ----------
-  // 静かなピアノのアルペジオ、弦のパッド、言葉のないコーラスによるオリジナル曲（ニ短調・76BPM）。
-  // 音源ファイルは使わず、ブラウザの中でその場で演奏する。16小節で1巡し、区間ごとに楽器が増える。
+  // 3曲ともオリジナル曲。音源ファイルは使わず、ブラウザの中でその場で演奏する。
+  //   夜想：静かなピアノとコーラス（ニ短調・4拍子）
+  //   疾走：ドラムと刻むシンセベース、弦のスタッカート、金管風リードのハイブリッド・オーケストラ（ニ短調・4拍子）
+  //   幻想：ハープとフルート、チェレスタによる色彩豊かな和音のワルツ（ニ長調・3拍子）
+  // どの曲も8小節の和音を4周し、周回（区間）ごとに楽器が増える。ステージに応じてテンポと調が変わる。
+  const BGM_STYLES = {
+    yoru:    { name: '夜想', note: '静かなピアノとコーラス' },
+    shissou: { name: '疾走', note: 'ドラムと弦で駆けるハイブリッド' },
+    gensou:  { name: '幻想', note: 'ハープとフルートのワルツ' },
+  };
   const BGM = (() => {
-    let BPM = 76, BEAT = 60 / BPM, BAR = BEAT * 4, TR = 0, delayNode = null;
+    let BEAT = 60 / 76, BAR = BEAT * 4, TR = 0, tempo = 1;
     const mtof = (m) => 440 * Math.pow(2, (m + TR - 69) / 12);
-    // 1小節ごとの和音 [ベース音, アルペジオに使う6音]（MIDIノート番号）
-    const CHORDS = [
-      [38, [50, 57, 62, 64, 65, 69]],   // Dm(add9)
-      [34, [46, 53, 57, 62, 65, 69]],   // B♭maj7
-      [43, [50, 53, 58, 62, 65, 70]],   // Gm7
-      [45, [52, 57, 62, 64, 67, 69]],   // A7sus4
-      [38, [50, 57, 62, 65, 69, 74]],   // Dm
-      [41, [48, 57, 60, 64, 67, 69]],   // Fmaj7
-      [40, [48, 55, 62, 64, 67, 72]],   // C/E
-      [45, [52, 57, 61, 64, 67, 69]],   // A7
-    ];
-    // コーラスの旋律 [拍, 音, 長さ(拍)]
-    const MELODY = [
-      [[0, 69, 3], [3, 72, 1]],
-      [[0, 74, 2], [2, 72, 1], [3, 70, 1]],
-      [[0, 69, 4]],
-      [[0, 67, 2], [2, 64, 2]],
-      [[0, 65, 2], [2, 69, 2]],
-      [[0, 72, 3], [3, 74, 1]],
-      [[0, 76, 2], [2, 74, 1], [3, 72, 1]],
-      [[0, 73, 4]],
-    ];
-    const ARP = [[0, 1, 2, 3, 4, 3, 2, 1], [0, 1, 2, 3, 5, 4, 3, 1]];
 
-    let out = null, busPiano, busPad, busVoice, busPulse;
+    let out = null, delayNode = null, noiseBuf = null;
+    let busPiano, busPad, busVoice, busPulse, busDrum, busSynth;
     let playing = false, timer = 0, nextBar = 0, bar = 0;
-    let on = true, vol = 0.5, ducked = false;
+    let on = true, vol = 0.5, ducked = false, style = 'yoru';
     try {
       const saved = JSON.parse(localStorage.getItem('yakin-bgm') || 'null');
-      if (saved) { on = saved.on !== false; vol = typeof saved.vol === 'number' ? saved.vol : vol; }
+      if (saved) {
+        on = saved.on !== false;
+        vol = typeof saved.vol === 'number' ? saved.vol : vol;
+        if (BGM_STYLES[saved.style]) style = saved.style;
+      }
     } catch (e) {}
-    const save = () => { try { localStorage.setItem('yakin-bgm', JSON.stringify({ on, vol })); } catch (e) {} };
+    const save = () => { try { localStorage.setItem('yakin-bgm', JSON.stringify({ on, vol, style })); } catch (e) {} };
     const level = () => (on ? vol * 0.55 : 0) * (ducked ? 0.35 : 1);
 
+    // ---- 音づくりの土台 ----
     function impulse(sec) {
       const len = Math.floor(actx.sampleRate * sec), buf = actx.createBuffer(2, len, actx.sampleRate);
       for (let c = 0; c < 2; c++) {
@@ -504,40 +516,53 @@
       busPiano = bus(0.8, 0.45, 0.5);
       busPad = bus(0.6, 0.7, 0);
       busVoice = bus(0.55, 0.9, 0.25);
+      busDrum = bus(0.9, 0.12, 0);
+      busSynth = bus(0.8, 0.2, 0.15);
       busPulse = gainNode(0); busPulse.connect(out);
+      noiseBuf = actx.createBuffer(1, actx.sampleRate, actx.sampleRate);
+      const nd = noiseBuf.getChannelData(0);
+      for (let i = 0; i < nd.length; i++) nd[i] = Math.random() * 2 - 1;
     }
+    function env(g, t, peak, attack, decayTo, decayTime, end) {
+      g.gain.setValueAtTime(0.0001, t);
+      g.gain.linearRampToValueAtTime(peak, t + attack);
+      if (decayTime) g.gain.exponentialRampToValueAtTime(Math.max(0.0001, decayTo), t + attack + decayTime);
+      g.gain.exponentialRampToValueAtTime(0.0001, end);
+    }
+    function osc(type, f, det, dest, t, stop) {
+      const o = actx.createOscillator(); o.type = type; o.frequency.value = f; if (det) o.detune.value = det;
+      o.connect(dest); o.start(t); o.stop(stop); return o;
+    }
+    function noise(dest, t, stop) {
+      const n = actx.createBufferSource(); n.buffer = noiseBuf; n.loop = true;
+      n.connect(dest); n.start(t); n.stop(stop); return n;
+    }
+    function filter(type, f, q) { const b = actx.createBiquadFilter(); b.type = type; b.frequency.value = f; if (q) b.Q.value = q; return b; }
 
-    function piano(m, t, dur, vel) {
+    // ---- 楽器 ----
+    function piano(m, t, dur, vel, bus = busPiano, bright = 7) {
       const f = mtof(m);
-      const lp = actx.createBiquadFilter(); lp.type = 'lowpass';
-      lp.frequency.setValueAtTime(Math.min(6000, f * 7), t);
+      const lp = filter('lowpass', Math.min(7000, f * bright));
+      lp.frequency.setValueAtTime(Math.min(7000, f * bright), t);
       lp.frequency.exponentialRampToValueAtTime(Math.max(300, f * 1.5), t + dur);
       const g = actx.createGain();
-      g.gain.setValueAtTime(0.0001, t);
-      g.gain.linearRampToValueAtTime(vel, t + 0.006);
-      g.gain.exponentialRampToValueAtTime(vel * 0.35, t + 0.3);
-      g.gain.exponentialRampToValueAtTime(0.0001, t + dur + 1.2);
-      const o1 = actx.createOscillator(); o1.type = 'triangle'; o1.frequency.value = f;
-      const o2 = actx.createOscillator(); o2.type = 'sine'; o2.frequency.value = f * 2.003;
-      const g2 = gainNode(0.25);
-      o1.connect(lp); o2.connect(g2).connect(lp); lp.connect(g).connect(busPiano);
-      for (const o of [o1, o2]) { o.start(t); o.stop(t + dur + 1.3); }
+      env(g, t, vel, 0.006, vel * 0.35, 0.3, t + dur + 1.2);
+      osc('triangle', f, 0, lp, t, t + dur + 1.3);
+      const g2 = gainNode(0.25); g2.connect(lp);
+      osc('sine', f * 2.003, 0, g2, t, t + dur + 1.3);
+      lp.connect(g).connect(bus);
     }
-    function pad(m, t, dur) {
-      const f = mtof(m), lp = actx.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 750; lp.Q.value = 0.4;
-      const g = actx.createGain();
+    function pad(m, t, dur, amp = 0.03, cutoff = 750) {
+      const lp = filter('lowpass', cutoff, 0.4), g = actx.createGain();
       g.gain.setValueAtTime(0.0001, t);
-      g.gain.linearRampToValueAtTime(0.03, t + 1.2);
-      g.gain.setValueAtTime(0.03, t + dur);
+      g.gain.linearRampToValueAtTime(amp, t + Math.min(1.2, dur * 0.4));
+      g.gain.setValueAtTime(amp, t + dur);
       g.gain.linearRampToValueAtTime(0.0001, t + dur + 1.2);
       lp.connect(g).connect(busPad);
-      for (const det of [-7, 7]) {
-        const o = actx.createOscillator(); o.type = 'sawtooth'; o.frequency.value = f; o.detune.value = det;
-        o.connect(lp); o.start(t); o.stop(t + dur + 1.3);
-      }
+      for (const det of [-7, 7]) osc('sawtooth', mtof(m), det, lp, t, t + dur + 1.3);
     }
     function voice(m, t, dur) {
-      // 「アー」と聞こえるように、2つの帯域（フォルマント）だけを通す
+      // 「アー」と聞こえるように、いくつかの帯域（フォルマント）だけを通す
       const f = mtof(m), g = actx.createGain();
       g.gain.setValueAtTime(0.0001, t);
       g.gain.linearRampToValueAtTime(0.11, t + 0.35);
@@ -546,18 +571,13 @@
       g.connect(busVoice);
       const mix = gainNode(1);
       for (const [fq, q, amt] of [[800, 5, 1], [1150, 6, 0.6], [2900, 8, 0.15]]) {
-        const bp = actx.createBiquadFilter(); bp.type = 'bandpass'; bp.frequency.value = fq; bp.Q.value = q;
-        mix.connect(bp).connect(gainNode(amt)).connect(g);
+        mix.connect(filter('bandpass', fq, q)).connect(gainNode(amt)).connect(g);
       }
       const lfo = actx.createOscillator(); lfo.frequency.value = 5.2;
       const depth = actx.createGain();
       depth.gain.setValueAtTime(0, t); depth.gain.linearRampToValueAtTime(f * 0.007, t + 0.6);
       lfo.connect(depth);
-      for (const det of [-6, 6]) {
-        const o = actx.createOscillator(); o.type = 'sawtooth'; o.frequency.value = f; o.detune.value = det;
-        depth.connect(o.frequency);
-        o.connect(mix); o.start(t); o.stop(t + dur + 0.8);
-      }
+      for (const det of [-6, 6]) depth.connect(osc('sawtooth', f, det, mix, t, t + dur + 0.8).frequency);
       lfo.start(t); lfo.stop(t + dur + 0.8);
     }
     function pulse(t) {
@@ -567,26 +587,244 @@
       g.gain.setValueAtTime(0.5, t); g.gain.exponentialRampToValueAtTime(0.0001, t + 0.4);
       o.connect(g).connect(busPulse); o.start(t); o.stop(t + 0.45);
     }
+    // ドラム
+    function kick(t, amp = 0.5) {
+      const o = actx.createOscillator(), g = actx.createGain();
+      o.type = 'sine';
+      o.frequency.setValueAtTime(150, t); o.frequency.exponentialRampToValueAtTime(45, t + 0.12);
+      g.gain.setValueAtTime(amp, t); g.gain.exponentialRampToValueAtTime(0.0001, t + 0.35);
+      o.connect(g).connect(busDrum); o.start(t); o.stop(t + 0.4);
+    }
+    function snare(t, amp = 0.22) {
+      const g = actx.createGain(); env(g, t, amp, 0.002, amp * 0.3, 0.05, t + 0.2);
+      const bp = filter('bandpass', 1900, 0.8); bp.connect(g).connect(busDrum);
+      noise(bp, t, t + 0.22);
+      const tg = actx.createGain(); env(tg, t, amp * 0.6, 0.002, 0.0001, 0.08, t + 0.1);
+      tg.connect(busDrum);
+      osc('triangle', 190, 0, tg, t, t + 0.12);
+    }
+    function hat(t, amp = 0.05, len = 0.04) {
+      const g = actx.createGain(); env(g, t, amp, 0.001, 0.0001, len, t + len + 0.01);
+      const hp = filter('highpass', 8000); hp.connect(g).connect(busDrum);
+      noise(hp, t, t + len + 0.02);
+    }
+    function crash(t) {
+      const g = actx.createGain(); env(g, t, 0.07, 0.003, 0.0001, 1.4, t + 1.45);
+      const hp = filter('highpass', 5000); hp.connect(g).connect(busDrum);
+      noise(hp, t, t + 1.5);
+    }
+    function taiko(t, amp = 0.4) {
+      const o = actx.createOscillator(), g = actx.createGain();
+      o.type = 'sine';
+      o.frequency.setValueAtTime(110, t); o.frequency.exponentialRampToValueAtTime(60, t + 0.25);
+      g.gain.setValueAtTime(amp, t); g.gain.exponentialRampToValueAtTime(0.0001, t + 0.6);
+      o.connect(g).connect(busDrum); o.start(t); o.stop(t + 0.65);
+    }
+    // 疾走用
+    function synthBass(m, t, dur) {
+      const f = mtof(m), lp = filter('lowpass', 1800, 6), g = actx.createGain();
+      lp.frequency.setValueAtTime(2200, t); lp.frequency.exponentialRampToValueAtTime(260, t + dur * 0.9);
+      env(g, t, 0.13, 0.004, 0.08, dur * 0.5, t + dur + 0.02);
+      lp.connect(g).connect(busSynth);
+      osc('sawtooth', f, -5, lp, t, t + dur + 0.05);
+      osc('square', f / 2, 0, lp, t, t + dur + 0.05);
+    }
+    function stacc(m, t, amp = 0.045) {
+      const lp = filter('lowpass', 2600, 0.7), g = actx.createGain();
+      env(g, t, amp, 0.008, amp * 0.3, 0.07, t + 0.2);
+      lp.connect(g).connect(busSynth);
+      for (const det of [-9, 9]) osc('sawtooth', mtof(m), det, lp, t, t + 0.22);
+    }
+    function brass(m, t, dur, amp = 0.07) {
+      const f = mtof(m), lp = filter('lowpass', 700, 2), g = actx.createGain();
+      lp.frequency.setValueAtTime(700, t); lp.frequency.linearRampToValueAtTime(2600, t + 0.08);
+      lp.frequency.exponentialRampToValueAtTime(1400, t + Math.max(0.1, dur));
+      g.gain.setValueAtTime(0.0001, t);
+      g.gain.linearRampToValueAtTime(amp, t + 0.04);
+      g.gain.setValueAtTime(amp * 0.8, t + Math.max(0.05, dur - 0.05));
+      g.gain.linearRampToValueAtTime(0.0001, t + dur + 0.25);
+      lp.connect(g).connect(busVoice);
+      const lfo = actx.createOscillator(); lfo.frequency.value = 5.5;
+      const depth = gainNode(0); depth.gain.setValueAtTime(0, t); depth.gain.linearRampToValueAtTime(f * 0.006, t + 0.4);
+      lfo.connect(depth); lfo.start(t); lfo.stop(t + dur + 0.3);
+      for (const det of [-8, 0, 8]) depth.connect(osc('sawtooth', f, det, lp, t, t + dur + 0.3).frequency);
+    }
+    // 幻想用
+    function harp(m, t, amp = 0.1) { piano(m, t, 0.9, amp, busPiano, 10); }
+    function celesta(m, t, amp = 0.05) {
+      const f = mtof(m), g = actx.createGain();
+      env(g, t, amp, 0.003, amp * 0.25, 0.15, t + 1.6);
+      g.connect(busVoice);
+      osc('sine', f, 0, g, t, t + 1.7);
+      const g2 = gainNode(0.3); g2.connect(g);
+      osc('sine', f * 4.01, 0, g2, t, t + 0.5);
+    }
+    function flute(m, t, dur, amp = 0.085) {
+      const f = mtof(m), g = actx.createGain(), lp = filter('lowpass', 3200);
+      g.gain.setValueAtTime(0.0001, t);
+      g.gain.linearRampToValueAtTime(amp, t + 0.09);
+      g.gain.setValueAtTime(amp * 0.85, t + Math.max(0.1, dur - 0.05));
+      g.gain.linearRampToValueAtTime(0.0001, t + dur + 0.35);
+      lp.connect(g).connect(busVoice);
+      const lfo = actx.createOscillator(); lfo.frequency.value = 5.3;
+      const depth = gainNode(0); depth.gain.setValueAtTime(0, t); depth.gain.linearRampToValueAtTime(f * 0.005, t + 0.5);
+      lfo.connect(depth); lfo.start(t); lfo.stop(t + dur + 0.4);
+      depth.connect(osc('sine', f, 0, lp, t, t + dur + 0.4).frequency);
+      const g3 = gainNode(0.18); g3.connect(lp);
+      depth.connect(osc('triangle', f * 2, 0, g3, t, t + dur + 0.4).frequency);
+      const bg = gainNode(0.25); bg.connect(lp);      // 息の音
+      const bp = filter('bandpass', Math.min(8000, f * 2), 3); bp.connect(bg);
+      const nb = gainNode(0); nb.gain.setValueAtTime(0.35, t); nb.gain.exponentialRampToValueAtTime(0.05, t + 0.2);
+      nb.connect(bp); noise(nb, t, t + dur + 0.4);
+    }
 
-    function scheduleBar(i, t) {
-      const [bass, notes] = CHORDS[i % 8];
-      const section = Math.floor(i / 8) % 4;   // 0:ピアノ 1:+パッド 2:+コーラス 3:コーラス＋ゆったりピアノ
-      const hum = () => (Math.random() - 0.5) * 0.016;
-      piano(bass, t, BAR * 0.9, 0.2);
-      const arp = ARP[i % 2];
-      for (let k = 0; k < 8; k++) {
-        if (section === 3 && k % 2) continue;
-        piano(notes[arp[k]], t + k * BEAT / 2 + hum(), BEAT * 1.2, k % 2 ? 0.1 : 0.15);
-      }
-      if (section >= 1) for (const n of notes.slice(1, 5)) pad(n, t, BAR);
-      if (section >= 2) for (const [bt, m, len] of MELODY[i % 8]) voice(m, t + bt * BEAT, len * BEAT);
-      for (let k = 0; k < 4; k++) pulse(t + k * BEAT);
+    // ---- 曲 ----
+    const SONGS = {
+      yoru: {
+        bpm: 76, beats: 4,
+        // [ベース音, アルペジオに使う6音]（MIDIノート番号）
+        chords: [
+          [38, [50, 57, 62, 64, 65, 69]],   // Dm(add9)
+          [34, [46, 53, 57, 62, 65, 69]],   // B♭maj7
+          [43, [50, 53, 58, 62, 65, 70]],   // Gm7
+          [45, [52, 57, 62, 64, 67, 69]],   // A7sus4
+          [38, [50, 57, 62, 65, 69, 74]],   // Dm
+          [41, [48, 57, 60, 64, 67, 69]],   // Fmaj7
+          [40, [48, 55, 62, 64, 67, 72]],   // C/E
+          [45, [52, 57, 61, 64, 67, 69]],   // A7
+        ],
+        // [拍, 音, 長さ(拍)]
+        melody: [
+          [[0, 69, 3], [3, 72, 1]],
+          [[0, 74, 2], [2, 72, 1], [3, 70, 1]],
+          [[0, 69, 4]],
+          [[0, 67, 2], [2, 64, 2]],
+          [[0, 65, 2], [2, 69, 2]],
+          [[0, 72, 3], [3, 74, 1]],
+          [[0, 76, 2], [2, 74, 1], [3, 72, 1]],
+          [[0, 73, 4]],
+        ],
+        play(i, t, sec) {
+          const [bass, notes] = this.chords[i % 8];
+          const hum = () => (Math.random() - 0.5) * 0.016;
+          piano(bass, t, BAR * 0.9, 0.2);
+          const arp = [[0, 1, 2, 3, 4, 3, 2, 1], [0, 1, 2, 3, 5, 4, 3, 1]][i % 2];
+          for (let k = 0; k < 8; k++) {
+            if (sec === 3 && k % 2) continue;
+            piano(notes[arp[k]], t + k * BEAT / 2 + hum(), BEAT * 1.2, k % 2 ? 0.1 : 0.15);
+          }
+          if (sec >= 1) for (const n of notes.slice(1, 5)) pad(n, t, BAR);
+          if (sec >= 2) for (const [bt, m, len] of this.melody[i % 8]) voice(m, t + bt * BEAT, len * BEAT);
+        },
+      },
+
+      shissou: {
+        bpm: 148, beats: 4,
+        // [ベースの根音, 弦の3音]
+        chords: [
+          [38, [62, 65, 69]],   // Dm
+          [34, [62, 65, 70]],   // B♭
+          [41, [60, 65, 69]],   // F
+          [36, [60, 64, 67]],   // C
+          [38, [62, 65, 69]],   // Dm
+          [34, [62, 65, 70]],   // B♭
+          [43, [62, 67, 70]],   // Gm
+          [45, [61, 64, 69]],   // A
+        ],
+        melody: [
+          [[0, 74, 1.5], [1.5, 72, 0.5], [2, 74, 1], [3, 77, 1]],
+          [[0, 77, 1.5], [1.5, 76, 0.5], [2, 74, 2]],
+          [[0, 72, 1], [1, 69, 1], [2, 72, 1], [3, 77, 1]],
+          [[0, 76, 3], [3, 72, 1]],
+          [[0, 74, 1.5], [1.5, 72, 0.5], [2, 74, 1], [3, 81, 1]],
+          [[0, 79, 1.5], [1.5, 77, 0.5], [2, 74, 2]],
+          [[0, 77, 1], [1, 79, 1], [2, 81, 1], [3, 82, 1]],
+          [[0, 81, 3], [3, 73, 1]],
+        ],
+        // 16分音符で刻むベース（根音からの半音数）
+        bassPat: [0, 0, 12, 0, 0, 12, 0, 7, 0, 0, 12, 0, 0, 12, 7, 10],
+        strPat: [0, 1, 2, 1, 0, 1, 2, 1],
+        play(i, t, sec) {
+          const [root, tri] = this.chords[i % 8];
+          const s16 = BEAT / 4;
+          // 区間 2 は落としどころ：ハーフタイムのドラムと伸ばすベース
+          if (sec === 2) {
+            synthBass(root, t, BAR * 0.95);
+            kick(t); snare(t + BEAT * 2, 0.2);
+            for (let k = 0; k < 8; k++) hat(t + k * BEAT / 2, 0.03);
+            for (const n of tri) pad(n, t, BAR, 0.028, 1400);
+            taiko(t + BEAT * 3.5, 0.25);
+          } else {
+            for (let k = 0; k < 16; k++) synthBass(root + this.bassPat[k], t + k * s16, s16 * 0.85);
+            for (let k = 0; k < 4; k++) kick(t + k * BEAT, 0.45);
+            for (let k = 0; k < 16; k++) hat(t + k * s16, k % 4 === 2 ? 0.06 : 0.025);
+            if (sec >= 1) { snare(t + BEAT); snare(t + BEAT * 3); }
+            for (let k = 0; k < 8; k++) stacc(tri[this.strPat[k]] + (k === 7 ? 12 : 0), t + k * BEAT / 2);
+          }
+          if (sec >= 1) {
+            const up = sec === 3 ? 12 : 0;
+            for (const [bt, m, len] of this.melody[i % 8]) brass(m + up, t + bt * BEAT, len * BEAT * 0.95, sec === 3 ? 0.055 : 0.07);
+          }
+          if (sec === 3 && i % 2 === 0) crash(t);
+          if (i % 8 === 7) for (let k = 0; k < 4; k++) taiko(t + BEAT * 2 + k * s16 * 2, 0.18 + k * 0.05);   // 周回の区切りのフィル
+        },
+      },
+
+      gensou: {
+        bpm: 100, beats: 3,
+        chords: [
+          [38, [50, 57, 61, 64, 66, 69]],   // Dmaj9
+          [47, [47, 54, 57, 61, 62, 66]],   // Bm9
+          [43, [43, 50, 54, 57, 61, 66]],   // Gmaj9(#11)
+          [45, [45, 52, 55, 59, 62, 66]],   // A13sus4
+          [42, [42, 49, 52, 57, 61, 64]],   // F#m7
+          [47, [47, 54, 57, 62, 66, 69]],   // Bm7
+          [40, [40, 47, 50, 55, 59, 66]],   // Em9
+          [45, [45, 52, 55, 58, 61, 64]],   // A7(♭9)
+        ],
+        melody: [
+          [[0, 78, 2], [2, 76, 1]],
+          [[0, 74, 1], [1, 73, 1], [2, 74, 1]],
+          [[0, 73, 2], [2, 69, 1]],
+          [[0, 71, 3]],
+          [[0, 73, 1], [1, 76, 1], [2, 81, 1]],
+          [[0, 78, 2], [2, 74, 1]],
+          [[0, 79, 1.5], [1.5, 78, 0.5], [2, 76, 1]],
+          [[0, 73, 2], [2, 76, 1]],
+        ],
+        play(i, t, sec) {
+          const [bass, notes] = this.chords[i % 8];
+          piano(bass, t, BAR, 0.16, busPiano, 4);                  // ワルツの1拍目
+          if (sec >= 1) { harp(notes[2], t + BEAT, 0.05); harp(notes[3], t + BEAT, 0.05); harp(notes[2], t + BEAT * 2, 0.045); harp(notes[3], t + BEAT * 2, 0.045); }
+          const up = i % 2 ? [5, 4, 3, 2, 1, 0] : [0, 1, 2, 3, 4, 5];
+          for (let k = 0; k < 6; k++) harp(notes[up[k]] + 12, t + k * BEAT / 2 + (Math.random() - 0.5) * 0.01, k === 0 ? 0.1 : 0.075);
+          if (sec >= 1) for (const n of notes.slice(2, 6)) pad(n, t, BAR, 0.022, 1300);
+          if (sec >= 1 && i % 2 === 1) celesta(notes[5] + 24, t + BEAT * 2.5);
+          if (sec >= 2) {
+            const up8 = sec === 3 ? 12 : 0;
+            for (const [bt, m, len] of this.melody[i % 8]) flute(m + up8, t + bt * BEAT, len * BEAT * 0.95);
+          }
+          if (sec === 3) for (let k = 0; k < 3; k++) if (Math.random() < 0.5) celesta(notes[(k * 2 + i) % 6] + 24, t + k * BEAT + BEAT / 2, 0.035);
+        },
+      },
+    };
+
+    function setTempo() {
+      const S = SONGS[style];
+      BEAT = 60 / (S.bpm * tempo);
+      BAR = BEAT * S.beats;
+      if (delayNode) delayNode.delayTime.value = Math.min(1.5, BEAT * 0.75);
     }
     function tick() {
       if (!playing || !actx) return;
       const now = actx.currentTime;
       if (nextBar < now) nextBar = now + 0.1;     // タブが裏にいて遅れた分は捨てる
-      while (nextBar < now + 0.5) { scheduleBar(bar, nextBar); nextBar += BAR; bar++; }
+      while (nextBar < now + 0.5) {
+        const S = SONGS[style];
+        S.play(bar, nextBar, Math.floor(bar / 8) % 4);
+        for (let k = 0; k < S.beats; k++) pulse(nextBar + k * BEAT);
+        nextBar += BAR; bar++;
+      }
     }
     function fade(v, sec) {
       if (!out) return;
@@ -599,11 +837,13 @@
     return {
       get on() { return on; },
       get vol() { return vol; },
+      get style() { return style; },
+      get playing() { return playing; },
       start(opt) {
         if (!actx) return;
         if (!out) build();
-        if (opt) { BPM = opt.bpm; BEAT = 60 / BPM; BAR = BEAT * 4; TR = opt.tr; }
-        delayNode.delayTime.value = BEAT * 0.75;
+        if (opt) { tempo = opt.tempo; TR = opt.tr; }
+        setTempo();
         ducked = false;
         busPulse.gain.value = 0;
         if (!playing) { playing = true; bar = 0; nextBar = actx.currentTime + 0.15; }
@@ -614,6 +854,13 @@
       stop() {
         playing = false;
         fade(0, 1.5);
+      },
+      setStyle(id) {
+        if (!BGM_STYLES[id]) return;
+        style = id; save();
+        setTempo();
+        bar = 0;                                      // 次の小節から新しい曲の頭へ
+        if (actx && playing) nextBar = Math.max(actx.currentTime + 0.1, nextBar);
       },
       duck(v) { ducked = v; fade(level(), 0.6); },
       boss(v) {
@@ -1699,6 +1946,7 @@
     stageId = id; stage = STAGES[id];
     try { localStorage.setItem('yakin-stage', id); } catch (e) {}
     renderStages(); setupDemo();
+    if (BGM.playing) BGM.start(stage.bgm);
     const cur = $('stages').querySelector('[aria-checked="true"]');
     if (cur) cur.focus();
   }
@@ -1714,6 +1962,31 @@
     $('bgmBtn').setAttribute('aria-pressed', String(BGM.on));
     $('bgmVol').value = Math.round(BGM.vol * 100);
     $('bgmVolOut').textContent = Math.round(BGM.vol * 100);
+    for (const boxId of ['bgmPickTitle', 'bgmPickPause']) {
+      const box = $(boxId);
+      box.innerHTML = '';
+      for (const id in BGM_STYLES) {
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.setAttribute('role', 'radio');
+        btn.setAttribute('aria-checked', String(id === BGM.style));
+        btn.innerHTML = '<b></b><small></small>';
+        btn.querySelector('b').textContent = BGM_STYLES[id].name;
+        btn.querySelector('small').textContent = BGM_STYLES[id].note;
+        btn.addEventListener('click', () => pickBgm(id, boxId));
+        box.appendChild(btn);
+      }
+    }
+  }
+  function pickBgm(id, boxId) {
+    initAudio();
+    if (actx && actx.state === 'suspended') actx.resume();
+    BGM.setStyle(id);
+    if (!BGM.on) BGM.toggle();
+    if (state === 'title') BGM.start(stage.bgm);     // タイトル画面では試聴として鳴らす
+    renderBgmUi();
+    const cur = $(boxId).querySelector('[aria-checked="true"]');
+    if (cur) cur.focus();
   }
   $('bgmBtn').addEventListener('click', () => { BGM.toggle(); renderBgmUi(); });
   $('bgmVol').addEventListener('input', (e) => { BGM.setVol(Number(e.target.value) / 100); renderBgmUi(); });
