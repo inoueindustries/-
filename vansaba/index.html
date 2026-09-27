@@ -172,13 +172,15 @@
   .card kbd { font-family: var(--display); font-size: 13px; color: var(--muted); border: 1px solid var(--line); border-radius: 3px; padding: 2px 7px; }
   .bgmpick { display: grid; gap: 6px; }
   .bgmpick .label { font-family: var(--display); font-size: 12px; color: var(--muted); letter-spacing: .08em; }
-  .seg { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
+  .seg { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 6px; }
   .seg button {
     display: grid; gap: 2px; align-content: start; text-align: left;
     padding: 8px 10px; background: var(--panel-2); color: var(--ink);
     border: 1px solid var(--line); border-radius: 4px; font: inherit; cursor: pointer;
   }
   .seg button:hover { background: #222b35; }
+  .seg.voice { grid-template-columns: repeat(4, 1fr); }
+  .seg.voice button { text-align: center; }
   .seg button b { font-family: var(--display); font-weight: 400; font-size: 15px; }
   .seg button small { font-size: 11px; color: var(--muted); line-height: 1.4; }
   .seg button[aria-checked="true"] { border-color: var(--weld); box-shadow: inset 0 0 0 1px var(--weld); }
@@ -320,6 +322,10 @@
         <span class="label">BGM（押すと試聴できます）</span>
         <div class="seg" id="bgmPickTitle" role="radiogroup" aria-label="BGMを選ぶ"></div>
       </div>
+      <div class="bgmpick">
+        <span class="label">レベルアップ時のボイス（押すと試聴できます）</span>
+        <div class="seg voice" id="voicePickTitle" role="radiogroup" aria-label="ボイスを選ぶ"></div>
+      </div>
       <p class="best" id="moneyTitle"></p>
       <div class="actions">
         <button class="btn" id="startBtn" type="button">作業開始</button>
@@ -360,6 +366,10 @@
       <div class="bgmpick">
         <span class="label">BGM</span>
         <div class="seg" id="bgmPickPause" role="radiogroup" aria-label="BGMを選ぶ"></div>
+      </div>
+      <div class="bgmpick">
+        <span class="label">レベルアップ時のボイス</span>
+        <div class="seg voice" id="voicePickPause" role="radiogroup" aria-label="ボイスを選ぶ"></div>
       </div>
       <div class="actions">
         <button class="btn" id="resumeBtn" type="button">再開する</button>
@@ -687,6 +697,15 @@
     yoru:    { name: '夜想', note: '静かなピアノとコーラス' },
     shissou: { name: '疾走', note: 'ドラムと弦で駆けるハイブリッド' },
     gensou:  { name: '幻想', note: 'ハープとフルートのワルツ' },
+    cinema:  { name: 'シネマ', note: '映画の予告編のような壮大なオーケストラ' },
+    fantasy: { name: 'ファンタジー戦記', note: '剣と魔法の戦闘曲' },
+    celt:    { name: 'ケルトの丘', note: '笛とハープとドローンの民謡風（6/8拍子）' },
+    rally:   { name: '反撃の狼煙', note: '重いドラムとコーラスで駆ける戦闘曲' },
+    jazz:    { name: '真夜中のアシッドジャズ', note: 'エレピとベースのおしゃれな曲。声ネタ入り' },
+    calm:    { name: 'やすらぎ', note: '聞き心地のいいシンプルなピアノ' },
+    jrpg:    { name: '決戦のファンファーレ', note: '王道JRPGの戦闘曲' },
+    hero:    { name: '勇者の進軍', note: 'オーケストラの王道RPG戦闘曲' },
+    march:   { name: '決戦前夜', note: '軍楽隊風の重厚なオーケストラ' },
     ...BGM_FILES,
   };
   const BGM = (() => {
@@ -900,6 +919,72 @@
       nb.connect(bp); noise(nb, t, t + dur + 0.4);
     }
 
+    // 追加の楽器
+    function epiano(m, t, dur, vel = 0.07) {      // エレクトリックピアノ
+      const f = mtof(m), g = actx.createGain();
+      env(g, t, vel, 0.004, vel * 0.4, 0.4, t + dur + 0.6);
+      g.connect(busPiano);
+      osc('sine', f, 0, g, t, t + dur + 0.7);
+      const tine = actx.createGain(); env(tine, t, 0.3, 0.002, 0.0001, 0.25, t + 0.3); tine.connect(g);
+      osc('sine', f * 4, 0, tine, t, t + 0.35);
+    }
+    function pluckBass(m, t, dur, amp = 0.12) {   // はじくベース
+      const f = mtof(m), lp = filter('lowpass', 900, 4), g = actx.createGain();
+      lp.frequency.setValueAtTime(1600, t); lp.frequency.exponentialRampToValueAtTime(300, t + 0.2);
+      env(g, t, amp, 0.004, amp * 0.5, 0.12, t + dur + 0.05);
+      lp.connect(g).connect(busSynth);
+      osc('triangle', f, 0, lp, t, t + dur + 0.1);
+      osc('square', f, 0, lp, t, t + dur + 0.1);
+    }
+    const VOWELS = {
+      a: [[800, 5, 1], [1150, 6, 0.6], [2900, 8, 0.15]],
+      o: [[450, 5, 1], [800, 6, 0.5], [2830, 8, 0.1]],
+      u: [[325, 5, 1], [700, 6, 0.4], [2530, 8, 0.1]],
+      e: [[400, 5, 1], [1600, 6, 0.5], [2700, 8, 0.15]],
+    };
+    function voiceV(m, t, dur, vowel = 'a', amp = 0.1) {   // 母音を選べる声（コーラス・声ネタ）
+      const f = mtof(m), g = actx.createGain(), atk = Math.min(0.3, dur * 0.3);
+      g.gain.setValueAtTime(0.0001, t);
+      g.gain.linearRampToValueAtTime(amp, t + atk);
+      g.gain.setValueAtTime(amp, t + Math.max(atk + 0.01, dur - 0.05));
+      g.gain.linearRampToValueAtTime(0.0001, t + dur + 0.25);
+      g.connect(busVoice);
+      const mix = gainNode(1);
+      for (const [fq, q, a2] of VOWELS[vowel] || VOWELS.a) mix.connect(filter('bandpass', fq, q)).connect(gainNode(a2)).connect(g);
+      const lfo = actx.createOscillator(); lfo.frequency.value = 5.4;
+      const depth = gainNode(0); depth.gain.setValueAtTime(0, t); depth.gain.linearRampToValueAtTime(f * 0.006, t + 0.5);
+      lfo.connect(depth); lfo.start(t); lfo.stop(t + dur + 0.3);
+      for (const det of [-6, 6]) depth.connect(osc('sawtooth', f, det, mix, t, t + dur + 0.3).frequency);
+    }
+    function timpani(m, t, amp = 0.35) {
+      const f = mtof(m), g = actx.createGain();
+      env(g, t, amp, 0.004, amp * 0.3, 0.2, t + 1.1);
+      g.connect(busDrum);
+      const o = actx.createOscillator(); o.type = 'sine';
+      o.frequency.setValueAtTime(f * 1.08, t); o.frequency.exponentialRampToValueAtTime(f, t + 0.08);
+      o.connect(g); o.start(t); o.stop(t + 1.2);
+      const g2 = gainNode(0.3); g2.connect(g);
+      osc('triangle', f * 1.5, 0, g2, t, t + 0.4);
+    }
+    function riser(t, dur) {                     // 盛り上げの「シュワー」
+      const bp = filter('bandpass', 400, 2), g = actx.createGain();
+      bp.frequency.setValueAtTime(300, t); bp.frequency.exponentialRampToValueAtTime(6000, t + dur);
+      g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(0.08, t + dur);
+      g.gain.linearRampToValueAtTime(0.0001, t + dur + 0.05);
+      bp.connect(g).connect(busPad);
+      noise(bp, t, t + dur + 0.1);
+    }
+    function roll(t, dur, amp = 0.12) {          // スネアロール
+      const n = Math.max(1, Math.floor(dur / (BEAT / 8)));
+      for (let k = 0; k < n; k++) snare(t + k * BEAT / 8, amp * (0.4 + 0.6 * k / n));
+    }
+    function drone(m, t, dur) { pad(m, t, dur, 0.022, 520); }
+    function whistle(m, t, dur, amp = 0.075, orn = false) {   // ティン・ホイッスル（長い音は装飾音つき）
+      if (orn) { flute(m + 2, t, 0.05, amp * 0.8); flute(m, t + 0.05, Math.max(0.05, dur - 0.05), amp); }
+      else flute(m, t, dur, amp);
+    }
+    const mel = (M, t, fn) => { for (const [bt, m, len, x] of M) fn(m, t + bt * BEAT, len * BEAT, x); };
+
     // ---- 曲 ----
     const SONGS = {
       yoru: {
@@ -1029,6 +1114,215 @@
           if (sec === 3) for (let k = 0; k < 3; k++) if (Math.random() < 0.5) celesta(notes[(k * 2 + i) % 6] + 24, t + k * BEAT + BEAT / 2, 0.035);
         },
       },
+
+      // シネマ：ピアノの刻みと太鼓から始まり、弦・金管・コーラスが重なる
+      cinema: {
+        bpm: 84, beats: 4,
+        chords: [[38, [50, 57, 62, 65, 69, 74]], [34, [46, 53, 58, 62, 65, 70]], [41, [48, 53, 57, 60, 65, 69]], [36, [48, 52, 55, 60, 64, 67]],
+                 [43, [50, 55, 58, 62, 67, 70]], [34, [46, 53, 58, 62, 65, 70]], [45, [50, 57, 62, 65, 69, 74]], [45, [52, 57, 61, 64, 69, 73]]],
+        melody: [[[0, 69, 4]], [[0, 70, 2], [2, 72, 2]], [[0, 72, 4]], [[0, 67, 4]], [[0, 70, 3], [3, 69, 1]], [[0, 74, 4]], [[0, 72, 2], [2, 69, 2]], [[0, 73, 4]]],
+        play(i, t, sec) {
+          const [bass, n] = this.chords[i % 8];
+          pad(bass, t, BAR, 0.035, 400); pad(bass + 12, t, BAR, 0.022, 600);
+          const arp = [1, 2, 3, 2, 1, 2, 3, 4];
+          for (let k = 0; k < 8; k++) piano(n[arp[k]] + 12, t + k * BEAT / 2, BEAT * 0.8, 0.07, busPiano, 5);
+          taiko(t, 0.35);
+          if (sec >= 1) { for (const m of n.slice(2)) pad(m, t, BAR, 0.018, 1600); taiko(t + BEAT * 2, 0.25); timpani(bass + 12, t + BEAT * 3.5, 0.2); }
+          if (sec >= 2) { mel(this.melody[i % 8], t, (m, tt, d) => brass(m, tt, d, 0.06)); voiceV(n[2], t, BAR * 0.95, 'a', 0.045); voiceV(n[4], t, BAR * 0.95, 'a', 0.045); }
+          if (sec === 3 && i % 2 === 0) crash(t);
+          if (i % 8 === 7) riser(t + BEAT * 2, BEAT * 2);
+        },
+      },
+
+      // ファンタジー戦記：弦の16分の刻み、ティンパニ、金管のメロディ
+      fantasy: {
+        bpm: 150, beats: 4,
+        chords: [[38, [62, 65, 69]], [36, [60, 64, 67]], [34, [62, 65, 70]], [45, [61, 64, 69]], [38, [62, 65, 69]], [41, [60, 65, 69]], [43, [62, 67, 71]], [45, [61, 64, 67]]],
+        melody: [
+          [[0, 74, 1], [1, 77, 1], [2, 81, 1.5], [3.5, 79, 0.5]], [[0, 79, 2], [2, 76, 1], [3, 72, 1]],
+          [[0, 74, 1.5], [1.5, 77, 0.5], [2, 74, 1], [3, 70, 1]], [[0, 69, 3], [3, 73, 1]],
+          [[0, 74, 1], [1, 77, 1], [2, 81, 1], [3, 86, 1]], [[0, 84, 2], [2, 81, 1], [3, 77, 1]],
+          [[0, 79, 1], [1, 81, 1], [2, 83, 1], [3, 79, 1]], [[0, 81, 4]],
+        ],
+        play(i, t, sec) {
+          const [root, tri] = this.chords[i % 8], s16 = BEAT / 4;
+          const pat = [0, 12, 7, 12, 0, 12, 7, 12, 0, 12, 7, 12, 0, 12, 10, 12];
+          for (let k = 0; k < 16; k++) stacc(root + 24 + pat[k], t + k * s16, 0.032);
+          pluckBass(root, t, BEAT * 0.9, 0.1); pluckBass(root, t + BEAT * 2, BEAT * 0.9, 0.1);
+          timpani(root + 12, t, 0.3); timpani(root + 19, t + BEAT * 2, 0.22);
+          if (sec >= 1) { snare(t + BEAT, 0.12); snare(t + BEAT * 3, 0.12); mel(this.melody[i % 8], t, (m, tt, d) => brass(m, tt, d * 0.95, sec === 3 ? 0.055 : 0.065)); }
+          if (sec >= 2) for (const m of tri) { brass(m, t + BEAT * 1.5, BEAT * 0.3, 0.022); brass(m, t + BEAT * 3.5, BEAT * 0.3, 0.022); }
+          if (sec === 3) { crash(t); mel(this.melody[i % 8], t, (m, tt, d) => brass(m - 12, tt, d * 0.95, 0.03)); }
+        },
+      },
+
+      // ケルトの丘：6/8拍子。ドローンの上で笛がジグを吹く
+      celt: {
+        bpm: 210, beats: 6,   // 1拍＝8分音符
+        chords: [[38, [50, 54, 57, 62, 66, 69]], [38, [50, 54, 57, 62, 66, 69]], [36, [48, 52, 55, 60, 64, 67]], [38, [50, 54, 57, 62, 66, 69]],
+                 [43, [43, 50, 55, 59, 62, 67]], [38, [50, 54, 57, 62, 66, 69]], [40, [47, 52, 55, 59, 64, 67]], [45, [45, 52, 57, 61, 64, 69]]],
+        melody: [
+          [[0, 74, 1], [1, 78, 1], [2, 81, 1], [3, 81, 1], [4, 78, 1], [5, 81, 1]],
+          [[0, 83, 1], [1, 81, 1], [2, 78, 1], [3, 76, 1], [4, 74, 1], [5, 76, 1]],
+          [[0, 79, 1], [1, 76, 1], [2, 72, 1], [3, 79, 1], [4, 76, 1], [5, 72, 1]],
+          [[0, 74, 1], [1, 76, 1], [2, 78, 1], [3, 81, 3]],
+          [[0, 83, 1], [1, 79, 1], [2, 83, 1], [3, 86, 1], [4, 83, 1], [5, 79, 1]],
+          [[0, 81, 1], [1, 78, 1], [2, 74, 1], [3, 81, 1], [4, 78, 1], [5, 74, 1]],
+          [[0, 76, 1], [1, 78, 1], [2, 79, 1], [3, 83, 1], [4, 81, 1], [5, 79, 1]],
+          [[0, 76, 1], [1, 73, 1], [2, 69, 1], [3, 76, 3]],
+        ],
+        play(i, t, sec) {
+          const [bass, n] = this.chords[i % 8];
+          drone(38, t, BAR); drone(45, t, BAR);
+          taiko(t, 0.3); taiko(t + BEAT * 3, 0.2);
+          if (sec >= 1) { hat(t + BEAT * 2, 0.03); hat(t + BEAT * 5, 0.03); }
+          for (let k = 0; k < 6; k++) harp(n[k], t + k * BEAT, k === 0 ? 0.09 : 0.06);
+          if (sec >= 1) mel(this.melody[i % 8], t, (m, tt, d) => whistle(m, tt, d * 0.9, 0.07, d > BEAT * 1.5));
+          if (sec >= 2) piano(bass, t, BAR, 0.12, busPiano, 4);
+          if (sec === 3) mel(this.melody[i % 8], t, (m, tt, d) => brass(m - 12, tt, d * 0.9, 0.022));
+        },
+      },
+
+      // 反撃の狼煙：重いドラム、16分のシンセベース、ピアノの高音の刻み、コーラス
+      rally: {
+        bpm: 156, beats: 4,
+        chords: [[38, [62, 65, 69]], [36, [60, 65, 69]], [34, [62, 65, 70]], [45, [61, 64, 69]], [43, [62, 67, 70]], [34, [62, 65, 70]], [36, [60, 64, 67]], [45, [61, 64, 69]]],
+        melody: [
+          [[0, 74, 2], [2, 76, 1], [3, 77, 1]], [[0, 76, 2], [2, 72, 2]], [[0, 74, 1.5], [1.5, 70, 0.5], [2, 74, 1], [3, 77, 1]], [[0, 76, 4]],
+          [[0, 79, 2], [2, 77, 1], [3, 74, 1]], [[0, 77, 2], [2, 82, 2]], [[0, 81, 1.5], [1.5, 79, 0.5], [2, 76, 2]], [[0, 73, 2], [2, 76, 2]],
+        ],
+        bassPat: [0, 0, 0, 12, 0, 0, 10, 0, 0, 0, 0, 12, 0, 7, 10, 12],
+        play(i, t, sec) {
+          const [root, tri] = this.chords[i % 8], s16 = BEAT / 4;
+          for (let k = 0; k < 16; k++) synthBass(root + this.bassPat[k], t + k * s16, s16 * 0.8);
+          for (const b of [0, 0.75, 1.5, 2.5, 3]) kick(t + b * BEAT, 0.45);
+          snare(t + BEAT); snare(t + BEAT * 3); taiko(t + BEAT, 0.2); taiko(t + BEAT * 3, 0.2);
+          const hs = sec === 3 ? s16 : BEAT / 2;
+          for (let k = 0; k < BAR / hs - 0.01; k++) hat(t + k * hs, 0.03);
+          for (let k = 0; k < 8; k++) piano(tri[k % 3] + 12 + (k % 4 === 3 ? 12 : 0), t + k * BEAT / 2, BEAT * 0.3, 0.055, busPiano, 9);
+          if (sec >= 1) for (const m of tri) voiceV(m - 12, t, BAR * 0.95, i % 2 ? 'o' : 'a', 0.04);
+          if (sec >= 2) mel(this.melody[i % 8], t, (m, tt, d) => brass(m, tt, d * 0.95, 0.065));
+          if (sec === 3 && i % 2 === 0) crash(t);
+          if (i % 8 === 7) roll(t + BEAT * 3, BEAT, 0.12);
+        },
+      },
+
+      // 真夜中のアシッドジャズ：跳ねるリズム、エレピ、ベース、声ネタ
+      jazz: {
+        bpm: 116, beats: 4,
+        chords: [[38, [60, 64, 65, 69]], [43, [59, 62, 65, 69]], [36, [59, 62, 64, 67]], [41, [57, 60, 64, 67]],
+                 [34, [57, 60, 62, 65]], [40, [58, 62, 64, 67]], [45, [55, 59, 61, 64]], [38, [60, 64, 65, 69]]],
+        bassLine: [[0, 0], [0.75, 0], [1.5, 12], [2, 7], [2.75, 10], [3.5, 12]],
+        melody: [
+          [[0.5, 69, 0.5, 'o'], [1, 72, 0.5, 'o'], [1.5, 74, 1, 'a']], [[2, 72, 0.5, 'e'], [2.5, 69, 1, 'o']],
+          [[0.5, 76, 0.5, 'a'], [1, 74, 0.5, 'a'], [1.5, 72, 1.5, 'o']], [],
+          [[0.5, 69, 0.5, 'o'], [1, 72, 0.5, 'o'], [1.5, 77, 1, 'a']], [[2, 76, 0.5, 'e'], [2.5, 74, 1, 'o']],
+          [[0.5, 73, 0.5, 'a'], [1, 76, 0.5, 'e'], [1.5, 79, 1.5, 'a']], [[2, 81, 1, 'o'], [3, 76, 1, 'a']],
+        ],
+        lead: [[[0, 81, 1.5], [1.5, 79, 0.5], [2, 77, 2]], [[0.5, 76, 1], [1.5, 74, 2.5]], [[0, 76, 1], [1, 79, 1], [2, 84, 2]], [[0, 83, 4]]],
+        play(i, t, sec) {
+          const [root, v] = this.chords[i % 8];
+          const sw = (b) => (b % 1 === 0.5 ? b + 0.16 : b);   // 裏の8分を少し遅らせて跳ねさせる
+          for (const [b, o] of this.bassLine) pluckBass(root + o, t + sw(b) * BEAT, BEAT * 0.4, 0.11);
+          for (const b of sec >= 2 ? [0.5, 1.5, 3] : [1.5, 3]) for (const m of v) epiano(m, t + sw(b) * BEAT, BEAT * 0.6, 0.032);
+          kick(t, 0.4); kick(t + sw(2.5) * BEAT, 0.35);
+          snare(t + BEAT, 0.13); snare(t + BEAT * 3, 0.13);
+          for (let k = 0; k < 8; k++) hat(t + sw(k / 2) * BEAT, k % 2 ? 0.02 : 0.03);
+          hat(t + sw(3.5) * BEAT, 0.035, 0.12);
+          if (sec >= 1) for (const [bt, m, len, vw] of this.melody[i % 8]) voiceV(m, t + sw(bt) * BEAT, len * BEAT * 0.9, vw, 0.09);
+          if (sec >= 2 && i % 2 === 0) for (const [bt, m, len] of this.lead[(i >> 1) % 4]) epiano(m, t + sw(bt) * BEAT, len * BEAT, 0.06);
+        },
+      },
+
+      // やすらぎ：やさしいピアノだけのシンプルな曲
+      calm: {
+        bpm: 88, beats: 4,
+        chords: [[38, [50, 57, 62, 66, 69, 74]], [37, [49, 57, 61, 64, 69, 73]], [35, [47, 54, 59, 62, 66, 71]], [31, [43, 50, 55, 59, 62, 67]],
+                 [38, [50, 57, 62, 66, 69, 74]], [31, [43, 50, 55, 59, 62, 67]], [33, [45, 52, 57, 61, 64, 69]], [38, [50, 57, 62, 66, 69, 74]]],
+        melody: [
+          [[0, 78, 2], [2, 76, 1], [3, 74, 1]], [[0, 73, 2], [2, 76, 2]], [[0, 74, 2], [2, 73, 1], [3, 71, 1]], [[0, 71, 4]],
+          [[0, 74, 1], [1, 76, 1], [2, 78, 2]], [[0, 79, 2], [2, 78, 1], [3, 76, 1]], [[0, 76, 2], [2, 78, 1], [3, 76, 1]], [[0, 74, 4]],
+        ],
+        play(i, t, sec) {
+          const [bass, n] = this.chords[i % 8];
+          piano(bass + 12, t, BAR * 0.9, 0.11, busPiano, 4);
+          const arp = [1, 2, 3, 4, 5, 4, 3, 2];
+          for (let k = 0; k < 8; k++) piano(n[arp[k]], t + k * BEAT / 2, BEAT * 1.1, 0.055, busPiano, 5);
+          if (sec >= 1) for (const m of n.slice(2, 5)) pad(m, t, BAR, 0.014, 1100);
+          if (sec >= 2) mel(this.melody[i % 8], t, (m, tt, d) => piano(m, tt, d, 0.1, busPiano, 6));
+          if (sec === 3 && i % 2) celesta(n[5] + 12, t + BEAT * 2.5, 0.035);
+        },
+      },
+
+      // 決戦のファンファーレ：オクターブで跳ねるベース、裏拍の弦、金管のメロディ
+      jrpg: {
+        bpm: 164, beats: 4,
+        chords: [[38, [62, 65, 69]], [34, [62, 65, 70]], [36, [60, 64, 67]], [38, [62, 65, 69]], [43, [62, 67, 70]], [34, [62, 65, 70]], [36, [60, 64, 67]], [45, [61, 64, 69]]],
+        melody: [
+          [[0, 74, 0.5], [0.5, 76, 0.5], [1, 77, 1], [2, 81, 1.5], [3.5, 79, 0.5]], [[0, 77, 1], [1, 74, 1], [2, 70, 2]],
+          [[0, 72, 0.5], [0.5, 74, 0.5], [1, 76, 1], [2, 79, 1.5], [3.5, 77, 0.5]], [[0, 76, 1], [1, 74, 3]],
+          [[0, 79, 1], [1, 82, 1], [2, 86, 2]], [[0, 84, 1], [1, 82, 1], [2, 77, 2]],
+          [[0, 79, 1], [1, 81, 1], [2, 84, 1], [3, 82, 1]], [[0, 81, 3], [3, 73, 1]],
+        ],
+        play(i, t, sec) {
+          const [root, tri] = this.chords[i % 8];
+          for (let k = 0; k < 8; k++) pluckBass(root + (k % 2 ? 12 : 0), t + k * BEAT / 2, BEAT * 0.45, 0.11);
+          kick(t, 0.4); kick(t + BEAT * 2, 0.4); snare(t + BEAT, 0.16); snare(t + BEAT * 3, 0.16);
+          for (let k = 0; k < 8; k++) hat(t + k * BEAT / 2, 0.03);
+          for (let k = 0; k < 8; k++) stacc(tri[[0, 1, 2, 1][k % 4]] + 12, t + k * BEAT / 2 + BEAT / 4, 0.028);
+          if (sec >= 1) mel(this.melody[i % 8], t, (m, tt, d) => brass(m, tt, d * 0.92, 0.06));
+          if (sec >= 2) for (const m of tri) pad(m + 12, t, BAR, 0.013, 2200);
+          if (sec === 3) { crash(t); mel(this.melody[i % 8], t, (m, tt, d) => brass(m + 12, tt, d * 0.92, 0.022)); }
+          if (i % 8 === 7) for (let k = 0; k < 4; k++) snare(t + BEAT * 3 + k * BEAT / 4, 0.1 + k * 0.03);
+        },
+      },
+
+      // 勇者の進軍：小節頭の弦の駆け上がり、金管の和音、ティンパニ
+      hero: {
+        bpm: 146, beats: 4,
+        chords: [[38, [62, 65, 69]], [43, [62, 67, 70]], [36, [60, 64, 67]], [41, [60, 65, 69]], [34, [62, 65, 70]], [43, [62, 67, 70]], [45, [61, 64, 69]], [45, [61, 64, 69]]],
+        melody: [
+          [[0, 74, 1.5], [1.5, 74, 0.5], [2, 77, 1], [3, 81, 1]], [[0, 79, 1.5], [1.5, 77, 0.5], [2, 74, 2]],
+          [[0, 76, 1], [1, 79, 1], [2, 84, 1.5], [3.5, 82, 0.5]], [[0, 81, 4]],
+          [[0, 82, 1.5], [1.5, 81, 0.5], [2, 79, 1], [3, 77, 1]], [[0, 79, 1.5], [1.5, 77, 0.5], [2, 74, 2]],
+          [[0, 73, 1], [1, 76, 1], [2, 79, 1], [3, 81, 1]], [[0, 85, 2], [2, 81, 2]],
+        ],
+        scale: [0, 2, 3, 5, 7, 9, 10, 12],
+        play(i, t, sec) {
+          const [root, tri] = this.chords[i % 8], s16 = BEAT / 4;
+          for (let k = 0; k < 8; k++) stacc(root + 24 + this.scale[k], t + k * s16, 0.03);
+          for (let k = 0; k < 4; k++) stacc(root + 12, t + BEAT * 2 + k * BEAT / 2, 0.03);
+          pluckBass(root, t, BEAT, 0.1); pluckBass(root, t + BEAT * 2, BEAT, 0.1);
+          timpani(root + 12, t, 0.3); timpani(root + 12, t + BEAT * 1.5, 0.18);
+          for (const m of tri) { brass(m, t, BEAT * 0.35, 0.026); brass(m, t + BEAT * 1.5, BEAT * 0.35, 0.022); }
+          if (sec >= 1) { snare(t + BEAT, 0.1); snare(t + BEAT * 3, 0.1); mel(this.melody[i % 8], t, (m, tt, d) => brass(m, tt, d * 0.9, 0.065)); }
+          if (sec >= 2 && i % 2 === 0) crash(t);
+          if (sec === 3) mel(this.melody[i % 8], t, (m, tt, d) => flute(m + 12, tt, d * 0.9, 0.04));
+        },
+      },
+
+      // 決戦前夜：行進のスネア、低音金管の付点リズム、重厚な金管のコラール
+      march: {
+        bpm: 126, beats: 4,
+        chords: [[38, [62, 65, 69]], [38, [62, 65, 69]], [34, [62, 65, 70]], [34, [62, 65, 70]], [43, [62, 67, 70]], [45, [61, 64, 69]], [38, [62, 65, 69]], [45, [61, 64, 69]]],
+        melody: [
+          [[0, 74, 3], [3, 76, 1]], [[0, 77, 2], [2, 76, 1], [3, 74, 1]], [[0, 77, 3], [3, 79, 1]], [[0, 81, 4]],
+          [[0, 82, 2], [2, 81, 1], [3, 79, 1]], [[0, 81, 2], [2, 76, 2]], [[0, 77, 1.5], [1.5, 76, 0.5], [2, 74, 2]], [[0, 73, 4]],
+        ],
+        ost: [[0, 12, 0.6], [0.75, 12, 0.2], [1, 19, 0.9], [2, 12, 0.6], [2.75, 12, 0.2], [3, 17, 0.9]],
+        snarePat: [2, 0, 1, 1, 2, 0, 1, 1, 2, 0, 1, 1, 2, 1, 1, 1],
+        play(i, t, sec) {
+          const [root, tri] = this.chords[i % 8], s16 = BEAT / 4;
+          for (const [b, o, d] of this.ost) brass(root + o, t + b * BEAT, d * BEAT, 0.04);
+          for (let k = 0; k < 16; k++) if (this.snarePat[k]) snare(t + k * s16, this.snarePat[k] === 2 ? 0.11 : 0.05);
+          kick(t, 0.3); kick(t + BEAT * 2, 0.3);
+          timpani(root + 12, t, 0.3); timpani(root + 12, t + BEAT * 2, 0.22);
+          if (sec >= 1) for (const m of tri) pad(m + 12, t, BAR, 0.016, 2000);
+          if (sec >= 2) { mel(this.melody[i % 8], t, (m, tt, d) => brass(m, tt, d * 0.95, 0.07)); mel(this.melody[i % 8], t, (m, tt, d) => brass(m - 12, tt, d * 0.95, 0.035)); }
+          if (sec === 3) crash(t);
+          if (i % 8 === 7) roll(t + BEAT * 2, BEAT * 2, 0.12);
+        },
+      },
     };
 
     // ファイルの曲の再生・停止と音量
@@ -1112,6 +1406,44 @@
       setVol(v) { vol = v; save(); fade(level(), 0.2); },
     };
   })();
+
+  // ---------- レベルアップ時のボイス ----------
+  // 端末に入っている日本語の読み上げ音声を使う。男性・女性らしい声があれば優先し、声の高さで演じ分ける
+  const VOICES = {
+    off:    { name: 'なし' },
+    male:   { name: '男性', pitch: 0.8, rate: 1.05, prefer: /(Otoya|Keita|Ichiro|Takumi|Daichi|Hattori|male|男性)/i },
+    female: { name: '女性', pitch: 1.15, rate: 1.05, prefer: /(Kyoko|Haruka|Ayumi|Nanami|Mizuki|Sayaka|O-ren|female|女性)/i },
+    boy:    { name: '少年', pitch: 1.75, rate: 1.18, prefer: /(Kyoko|Haruka|Nanami|Ayumi|female|女性)/i },
+  };
+  const LINES = {
+    male:   { level: ['よし、レベルアップだ！', 'まだまだいけるぞ！', '改善完了！'], lucky: ['おっ、ラッキー！', 'ツイてるぞ！'], awaken: ['覚醒！ 全力でいくぞ！'] },
+    female: { level: ['レベルアップ！', 'いい調子です！', '改善、完了です！'], lucky: ['ラッキー！', 'やったね！'], awaken: ['覚醒！ 見せてあげる！'] },
+    boy:    { level: ['やったー！ レベルアップ！', '強くなったぞ！', 'まだまだー！'], lucky: ['ラッキー！ やったぁ！'], awaken: ['かくせい！ いっけぇー！'] },
+  };
+  let voiceId = 'off', lastSay = 0;
+  try { const v = localStorage.getItem('yakin-voice'); if (VOICES[v]) voiceId = v; } catch (e) {}
+  function pickVoice(V) {
+    try {
+      const all = speechSynthesis.getVoices().filter((v) => /^ja/i.test(v.lang));
+      return all.find((v) => V.prefer.test(v.name)) || all[0] || null;
+    } catch (e) { return null; }
+  }
+  function say(kind, force) {
+    if (voiceId === 'off' || muted || !('speechSynthesis' in window)) return;
+    const now = performance.now();
+    if (!force && now - lastSay < 1500) return;   // 連続レベルアップでしゃべりすぎない
+    lastSay = now;
+    try {
+      const V = VOICES[voiceId], list = LINES[voiceId][kind];
+      const u = new SpeechSynthesisUtterance(list[(Math.random() * list.length) | 0]);
+      u.lang = 'ja-JP';
+      const v = pickVoice(V); if (v) u.voice = v;
+      u.pitch = V.pitch; u.rate = V.rate; u.volume = 1;
+      speechSynthesis.cancel();
+      speechSynthesis.speak(u);
+    } catch (e) {}
+  }
+  try { if ('speechSynthesis' in window) { speechSynthesis.getVoices(); speechSynthesis.addEventListener('voiceschanged', () => {}); } } catch (e) {}
 
   // ---------- 状態 ----------
   let state = 'title';
@@ -2703,6 +3035,7 @@
     choices = picks;
     // ラッキーボーナス：武器のカードがまれに「3段階アップ」になる
     luckyFlags = picks.map((k) => !!(UPG[k] && UPG[k].w && lv[k] + 1 < capOf(k) && Math.random() < stat.luck));
+    say(luckyFlags.some(Boolean) ? 'lucky' : 'level');
     const cards = $('cards');
     cards.innerHTML = '';
     picks.forEach((k, n) => {
@@ -2754,6 +3087,7 @@
       awakenFx = { t: 0, name: AWAKE[w].name };
       flash = Math.max(flash, 0.6);
       sfx('awaken');
+      say('awaken', true);
       banner('覚醒！ ' + UPG[w].name + ' → ' + AWAKE[w].name);
     }
     else if (k === 'award') {
@@ -3008,6 +3342,30 @@
       }
     }
   }
+  function renderVoiceUi() {
+    for (const boxId of ['voicePickTitle', 'voicePickPause']) {
+      const box = $(boxId);
+      box.innerHTML = '';
+      for (const id in VOICES) {
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.setAttribute('role', 'radio');
+        btn.setAttribute('aria-checked', String(id === voiceId));
+        btn.innerHTML = '<b></b>';
+        btn.querySelector('b').textContent = VOICES[id].name;
+        btn.addEventListener('click', () => {
+          voiceId = id;
+          try { localStorage.setItem('yakin-voice', id); } catch (e) {}
+          renderVoiceUi();
+          say('level', true);
+          const cur = $(boxId).querySelector('[aria-checked="true"]');
+          if (cur) cur.focus();
+        });
+        box.appendChild(btn);
+      }
+    }
+  }
+  renderVoiceUi();
   function pickBgm(id, boxId) {
     initAudio();
     if (actx && actx.state === 'suspended') actx.resume();
