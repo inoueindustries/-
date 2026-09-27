@@ -438,7 +438,7 @@
           <li>上級と管理職モードでは、まれに「⚠ クレーム発生」イベントが起き、倒せない敵「クレーム電話」が苦情（弾）を投げてきます。近くに出るオレンジの箱3つのどれかに「対策書」が入っていて、見つけると消えます（クレーム対応手当つき）。</li>
           <li>HPが満タンのときに「缶コーヒー」を選ぶと、飲まずに我慢して ¥150 を貯金します（給料の拾得金に入ります）。</li>
           <li>初級だけ、HPが35%を切っているときのレベルアップで4枚目に「救急箱（HP全回復）」が加わります。救急箱は1回の夜勤で1回しか使えません。</li>
-          <li>1分ごとに敵の「嵐」、経過 02:00・05:00・08:00 にボスが出ます。ボスを倒すとHP全回復と特別ボーナス箱（金色）。</li>
+          <li>1分ごとに敵の「嵐」、経過 02:00・05:00・08:00 にボスが出ます。ボスを倒すとHP全回復と特別ボーナス箱（金色）。管理職モードだけは、ボスを倒しても回復はHPの50%で、金色の箱に回復は入っていません。</li>
         </ul>
       </section>
       <section class="rsec">
@@ -566,7 +566,8 @@
       desc: '3つの工場の不良品がまとめて押し寄せ、ボス3体が順番に巡回。リコール大魔王も2回現れる。',
       roles: { basic: ['bug', 'tomb', 'choco'], fast: ['chip', 'solder', 'tag'], tank: ['rust', 'ic', 'lot'], boss: ['boss', 'reflow', 'takt'] },
       hp: 3.2, spd: 1.32, spawn: 2.3, dmg: 1.9, xp: 1.6, pay: 3, belts: true,
-      swarm: '全ラインから不良品が押し寄せる！', bossIn: '巡回ボスがやって来た！', bossOut: '巡回ボス撃退！ HP全回復',
+      bossHeal: 0.5,   // ボス撃破の回復はHPの50%だけ（金色の箱は回復なし）
+      swarm: '全ラインから不良品が押し寄せる！', bossIn: '巡回ボスがやって来た！', bossOut: '巡回ボス撃退！ HP50%回復',
       bgm: { tempo: 1.22, tr: 1 },
       superAt: [300, 540],
       lock: true,
@@ -1756,8 +1757,9 @@
       return;
     }
     if (b.gold) {
-      applyItem('money', 4, true); applyItem('magnet', 1, true); P.hp = stat.maxHp;
-      banner('💰 特別ボーナス箱！ 大入り袋×4・全回収・HP全回復');
+      applyItem('money', 4, true); applyItem('magnet', 1, true);
+      if (stage.bossHeal == null) P.hp = stat.maxHp;
+      banner('💰 特別ボーナス箱！ 大入り袋×4・全回収' + (stage.bossHeal == null ? '・HP全回復' : ''));
     } else applyItem(b.forced || pickItem());
   }
   function burst(x, y, color, n) {
@@ -1813,7 +1815,7 @@
       const d = Math.hypot(o.x - e.x, o.y - e.y) || 1;
       hurt(o, o.hp / stat.dmg + 1, (o.x - e.x) / d * 600, (o.y - e.y) / d * 600);
     }
-    P.hp = stat.maxHp;
+    P.hp = Math.min(stat.maxHp, P.hp + stat.maxHp * (stage.bossHeal ?? 1));
     if (!enemies.some((o) => o.boss && !o.dead)) BGM.boss(false);
     banner(stage.bossOut);
   }
