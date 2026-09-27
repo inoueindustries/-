@@ -452,6 +452,7 @@
         <table class="rtable" id="rulesPay"></table>
         <p class="rtext" id="rulesExample"></p>
       </section>
+      <p class="rtext" id="voiceCredit" hidden></p>
       <div class="actions"><button class="btn" id="rulesClose" type="button">閉じる</button></div>
     </div>
   </div>
@@ -1487,6 +1488,15 @@
   // 例: male: { level: ['voice/male_level1.mp3', 'voice/male_level2.mp3'], lucky: ['voice/male_lucky.mp3'], awaken: ['voice/male_awaken.mp3'] },
   const VOICE_FILES = {
   };
+  // vansaba/tools/make_voices_gemini.py などで作った voice/voices.json があれば読み込む
+  let voiceCredit = '';
+  try {
+    fetch('voice/voices.json').then((r) => (r.ok ? r.json() : null)).then((j) => {
+      if (!j) return;
+      for (const k of ['male', 'female', 'boy']) if (j[k]) VOICE_FILES[k] = j[k];
+      voiceCredit = j.credit || '';
+    }).catch(() => {});
+  } catch (e) {}
   const LINES = {
     male:   { level: ['よし、レベルアップだ！', 'まだまだいけるぞ！', '改善完了！'], lucky: ['おっ、ラッキー！', 'ツイてるぞ！'], awaken: ['覚醒！ 全力でいくぞ！'] },
     female: { level: ['レベルアップ！', 'いい調子です！', '改善、完了です！'], lucky: ['ラッキー！', 'やったね！'], awaken: ['覚醒！ 見せてあげる！'] },
@@ -3417,6 +3427,8 @@
       const td = document.createElement('td'); td.textContent = b;
       tr.append(th, td); t.appendChild(tr);
     }
+    $('voiceCredit').textContent = voiceCredit;
+    $('voiceCredit').hidden = !voiceCredit;
     const ex = (wage * 8 + 800 * KILL_PAY + CLEAR_PAY);
     $('rulesExample').textContent = '例：初級で朝まで生き延び、800体倒した場合　(' + yen(wage * 8) + ' ＋ ' + yen(800 * KILL_PAY) + ' ＋ ' + yen(CLEAR_PAY) + ') × 1 ＝ ' + yen(ex) + '（＋拾得金）。上級なら同じ働きで ' + yen(ex * STAGES.line.pay) + '。';
   }

@@ -42,6 +42,7 @@
   - ステージが上がるほどテンポが速くなり調も変わる。ボス出現中は低いリズムが加わる
 - レベルアップ時のボイス：なし／男性／女性／少年。端末の日本語読み上げ音声のうち、自然なニューラル音声（Edge の Nanami・Keita、Mac/iPhone の拡張音声、Chrome の Google 日本語など）を優先して使う
   - VOICEVOX で自然な声を作る手順とセリフ一覧は `vansaba/voice/VOICEVOXボイス作成手順.md`
+  - Gemini TTS で作る場合：環境変数 `GEMINI_API_KEY` を設定して `python3 vansaba/tools/make_voices_gemini.py` を実行すると、`vansaba/voice/` に wav と `voices.json` ができ、ゲームが自動で読み込む（声は `VOICES` で変更可）
   - 録音や音声合成ソフトで作ったボイスファイルを `vansaba/voice/` に入れ、`index.html` の `VOICE_FILES` に書くと、読み上げの代わりにそのファイルを鳴らす
 
 ### 給料と育成
