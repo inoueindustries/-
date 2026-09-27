@@ -701,7 +701,8 @@
     fantasy: { name: 'ファンタジー戦記', note: '剣と魔法の戦闘曲' },
     celt:    { name: 'ケルトの丘', note: '笛とハープとドローンの民謡風（6/8拍子）' },
     rally:   { name: '反撃の狼煙', note: '重いドラムとコーラスで駆ける戦闘曲' },
-    jazz:    { name: '真夜中のアシッドジャズ', note: 'エレピとベースのおしゃれな曲。声ネタ入り' },
+    // 持ち込み曲。1回目は頭から流し、その後は 1:15.8〜2:19.8（64秒・32小節）を継ぎ目なくループ
+    jazz:    { name: 'Masquerade in Blue', note: 'おしゃれなアシッドジャズ（持ち込み曲）', file: 'bgm/masquerade_in_blue.mp3', loop: [75.78993, 139.79039], gain: 0.9 },
     calm:    { name: 'やすらぎ', note: '聞き心地のいいシンプルなピアノ' },
     jrpg:    { name: '決戦のファンファーレ', note: '王道JRPGの戦闘曲' },
     hero:    { name: '勇者の進軍', note: 'オーケストラの王道RPG戦闘曲' },
@@ -1325,16 +1326,59 @@
       },
     };
 
-    // ファイルの曲の再生・停止と音量
-    let audioEl = null;
-    const isFile = () => !!BGM_STYLES[style].file;
-    function fileSync() {
-      const f = BGM_STYLES[style].file;
-      if (!f || !playing) { if (audioEl) audioEl.pause(); return; }
-      if (!audioEl) { audioEl = new Audio(); audioEl.loop = true; audioEl.preload = 'auto'; }
-      if (audioEl.dataset.src !== f) { audioEl.src = f; audioEl.dataset.src = f; }
-      audioEl.volume = Math.min(1, level() * 2);
-      if (audioEl.paused) audioEl.play().catch(() => {});
+    // ファイルの曲：読み込んで音声バッファにし、ループ位置で継ぎ目なく繰り返す。
+    // 読み込めないとき（ファイルを直接開いた場合など）は、同じ枠の自動演奏か <audio> で代わりに鳴らす
+    let audioEl = null, fileSrc = null, fileStyle = null, fileToken = 0;
+    const fileBufs = {}, fileFailed = {};
+    const isFile = () => !!BGM_STYLES[style].file && !(fileFailed[style] && SONGS[style]);
+    function loadFile(S) {
+      if (!fileBufs[S.file]) {
+        fileBufs[S.file] = fetch(S.file)
+          .then((r) => { if (!r.ok) throw new Error('load'); return r.arrayBuffer(); })
+          .then((b) => actx.decodeAudioData(b))
+          .then((buf) => {
+            if (S.loop) {   // 継ぎ目の0.08秒を、ループ開始点の直前の音とクロスフェード
+              const sr = buf.sampleRate, st = Math.round(S.loop[0] * sr), en = Math.round(S.loop[1] * sr), X = Math.round(0.08 * sr);
+              for (let c = 0; c < buf.numberOfChannels; c++) {
+                const d = buf.getChannelData(c);
+                for (let k = 0; k < X; k++) { const w = k / X, i = en - X + k, j = st - X + k; if (j >= 0 && i < d.length) d[i] = d[i] * (1 - w) + d[j] * w; }
+              }
+            }
+            return buf;
+          })
+          .catch(() => null);
+      }
+      return fileBufs[S.file];
+    }
+    function stopFile(fadeSec) {
+      if (fileSrc) { try { fileSrc.stop(actx.currentTime + (fadeSec || 0)); } catch (e) {} fileSrc = null; }
+      fileStyle = null;
+    }
+    function fileSync(fadeSec) {
+      const S = BGM_STYLES[style];
+      if (!S.file || !playing) { stopFile(fadeSec); if (audioEl) audioEl.pause(); return; }
+      if (fileStyle === style) return;
+      stopFile(0);
+      fileStyle = style;
+      const token = ++fileToken;
+      loadFile(S).then((buf) => {
+        if (token !== fileToken || !playing) return;
+        if (!buf) {
+          fileFailed[style] = true;
+          fileStyle = null;
+          if (SONGS[style]) { nextBar = Math.max(actx.currentTime + 0.1, nextBar); tick(); return; }   // 自動演奏に戻す
+          if (!audioEl) { audioEl = new Audio(); audioEl.loop = true; }
+          audioEl.src = S.file; audioEl.volume = Math.min(1, level() * 2);
+          audioEl.play().catch(() => {});
+          return;
+        }
+        const g = gainNode(S.gain || 1); g.connect(out);
+        fileSrc = actx.createBufferSource();
+        fileSrc.buffer = buf; fileSrc.loop = true;
+        if (S.loop) { fileSrc.loopStart = S.loop[0]; fileSrc.loopEnd = S.loop[1]; }
+        fileSrc.connect(g);
+        fileSrc.start();
+      });
     }
 
     function setTempo() {
@@ -1355,7 +1399,7 @@
       }
     }
     function fade(v, sec) {
-      if (audioEl && isFile()) audioEl.volume = Math.min(1, v * 2);
+      if (audioEl && !audioEl.paused) audioEl.volume = Math.min(1, v * 2);
       if (!out) return;
       const t = actx.currentTime;
       out.gain.cancelScheduledValues(t);
@@ -1384,7 +1428,7 @@
       stop() {
         playing = false;
         fade(0, 1.5);
-        fileSync();
+        fileSync(1.6);
       },
       setStyle(id) {
         if (!BGM_STYLES[id]) return;
@@ -1409,11 +1453,17 @@
 
   // ---------- レベルアップ時のボイス ----------
   // 端末に入っている日本語の読み上げ音声を使う。男性・女性らしい声があれば優先し、声の高さで演じ分ける
+  // prefer は上から順に探す。ニューラル音声（Natural／Online／Premium など）ほど自然に聞こえるので優先する
+  const NATURAL = /(Natural|Online|Neural|Premium|Enhanced|拡張|高品質)/i;
   const VOICES = {
     off:    { name: 'なし' },
-    male:   { name: '男性', pitch: 0.8, rate: 1.05, prefer: /(Otoya|Keita|Ichiro|Takumi|Daichi|Hattori|male|男性)/i },
-    female: { name: '女性', pitch: 1.15, rate: 1.05, prefer: /(Kyoko|Haruka|Ayumi|Nanami|Mizuki|Sayaka|O-ren|female|女性)/i },
-    boy:    { name: '少年', pitch: 1.75, rate: 1.18, prefer: /(Kyoko|Haruka|Nanami|Ayumi|female|女性)/i },
+    male:   { name: '男性', male: true, pitch: 0.95, rate: 1.05, prefer: [/Keita.*(Natural|Online)/i, /Daichi|Naoki/i, /Otoya.*(Premium|Enhanced|拡張)/i, /Otoya|Keita|Ichiro|Takumi|Hattori/i, /male|男性/i] },
+    female: { name: '女性', pitch: 1.05, rate: 1.05, prefer: [/Nanami.*(Natural|Online)/i, /Aoi|Mayu|Shiori/i, /Kyoko.*(Premium|Enhanced|拡張)/i, /Google.*日本/i, /Kyoko|Haruka|Ayumi|Mizuki|Sayaka|O-ren|Nanami/i, /female|女性/i] },
+    boy:    { name: '少年', pitch: 1.35, rate: 1.12, prefer: [/Nanami.*(Natural|Online)/i, /Aoi|Mayu|Shiori/i, /Kyoko.*(Premium|Enhanced|拡張)/i, /Google.*日本/i, /Kyoko|Haruka|Ayumi|Nanami/i] },
+  };
+  // 録音・生成したボイスファイル（mp3など）を使うときは vansaba/voice/ に入れてここに書く。書いてあればこちらを優先して鳴らす
+  // 例: male: { level: ['voice/male_level1.mp3', 'voice/male_level2.mp3'], lucky: ['voice/male_lucky.mp3'], awaken: ['voice/male_awaken.mp3'] },
+  const VOICE_FILES = {
   };
   const LINES = {
     male:   { level: ['よし、レベルアップだ！', 'まだまだいけるぞ！', '改善完了！'], lucky: ['おっ、ラッキー！', 'ツイてるぞ！'], awaken: ['覚醒！ 全力でいくぞ！'] },
@@ -1425,23 +1475,40 @@
   function pickVoice(V) {
     try {
       const all = speechSynthesis.getVoices().filter((v) => /^ja/i.test(v.lang));
-      return all.find((v) => V.prefer.test(v.name)) || all[0] || null;
+      for (const re of V.prefer) { const v = all.find((x) => re.test(x.name)); if (v) return v; }
+      return all.find((x) => NATURAL.test(x.name)) || all[0] || null;
     } catch (e) { return null; }
   }
+  // 男性の声が端末にないときは、ほかの声を低くして代用する
+  const pitchFor = (V, v) => (V.male && v && !V.prefer.slice(0, 4).some((re) => re.test(v.name)) ? 0.7 : V.pitch);
+  const voiceFileCache = {};
+  function playVoiceFile(path) {
+    if (!voiceFileCache[path]) { const a = new Audio(path); a.preload = 'auto'; voiceFileCache[path] = a; }
+    const a = voiceFileCache[path];
+    try { a.currentTime = 0; } catch (e) {}
+    a.volume = 1;
+    return a.play().then(() => true).catch(() => false);
+  }
   function say(kind, force) {
-    if (voiceId === 'off' || muted || !('speechSynthesis' in window)) return;
+    if (voiceId === 'off' || muted) return;
+    if (!('speechSynthesis' in window) && !VOICE_FILES[voiceId]) return;
     const now = performance.now();
     if (!force && now - lastSay < 1500) return;   // 連続レベルアップでしゃべりすぎない
     lastSay = now;
-    try {
-      const V = VOICES[voiceId], list = LINES[voiceId][kind];
-      const u = new SpeechSynthesisUtterance(list[(Math.random() * list.length) | 0]);
-      u.lang = 'ja-JP';
-      const v = pickVoice(V); if (v) u.voice = v;
-      u.pitch = V.pitch; u.rate = V.rate; u.volume = 1;
-      speechSynthesis.cancel();
-      speechSynthesis.speak(u);
-    } catch (e) {}
+    const files = VOICE_FILES[voiceId] && VOICE_FILES[voiceId][kind];
+    const speak = () => {
+      try {
+        const V = VOICES[voiceId], list = LINES[voiceId][kind];
+        const u = new SpeechSynthesisUtterance(list[(Math.random() * list.length) | 0]);
+        u.lang = 'ja-JP';
+        const v = pickVoice(V); if (v) u.voice = v;
+        u.pitch = pitchFor(V, v); u.rate = V.rate; u.volume = 1;
+        speechSynthesis.cancel();
+        speechSynthesis.speak(u);
+      } catch (e) {}
+    };
+    if (files && files.length) playVoiceFile(files[(Math.random() * files.length) | 0]).then((ok) => { if (!ok) speak(); });
+    else speak();
   }
   try { if ('speechSynthesis' in window) { speechSynthesis.getVoices(); speechSynthesis.addEventListener('voiceschanged', () => {}); } } catch (e) {}
 
