@@ -114,6 +114,24 @@
   .controls dt { font-family: var(--display); color: var(--muted); letter-spacing: .08em; }
   .controls dd { margin: 0; }
   .roster { margin: 0; font-size: 13px; color: var(--muted); line-height: 1.7; }
+  .stages { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+  .stage {
+    display: grid; gap: 4px; align-content: start;
+    text-align: left; padding: 10px 12px;
+    background: var(--panel-2); color: var(--ink);
+    border: 1px solid var(--line); border-radius: 4px;
+    font: inherit; cursor: pointer;
+  }
+  .stage:hover { background: #222b35; }
+  .stage[aria-checked="true"] { border-color: var(--safety); box-shadow: inset 0 0 0 1px var(--safety); background: #232a2f; }
+  .stage:focus-visible { outline: 2px solid var(--weld); outline-offset: 2px; }
+  .stage b { font-size: 15px; }
+  .stage .sub { font-size: 12px; color: var(--muted); }
+  .stage .rec { font-family: var(--display); font-size: 11px; color: var(--weld); font-variant-numeric: tabular-nums; }
+  .lvchip { justify-self: start; font-family: var(--display); font-size: 11px; padding: 1px 6px; border-radius: 2px; color: #111; }
+  .lvchip.l1 { background: var(--good); }
+  .lvchip.l2 { background: var(--safety); }
+  .lvchip.l3 { background: var(--hazard); color: #fff; }
   .best { margin: 0; font-family: var(--display); font-size: 14px; color: var(--weld); min-height: 1em; }
   .actions { display: flex; flex-wrap: wrap; gap: 10px; }
   .btn {
@@ -164,6 +182,7 @@
     .card .ico { width: 40px; height: 40px; font-size: 22px; }
     .card kbd { display: none; }
     .stats dd { font-size: 18px; }
+    .stages { grid-template-columns: 1fr; }
   }
   @media (prefers-reduced-motion: reduce) {
     .banner, .xpfill { transition: none; }
@@ -179,6 +198,7 @@
       <div class="hudleft">
         <span id="lvText">Lv.1</span>
         <span class="kills" id="killText">撃破 0</span>
+        <span class="kills" id="stageText"></span>
       </div>
       <div class="clockbox">
         <span class="timer" id="timerText">00:00</span>
@@ -205,11 +225,12 @@
         <dt>移動</dt><dd>WASD・矢印キー／画面をドラッグ</dd>
         <dt>攻撃</dt><dd>自動で撃つ</dd>
         <dt>成長</dt><dd>ネジを集めてレベルアップ、改善を1つ選ぶ</dd>
+        <dt>ステージ</dt><dd>下のカードか数字キー 1〜3 で選ぶ</dd>
         <dt>休憩</dt><dd>P・Esc キー（BGMの音量もここで変えられます）</dd>
         <dt>音</dt><dd>画面右上の「曲」でBGM、「音」で効果音をオン・オフ</dd>
       </dl>
-      <p class="roster">出没する不良品：バリ虫／切粉（速い）／錆塊（硬い）／品質監査官（ボス・夜のあいだに3回巡回）</p>
-      <p class="best" id="bestTitle"></p>
+      <div class="stages" id="stages" role="radiogroup" aria-label="ステージを選ぶ"></div>
+      <p class="roster" id="roster"></p>
       <div class="actions"><button class="btn" id="startBtn" type="button">作業開始</button></div>
     </div>
   </div>
@@ -294,12 +315,63 @@
     weld: '#7fe3ff', hazard: '#e5484d', good: '#5fd08a', ink: '#e9edf1',
   };
 
+  // face: 顔のつけ方（lid=眠そうなまぶた, brows=怒り眉, mouth='o', cheeks=ほっぺ, ey=目の高さ, size=目の大きさ, ink=眉や口の色）
   const ETYPES = {
-    bug:  { name: 'バリ虫', r: 11, hp: 14, spd: 58, dmg: 7, xp: 1, color: '#c56b3c', sides: 6 },
-    chip: { name: '切粉', r: 8, hp: 7, spd: 108, dmg: 5, xp: 1, color: '#b9c2cc', sides: 3 },
-    rust: { name: '錆塊', r: 19, hp: 70, spd: 36, dmg: 14, xp: 4, color: '#8a4a2a', sides: 8 },
-    boss: { name: '品質監査官', r: 40, hp: 1800, spd: 50, dmg: 26, xp: 40, color: '#b8323a', sides: 12, boss: true },
+    // ネジ工場
+    bug:    { name: 'バリ虫', r: 11, hp: 14, spd: 58, dmg: 7, xp: 1, color: '#c56b3c', face: { brows: true } },
+    chip:   { name: '切粉', r: 8, hp: 7, spd: 108, dmg: 5, xp: 1, color: '#b9c2cc', face: { mouth: 'o' } },
+    rust:   { name: '錆塊', r: 19, hp: 70, spd: 36, dmg: 14, xp: 4, color: '#8a4a2a', face: { lid: true, cheeks: true } },
+    boss:   { name: '品質監査官', r: 40, hp: 1800, spd: 50, dmg: 26, xp: 40, color: '#b8323a', boss: true },
+    // 電子機器工場（SMT実装）
+    tomb:   { name: 'チップ立ち', r: 11, hp: 14, spd: 60, dmg: 7, xp: 1, color: '#2b2d33', face: { mouth: 'o', size: 0.27, ink: '#e9edf1' } },
+    solder: { name: 'はんだボール', r: 7, hp: 7, spd: 115, dmg: 5, xp: 1, color: '#cfd6dc', face: { cheeks: true } },
+    ic:     { name: '足浮きIC', r: 19, hp: 70, spd: 38, dmg: 14, xp: 4, color: '#2a2d34', face: { brows: true, size: 0.24, ink: '#e9edf1' } },
+    reflow: { name: 'リフロー炉の番人', r: 42, hp: 1800, spd: 50, dmg: 26, xp: 40, color: '#9aa4ae', boss: true },
+    // 組立ライン
+    choco:  { name: 'チョコ停', r: 11, hp: 14, spd: 62, dmg: 7, xp: 1, color: '#6b3f2a', face: { cheeks: true } },
+    tag:    { name: '不良札', r: 8, hp: 7, spd: 122, dmg: 5, xp: 1, color: '#e5484d', face: { brows: true, ey: -0.35, size: 0.28 } },
+    lot:    { name: '不良ロット', r: 20, hp: 70, spd: 38, dmg: 14, xp: 4, color: '#b08a5a', face: { lid: true, ey: 0.35, size: 0.22 } },
+    takt:   { name: 'タクトタイム大王', r: 44, hp: 1800, spd: 52, dmg: 26, xp: 40, color: '#f4f1e8', boss: true },
   };
+
+  // ステージ。hp〜xp は初級を1とした倍率
+  const STAGES = {
+    screw: {
+      name: 'ネジ工場', level: '初級', lv: 1, sub: '切削・プレス',
+      desc: 'バリや切粉が湧く町工場。まずはここから。',
+      roles: { basic: 'bug', fast: 'chip', tank: 'rust', boss: 'boss' },
+      hp: 1, spd: 1, spawn: 1, dmg: 1, xp: 1,
+      swarm: '切粉の嵐！', bossIn: '品質監査官が巡回に来た！', bossOut: '品質監査 合格！ HP全回復',
+      bgm: { bpm: 76, tr: 0 },
+    },
+    smt: {
+      name: '電子機器工場', level: '中級', lv: 2, sub: 'SMT実装ライン',
+      desc: '基板の上を、はんだボールが高速で転がってくる。敵が硬く、数も多い。',
+      roles: { basic: 'tomb', fast: 'solder', tank: 'ic', boss: 'reflow' },
+      hp: 1.35, spd: 1.1, spawn: 1.3, dmg: 1.2, xp: 1.2,
+      swarm: 'はんだボールの雨！', bossIn: 'リフロー炉の番人が目を覚ました！', bossOut: '温度プロファイル安定！ HP全回復',
+      bgm: { bpm: 84, tr: 2 },
+    },
+    line: {
+      name: '組立ライン', level: '上級', lv: 3, sub: 'コンベア組立',
+      desc: 'ベルトコンベアに押し流されながら戦う。タクトタイム大王は時間とともに速くなる。',
+      roles: { basic: 'choco', fast: 'tag', tank: 'lot', boss: 'takt' },
+      hp: 1.8, spd: 1.18, spawn: 1.6, dmg: 1.4, xp: 1.4, belts: true,
+      swarm: '不良札が舞い上がった！', bossIn: 'タクトタイム大王が迫ってくる！', bossOut: 'タクト達成！ HP全回復',
+      bgm: { bpm: 92, tr: -2 },
+    },
+  };
+  let stageId = 'screw';
+  try { const saved = localStorage.getItem('yakin-stage'); if (saved && STAGES[saved]) stageId = saved; } catch (e) {}
+  let stage = STAGES[stageId];
+
+  // 組立ラインのベルトコンベア（6マスに1本、向きは交互）
+  const BELT_SPEED = 80, BELT_EVERY = 6;
+  function beltAt(y) {
+    const j = Math.floor(y / TILE);
+    if (((j % BELT_EVERY) + BELT_EVERY) % BELT_EVERY !== 0) return 0;
+    return ((Math.floor(j / BELT_EVERY) % 2) + 2) % 2 === 0 ? 1 : -1;
+  }
 
   // 武器ごとのレベル別性能（添字 = レベル - 1）
   const WR = { count: [1, 2, 2, 3, 3], dmg: [10, 10, 14, 14, 15], pierce: [1, 1, 1, 2, 2], cd: [0.8, 0.8, 0.8, 0.8, 0.56] };
@@ -323,8 +395,11 @@
   const COFFEE = { icon: '缶', name: '缶コーヒー', desc: 'HPを30回復' };
 
   // ---------- 保存（この端末のみ） ----------
-  function loadBest() { try { return Number(localStorage.getItem('yakin-best')) || 0; } catch (e) { return 0; } }
-  function saveBest(v) { try { localStorage.setItem('yakin-best', String(v)); } catch (e) {} }
+  const bestKey = (id) => (id === 'screw' ? 'yakin-best' : 'yakin-best-' + id);
+  function loadBest(id = stageId) { try { return Number(localStorage.getItem(bestKey(id))) || 0; } catch (e) { return 0; } }
+  function saveBest(v, id = stageId) { try { localStorage.setItem(bestKey(id), String(v)); } catch (e) {} }
+  function isCleared(id) { try { return localStorage.getItem('yakin-clear-' + id) === '1'; } catch (e) { return false; } }
+  function saveCleared(id) { try { localStorage.setItem('yakin-clear-' + id, '1'); } catch (e) {} }
 
   // ---------- 効果音 ----------
   let actx = null, muted = false;
@@ -364,8 +439,8 @@
   // 静かなピアノのアルペジオ、弦のパッド、言葉のないコーラスによるオリジナル曲（ニ短調・76BPM）。
   // 音源ファイルは使わず、ブラウザの中でその場で演奏する。16小節で1巡し、区間ごとに楽器が増える。
   const BGM = (() => {
-    const BPM = 76, BEAT = 60 / BPM, BAR = BEAT * 4;
-    const mtof = (m) => 440 * Math.pow(2, (m - 69) / 12);
+    let BPM = 76, BEAT = 60 / BPM, BAR = BEAT * 4, TR = 0, delayNode = null;
+    const mtof = (m) => 440 * Math.pow(2, (m + TR - 69) / 12);
     // 1小節ごとの和音 [ベース音, アルペジオに使う6音]（MIDIノート番号）
     const CHORDS = [
       [38, [50, 57, 62, 64, 65, 69]],   // Dm(add9)
@@ -415,7 +490,7 @@
       out.connect(comp).connect(actx.destination);
       const reverb = actx.createConvolver(); reverb.buffer = impulse(3.4);
       reverb.connect(gainNode(0.6)).connect(out);
-      const delay = actx.createDelay(2); delay.delayTime.value = BEAT * 0.75;
+      const delay = actx.createDelay(2); delayNode = delay;
       const fb = gainNode(0.3), dlp = actx.createBiquadFilter(); dlp.type = 'lowpass'; dlp.frequency.value = 1800;
       delay.connect(dlp).connect(fb).connect(delay);
       dlp.connect(gainNode(0.22)).connect(out);
@@ -524,9 +599,11 @@
     return {
       get on() { return on; },
       get vol() { return vol; },
-      start() {
+      start(opt) {
         if (!actx) return;
         if (!out) build();
+        if (opt) { BPM = opt.bpm; BEAT = 60 / BPM; BAR = BEAT * 4; TR = opt.tr; }
+        delayNode.delayTime.value = BEAT * 0.75;
         ducked = false;
         busPulse.gain.value = 0;
         if (!playing) { playing = true; bar = 0; nextBar = actx.currentTime + 0.15; }
@@ -608,20 +685,20 @@
   function spawnEnemy(type, ang) {
     const T = ETYPES[type];
     const a = ang ?? Math.random() * Math.PI * 2, R = spawnRing();
-    const hs = T.boss ? 1 + time / 400 : 1 + time / 110;
+    const hs = (T.boss ? 1 + time / 400 : 1 + time / 110) * stage.hp;
     const e = {
       type, x: P.x + Math.cos(a) * R, y: P.y + Math.sin(a) * R,
-      r: T.r, hp: T.hp * hs, max: T.hp * hs, spd: T.spd * rand(0.9, 1.1), dmg: T.dmg, xp: T.xp,
-      color: T.color, sides: T.sides, boss: !!T.boss, rot: Math.random() * 6, vx: 0, vy: 0, flash: 0, dead: false, spanHit: -9, ph: Math.random() * 6.28,
+      r: T.r, hp: T.hp * hs, max: T.hp * hs, spd: T.spd * stage.spd * rand(0.9, 1.1), dmg: Math.round(T.dmg * stage.dmg), xp: T.xp,
+      color: T.color, face: T.face || {}, boss: !!T.boss, rot: Math.random() * 6, vx: 0, vy: 0, flash: 0, dead: false, spanHit: -9, ph: Math.random() * 6.28,
     };
     enemies.push(e);
     return e;
   }
   function pickType() {
-    const r = Math.random();
-    if (time > 150 && r < 0.12) return 'rust';
-    if (time > 40 && r < 0.4) return 'chip';
-    return 'bug';
+    const R = stage.roles, r = Math.random();
+    if (time > 150 && r < 0.12) return R.tank;
+    if (time > 40 && r < 0.4) return R.fast;
+    return R.basic;
   }
   function dropGem(x, y, v) {
     if (gems.length > 400) { gems[(Math.random() * gems.length) | 0].v += v; return; }
@@ -652,13 +729,13 @@
         for (let i = 0; i < 12; i++) dropGem(e.x + rand(-60, 60), e.y + rand(-60, 60), 5);
         P.hp = stat.maxHp;
         if (!enemies.some((o) => o.boss && !o.dead)) BGM.boss(false);
-        banner('品質監査 合格！ HP全回復');
+        banner(stage.bossOut);
       }
     }
   }
 
   function gainXp(v) {
-    P.xp += v; sfx('gem');
+    P.xp += v * stage.xp; sfx('gem');
     while (P.xp >= P.xpNext) {
       P.xp -= P.xpNext; P.level++; P.xpNext = xpFor(P.level); pending++;
     }
@@ -674,7 +751,11 @@
     else if (state === 'level') {
       const n = { Digit1: 0, Digit2: 1, Digit3: 2, Numpad1: 0, Numpad2: 1, Numpad3: 2 }[e.code];
       if (n !== undefined && choices[n]) choose(choices[n]);
-    } else if (state === 'title' && e.code === 'Enter') { e.preventDefault(); start(); }
+    } else if (state === 'title' && e.code === 'Enter' && !(document.activeElement && document.activeElement.classList.contains('stage'))) { e.preventDefault(); start(); }
+    else if (state === 'title') {
+      const n = { Digit1: 0, Digit2: 1, Digit3: 2, Numpad1: 0, Numpad2: 1, Numpad3: 2 }[e.code];
+      if (n !== undefined) selectStage(Object.keys(STAGES)[n]);
+    }
   });
   addEventListener('keyup', (e) => { keys[e.code] = false; });
   addEventListener('blur', () => { for (const k in keys) keys[k] = false; if (state === 'play') pause(); });
@@ -716,11 +797,12 @@
     P.moving = !!(ix || iy);
     if (P.moving) { P.face = Math.atan2(iy, ix); P.walk += dt; }
     if (ix) P.dir = ix < 0 ? -1 : 1;
+    if (stage.belts) P.x += beltAt(P.y) * BELT_SPEED * dt;
     if (P.iframe > 0) P.iframe -= dt;
 
     // 出現
     spawnT -= dt;
-    const interval = Math.max(0.12, 0.85 - time * 0.0025);
+    const interval = Math.max(0.12, 0.85 - time * 0.0025) / stage.spawn;
     const batch = 1 + Math.floor(time / 90);
     while (spawnT <= 0) {
       spawnT += interval;
@@ -729,14 +811,14 @@
     if (time >= nextSwarm) {
       nextSwarm += 60;
       const n = Math.min(40, 16 + Math.floor(time / 20));
-      for (let i = 0; i < n; i++) spawnEnemy('chip', (i / n) * Math.PI * 2);
-      banner('切粉の嵐！');
+      for (let i = 0; i < n; i++) spawnEnemy(stage.roles.fast, (i / n) * Math.PI * 2);
+      banner(stage.swarm);
     }
     if (bossIdx < BOSS_TIMES.length && time >= BOSS_TIMES[bossIdx]) {
       bossIdx++;
-      spawnEnemy('boss');
+      spawnEnemy(stage.roles.boss);
       BGM.boss(true);
-      banner('品質監査官が巡回に来た！');
+      banner(stage.bossIn);
       sfx('boss');
     }
 
@@ -749,6 +831,8 @@
         const a = Math.random() * Math.PI * 2, R = spawnRing();
         e.x = P.x + Math.cos(a) * R; e.y = P.y + Math.sin(a) * R; continue;
       }
+      if (stage.belts && !e.boss) e.x += beltAt(e.y) * BELT_SPEED * dt;
+      if (e.type === 'takt') e.spd += dt * 1.2;   // 時間とともに速くなる
       e.x += (dx / d * e.spd + e.vx) * dt;
       e.y += (dy / d * e.spd + e.vy) * dt;
       e.vx *= damp; e.vy *= damp;
@@ -909,42 +993,71 @@
     h = Math.imul(h ^ (h >>> 13), 1274126177);
     return (h ^ (h >>> 16)) >>> 0;
   }
+  const FLOORS = {
+    screw: { base: '#161b21', line: '#1e252d', aisle: 'rgba(242,194,48,.35)', dash: [26, 18], width: 4 },
+    smt:   { base: '#0c231d', line: '#123029', aisle: 'rgba(200,140,70,.4)', dash: [], width: 6 },
+    line:  { base: '#1a1c21', line: '#22252b', aisle: 'rgba(95,208,138,.3)', dash: [14, 10], width: 4 },
+  };
+  const COPPER = 'rgba(200,140,70,.45)';
   function drawFloor(cx, cy) {
-    ctx.fillStyle = COL.floor;
+    const F = FLOORS[stageId];
+    ctx.fillStyle = F.base;
     ctx.fillRect(0, 0, W, H);
     const ox = W / 2 - cx, oy = H / 2 - cy;
     const x0 = Math.floor((cx - W / 2) / TILE) - 1, x1 = Math.ceil((cx + W / 2) / TILE) + 1;
     const y0 = Math.floor((cy - H / 2) / TILE) - 1, y1 = Math.ceil((cy + H / 2) / TILE) + 1;
+    const mod = (a, n) => ((a % n) + n) % n;
 
     for (let i = x0; i <= x1; i++) for (let j = y0; j <= y1; j++) {
       const h = hash(i, j), px = i * TILE + ox, py = j * TILE + oy;
-      if (h % 29 === 0) {
+      if (stageId === 'smt') {
+        // 基板：銅配線・パッド・シルク印刷・ビア
+        ctx.strokeStyle = COPPER; ctx.fillStyle = COPPER; ctx.lineWidth = 2;
+        if (h % 9 === 0) {
+          ctx.beginPath(); ctx.moveTo(px + 6, py + 22); ctx.lineTo(px + 40, py + 22); ctx.lineTo(px + 58, py + 40); ctx.stroke();
+          ctx.beginPath(); ctx.arc(px + 6, py + 22, 3, 0, Math.PI * 2); ctx.arc(px + 58, py + 40, 3, 0, Math.PI * 2); ctx.fill();
+        } else if (h % 9 === 1) {
+          ctx.beginPath(); ctx.moveTo(px + 22, py + 4); ctx.lineTo(px + 22, py + 60); ctx.stroke();
+        } else if (h % 37 === 2) {
+          ctx.strokeStyle = 'rgba(230,236,240,.22)'; ctx.lineWidth = 1;
+          ctx.strokeRect(px + 12.5, py + 24.5, 28, 12);
+          ctx.fillRect(px + 14, py + 26, 7, 9); ctx.fillRect(px + 32, py + 26, 7, 9);
+          ctx.fillStyle = 'rgba(230,236,240,.3)'; ctx.font = '10px monospace'; ctx.textAlign = 'left'; ctx.textBaseline = 'alphabetic';
+          ctx.fillText('RCULD'[h % 5] + (h % 97 + 1), px + 13, py + 20);
+        } else if (h % 41 === 3) {
+          ctx.beginPath(); ctx.arc(px + 32, py + 32, 4.5, 0, Math.PI * 2); ctx.stroke();
+        }
+      } else if (h % 29 === 0) {
         ctx.fillStyle = 'rgba(0,0,0,.28)';
         ctx.beginPath(); ctx.ellipse(px + 32, py + 32, 18 + (h % 14), 10 + (h % 8), (h % 6) * 0.5, 0, Math.PI * 2); ctx.fill();
-      } else if (h % 47 === 3) {
+      } else if (stageId === 'screw' && h % 47 === 3) {
         ctx.fillStyle = '#1c232b'; ctx.fillRect(px + 12, py + 12, 40, 40);
         ctx.fillStyle = '#2a333d';
         for (const [bx, by] of [[16, 16], [48, 16], [16, 48], [48, 48]]) { ctx.beginPath(); ctx.arc(px + bx, py + by, 2, 0, Math.PI * 2); ctx.fill(); }
+      } else if (stageId === 'line' && (h >>> 9) % 97 === 5) {
+        ctx.fillStyle = 'rgba(95,208,138,.16)'; ctx.font = '14px DotGothic16, monospace'; ctx.textAlign = 'left'; ctx.textBaseline = 'alphabetic';
+        ctx.fillText('安全第一', px + 4, py + 38);
       }
     }
     // 目地
-    ctx.strokeStyle = COL.line; ctx.lineWidth = 1;
+    ctx.strokeStyle = F.line; ctx.lineWidth = 1;
     ctx.beginPath();
     for (let i = x0; i <= x1; i++) { const px = Math.round(i * TILE + ox) + 0.5; ctx.moveTo(px, 0); ctx.lineTo(px, H); }
     for (let j = y0; j <= y1; j++) { const py = Math.round(j * TILE + oy) + 0.5; ctx.moveTo(0, py); ctx.lineTo(W, py); }
     ctx.stroke();
-    // 通路の黄色ライン（8マスごと）
-    ctx.strokeStyle = 'rgba(242,194,48,.35)'; ctx.lineWidth = 4;
-    ctx.setLineDash([26, 18]);
+    // 通路ライン（8マスごと）。基板では太い電源配線、組立ラインでは縦の歩行帯だけ
+    ctx.strokeStyle = F.aisle; ctx.lineWidth = F.width;
+    ctx.setLineDash(F.dash);
     ctx.beginPath();
-    for (let i = x0; i <= x1; i++) if (((i % 8) + 8) % 8 === 0) { const px = i * TILE + ox; ctx.moveTo(px, 0); ctx.lineTo(px, H); }
-    for (let j = y0; j <= y1; j++) if (((j % 8) + 8) % 8 === 0) { const py = j * TILE + oy; ctx.moveTo(0, py); ctx.lineTo(W, py); }
+    for (let i = x0; i <= x1; i++) if (mod(i, 8) === 0) { const px = i * TILE + ox; ctx.moveTo(px, 0); ctx.lineTo(px, H); }
+    if (stageId !== 'line') for (let j = y0; j <= y1; j++) if (mod(j, 8) === 0) { const py = j * TILE + oy; ctx.moveTo(0, py); ctx.lineTo(W, py); }
     ctx.stroke();
     ctx.setLineDash([]);
-    // 立入禁止ゾーン（16マスごと）
+    // 16マスごとの目印：ネジ工場は立入禁止ゾーン、基板はフィデューシャルマーク
     for (let i = x0; i <= x1; i++) for (let j = y0; j <= y1; j++) {
-      if (((i % 16) + 16) % 16 === 4 && ((j % 16) + 16) % 16 === 4) {
-        const px = i * TILE + ox, py = j * TILE + oy;
+      if (mod(i, 16) !== 4 || mod(j, 16) !== 4) continue;
+      const px = i * TILE + ox, py = j * TILE + oy;
+      if (stageId === 'screw') {
         ctx.save();
         ctx.beginPath(); ctx.rect(px, py, TILE * 2, TILE * 2); ctx.rect(px + 10, py + 10, TILE * 2 - 20, TILE * 2 - 20);
         ctx.clip('evenodd');
@@ -953,6 +1066,28 @@
           ctx.beginPath(); ctx.moveTo(px + s, py + TILE * 2); ctx.lineTo(px + s + 8, py + TILE * 2); ctx.lineTo(px + s + 8 + TILE * 2, py); ctx.lineTo(px + s + TILE * 2, py); ctx.fill();
         }
         ctx.restore();
+      } else if (stageId === 'smt') {
+        ctx.fillStyle = 'rgba(214,160,90,.55)';
+        ctx.beginPath(); ctx.arc(px + TILE, py + TILE, 8, 0, Math.PI * 2); ctx.fill();
+        ctx.strokeStyle = 'rgba(214,160,90,.3)'; ctx.lineWidth = 2;
+        ctx.beginPath(); ctx.arc(px + TILE, py + TILE, 16, 0, Math.PI * 2); ctx.stroke();
+      }
+    }
+    // ベルトコンベア
+    if (stage.belts) {
+      for (let j = y0; j <= y1; j++) {
+        const dir = beltAt(j * TILE + 1);
+        if (!dir) continue;
+        const py = j * TILE + oy;
+        ctx.fillStyle = '#262a31'; ctx.fillRect(0, py + 4, W, TILE - 8);
+        ctx.fillStyle = '#3b414a'; ctx.fillRect(0, py, W, 4); ctx.fillRect(0, py + TILE - 4, W, 4);
+        const phase = mod(ox + anim * BELT_SPEED * dir, 32);
+        ctx.strokeStyle = 'rgba(242,194,48,.35)'; ctx.lineWidth = 3; ctx.lineCap = 'round';
+        ctx.beginPath();
+        for (let x = phase - 32; x < W + 32; x += 32) {
+          ctx.moveTo(x, py + 20); ctx.lineTo(x + 9 * dir, py + 32); ctx.lineTo(x, py + 44);
+        }
+        ctx.stroke();
       }
     }
   }
@@ -969,7 +1104,12 @@
   // ---------- キャラ画像への差し替え ----------
   // ChatGPT などで描いたキャラ画像を使うときは、ここにファイル名を書く（例: 'sprites/player.png'）。
   // null のままなら、下の描画コードで描いたキャラが表示される。
-  const SPRITE_FILES = { player: null, bug: null, chip: null, rust: null, boss: null };
+  const SPRITE_FILES = {
+    player: null,
+    bug: null, chip: null, rust: null, boss: null,          // ネジ工場
+    tomb: null, solder: null, ic: null, reflow: null,      // 電子機器工場
+    choco: null, tag: null, lot: null, takt: null,         // 組立ライン
+  };
   const SPR = {};
   for (const k in SPRITE_FILES) {
     if (!SPRITE_FILES[k]) continue;
@@ -1025,6 +1165,187 @@
     for (const s of [-1, 1]) { ctx.beginPath(); ctx.ellipse(x + s * gap, y, r, r * 0.6, 0, 0, Math.PI * 2); ctx.fill(); }
   }
 
+  // 体の形（原点が敵の中心。塗り色は呼び出し側で設定済み）
+  const BODY = {
+    bug(r) {
+      // バリ虫：トゲトゲのまるいバリ
+      ctx.beginPath();
+      for (let i = 0; i < 16; i++) {
+        const a = anim * 0.4 + i * Math.PI / 8, rr = i % 2 ? r : r * 1.28;
+        ctx.lineTo(Math.cos(a) * rr, Math.sin(a) * rr);
+      }
+      ctx.closePath(); ctx.fill(); ctx.stroke();
+      ctx.fillStyle = 'rgba(255,255,255,.18)';
+      ctx.beginPath(); ctx.arc(-r * 0.35, -r * 0.4, r * 0.35, 0, Math.PI * 2); ctx.fill();
+    },
+    chip(r, body) {
+      // 切粉：くるんと巻いたアホ毛つきの金属のしずく
+      ctx.strokeStyle = body; ctx.lineWidth = 2.2; ctx.lineCap = 'round';
+      ctx.beginPath(); ctx.arc(r * 0.2, -r * 1.25, r * 0.45, Math.PI * 0.6, Math.PI * 2.2); ctx.stroke();
+      ctx.beginPath(); ctx.arc(0, 0, r, 0, Math.PI * 2); ctx.fill();
+      ctx.strokeStyle = 'rgba(20,10,8,.35)'; ctx.lineWidth = 1.2; ctx.stroke();
+      ctx.fillStyle = 'rgba(255,255,255,.45)';
+      ctx.beginPath(); ctx.ellipse(-r * 0.35, -r * 0.4, r * 0.3, r * 0.18, -0.6, 0, Math.PI * 2); ctx.fill();
+    },
+    rust(r, body, e) {
+      // 錆塊：ずんぐりした眠そうな岩
+      ctx.beginPath(); ctx.ellipse(0, 0, r * 1.05, r * 0.95, 0, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+      ctx.beginPath(); ctx.arc(-r * 0.6, -r * 0.7, r * 0.35, 0, Math.PI * 2); ctx.fill();
+      ctx.beginPath(); ctx.arc(r * 0.55, -r * 0.75, r * 0.3, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = e.flash > 0 ? '#fff' : 'rgba(255,138,61,.45)';
+      ctx.beginPath(); ctx.arc(-r * 0.5, r * 0.45, r * 0.22, 0, Math.PI * 2); ctx.fill();
+      ctx.beginPath(); ctx.arc(r * 0.55, r * 0.3, r * 0.14, 0, Math.PI * 2); ctx.fill();
+    },
+    boss(r, body, e) {
+      // 品質監査官：帽子とクリップボード
+      ctx.beginPath(); ctx.arc(0, 0, r, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+      ctx.fillStyle = '#23324a';
+      ctx.beginPath(); ctx.arc(0, -r * 0.62, r * 0.62, Math.PI, 0); ctx.closePath(); ctx.fill();
+      ctx.fillRect(-r * 0.2, -r * 0.7, r * 0.95, r * 0.14);
+      ctx.fillStyle = '#f2c230';
+      ctx.beginPath(); ctx.arc(0, -r * 0.95, r * 0.1, 0, Math.PI * 2); ctx.fill();
+      const cxp = (P.x < e.x ? -1 : 1) * r * 0.85;
+      ctx.fillStyle = '#8a6a44'; ctx.fillRect(cxp - r * 0.28, r * 0.05, r * 0.56, r * 0.7);
+      ctx.fillStyle = '#f4f1e8'; ctx.fillRect(cxp - r * 0.22, r * 0.14, r * 0.44, r * 0.56);
+      ctx.fillStyle = '#9aa4ae';
+      for (let i = 0; i < 3; i++) ctx.fillRect(cxp - r * 0.16, r * (0.24 + i * 0.14), r * 0.32, 1.5);
+      ctx.fillStyle = '#f4f1e8'; ctx.fillRect(-r * 0.95, r * 0.18, r * 0.42, r * 0.34);
+      ctx.fillStyle = '#b8323a'; ctx.font = Math.round(r * 0.3) + 'px DotGothic16, monospace';
+      ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+      ctx.fillText('監', -r * 0.74, r * 0.36);
+    },
+    tomb(r, body, e) {
+      // チップ立ち：リフローで片側が浮いて立ち上がったチップ部品（マンハッタン現象）
+      const w = r * 1.35, h = r * 2;
+      ctx.rotate(Math.sin(anim * 3 + e.ph) * 0.12);
+      ctx.beginPath(); ctx.roundRect(-w / 2, -h / 2, w, h, 3); ctx.fill(); ctx.stroke();
+      ctx.fillStyle = e.flash > 0 ? '#fff' : '#cfd6dc';
+      ctx.fillRect(-w / 2, -h / 2, w, h * 0.2); ctx.fillRect(-w / 2, h * 0.3, w, h * 0.2);
+    },
+    solder(r) {
+      // はんだボール：ぴかぴかの小さな銀玉
+      ctx.beginPath(); ctx.arc(0, 0, r, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+      ctx.fillStyle = 'rgba(255,255,255,.75)';
+      ctx.beginPath(); ctx.ellipse(-r * 0.35, -r * 0.45, r * 0.32, r * 0.2, -0.5, 0, Math.PI * 2); ctx.fill();
+    },
+    ic(r, body, e) {
+      // 足浮きIC：右上の足が1本だけ浮いている
+      const w = r * 2.1, h = r * 1.6;
+      ctx.fillStyle = e.flash > 0 ? '#fff' : '#cfd6dc';
+      for (let i = 0; i < 4; i++) {
+        const py = -h / 2 + h * (i + 0.5) / 4 - 2;
+        ctx.fillRect(-w / 2 - 5, py, 6, 4);
+        if (i === 0) {
+          ctx.save(); ctx.translate(w / 2 - 1, py + 2); ctx.rotate(-0.7 + Math.sin(anim * 5 + e.ph) * 0.15); ctx.fillRect(0, -2, 8, 4); ctx.restore();
+        } else ctx.fillRect(w / 2 - 1, py, 6, 4);
+      }
+      ctx.fillStyle = body;
+      ctx.beginPath(); ctx.roundRect(-w / 2, -h / 2, w, h, 3); ctx.fill(); ctx.stroke();
+      ctx.fillStyle = 'rgba(255,255,255,.35)';
+      ctx.beginPath(); ctx.arc(-w / 2 + 5, -h / 2 + 5, 2.2, 0, Math.PI * 2); ctx.fill();
+    },
+    reflow(r, body, e) {
+      // リフロー炉の番人：煙突から湯気、窓の中はオレンジに光る
+      const w = r * 2.2, h = r * 1.7;
+      ctx.fillStyle = '#6f7880'; ctx.fillRect(r * 0.45, -h / 2 - r * 0.45, r * 0.3, r * 0.5);
+      ctx.fillStyle = 'rgba(233,237,241,.25)';
+      for (let k = 0; k < 3; k++) {
+        const t = (anim * 0.6 + k / 3) % 1;
+        ctx.beginPath(); ctx.arc(r * 0.6 + Math.sin(t * 6 + k) * 4, -h / 2 - r * 0.5 - t * r * 0.9, r * 0.12 + t * r * 0.15, 0, Math.PI * 2); ctx.fill();
+      }
+      ctx.fillStyle = body;
+      ctx.beginPath(); ctx.roundRect(-w / 2, -h / 2, w, h, r * 0.25); ctx.fill(); ctx.stroke();
+      const g = ctx.createLinearGradient(0, -h * 0.32, 0, h * 0.2);
+      g.addColorStop(0, '#ffb347'); g.addColorStop(1, '#ff5a2a');
+      ctx.fillStyle = e.flash > 0 ? '#fff' : g;
+      ctx.beginPath(); ctx.roundRect(-w * 0.38, -h * 0.32, w * 0.76, h * 0.52, 6); ctx.fill();
+      ctx.fillStyle = '#3a4048'; ctx.fillRect(-w / 2, h * 0.26, w, h * 0.1);
+      ctx.fillStyle = '#1c1618'; ctx.font = Math.round(r * 0.22) + 'px DotGothic16, monospace';
+      ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+      ctx.fillText('245℃', 0, h * 0.43);
+    },
+    choco(r, body, e) {
+      // チョコ停：板チョコ。銀紙が少しめくれている
+      const w = r * 1.9, h = r * 1.5;
+      ctx.beginPath(); ctx.roundRect(-w / 2, -h / 2, w, h, 3); ctx.fill(); ctx.stroke();
+      ctx.strokeStyle = 'rgba(255,255,255,.14)'; ctx.lineWidth = 1;
+      ctx.beginPath(); ctx.moveTo(-w / 6, -h / 2); ctx.lineTo(-w / 6, h / 2); ctx.moveTo(w / 6, -h / 2); ctx.lineTo(w / 6, h / 2); ctx.stroke();
+      ctx.fillStyle = e.flash > 0 ? '#fff' : '#cfd6dc';
+      ctx.beginPath(); ctx.moveTo(w / 2, h * 0.05); ctx.lineTo(w / 2, h / 2); ctx.lineTo(w * 0.05, h / 2); ctx.closePath(); ctx.fill();
+    },
+    tag(r, body, e) {
+      // 不良札：ひらひら揺れる赤い札
+      const w = r * 1.5, h = r * 2.1, c = r * 0.4;
+      ctx.rotate(Math.sin(anim * 6 + e.ph) * 0.25);
+      ctx.strokeStyle = '#e9edf1'; ctx.lineWidth = 1;
+      ctx.beginPath(); ctx.moveTo(0, -h / 2 + r * 0.35); ctx.quadraticCurveTo(r * 0.6, -h / 2 - r * 0.6, r * 0.2, -h / 2 - r); ctx.stroke();
+      ctx.strokeStyle = 'rgba(20,10,8,.45)'; ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      ctx.moveTo(-w / 2, -h / 2 + c); ctx.lineTo(-w / 2 + c, -h / 2); ctx.lineTo(w / 2 - c, -h / 2); ctx.lineTo(w / 2, -h / 2 + c);
+      ctx.lineTo(w / 2, h / 2); ctx.lineTo(-w / 2, h / 2); ctx.closePath(); ctx.fill(); ctx.stroke();
+      ctx.fillStyle = '#1a1c21'; ctx.beginPath(); ctx.arc(0, -h / 2 + r * 0.35, r * 0.14, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = '#ffffff'; ctx.font = Math.round(r * 0.5) + 'px DotGothic16, monospace';
+      ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+      ctx.fillText('不良', 0, h * 0.3);
+    },
+    lot(r, body, e) {
+      // 不良ロット：NGシールの貼られた段ボールの山
+      const tape = e.flash > 0 ? '#fff' : '#d9c49a';
+      ctx.beginPath(); ctx.rect(-r * 0.7, -r * 1.05, r * 1.4, r * 0.85); ctx.fill(); ctx.stroke();
+      ctx.beginPath(); ctx.rect(-r, -r * 0.2, r * 2, r * 1.2); ctx.fill(); ctx.stroke();
+      ctx.fillStyle = tape;
+      ctx.fillRect(-r * 0.09, -r * 1.05, r * 0.18, r * 0.85);
+      ctx.fillRect(-r, -r * 0.2, r * 2, r * 0.16);
+      ctx.fillStyle = '#e5484d'; ctx.fillRect(r * 0.18, -r * 0.9, r * 0.44, r * 0.3);
+      ctx.fillStyle = '#ffffff'; ctx.font = Math.round(r * 0.24) + 'px DotGothic16, monospace';
+      ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+      ctx.fillText('NG', r * 0.4, -r * 0.74);
+    },
+    takt(r, body, e) {
+      // タクトタイム大王：針がぐるぐる回る目覚まし時計
+      ctx.fillStyle = e.flash > 0 ? '#fff' : COL.hazard;
+      ctx.beginPath(); ctx.arc(-r * 0.62, -r * 0.82, r * 0.34, 0, Math.PI * 2); ctx.arc(r * 0.62, -r * 0.82, r * 0.34, 0, Math.PI * 2); ctx.fill();
+      ctx.strokeStyle = '#1c1618'; ctx.lineWidth = 3; ctx.lineCap = 'round';
+      ctx.beginPath(); ctx.moveTo(-r * 0.6, r * 0.8); ctx.lineTo(-r * 0.8, r * 1.1); ctx.moveTo(r * 0.6, r * 0.8); ctx.lineTo(r * 0.8, r * 1.1); ctx.stroke();
+      ctx.fillStyle = body;
+      ctx.beginPath(); ctx.arc(0, 0, r, 0, Math.PI * 2); ctx.fill();
+      ctx.strokeStyle = COL.hazard; ctx.lineWidth = r * 0.16; ctx.stroke();
+      ctx.fillStyle = '#9aa4ae';
+      for (let i = 0; i < 12; i++) {
+        const a = i * Math.PI / 6;
+        ctx.beginPath(); ctx.arc(Math.cos(a) * r * 0.78, Math.sin(a) * r * 0.78, i % 3 ? 1.5 : 2.6, 0, Math.PI * 2); ctx.fill();
+      }
+      ctx.strokeStyle = '#1c1618'; ctx.lineWidth = 3;
+      const a1 = anim * 4 + e.ph, a2 = anim * 0.4;
+      ctx.beginPath();
+      ctx.moveTo(0, r * 0.2); ctx.lineTo(Math.cos(a1) * r * 0.62, r * 0.2 + Math.sin(a1) * r * 0.5);
+      ctx.moveTo(0, r * 0.2); ctx.lineTo(Math.cos(a2) * r * 0.4, r * 0.2 + Math.sin(a2) * r * 0.32);
+      ctx.stroke();
+    },
+  };
+
+  // ボスだけは顔を個別に描く
+  const BOSS_FACE = {
+    boss(e, x, ey, r, look, hurtFace) {
+      drawEyes(x, ey - r * 0.05, r * 0.3, r * 0.17, look, hurtFace ? 'hurt' : 'normal');
+      ctx.strokeStyle = '#1c1618'; ctx.lineWidth = 2;
+      for (const s of [-1, 1]) { ctx.beginPath(); ctx.arc(x + s * r * 0.3, ey - r * 0.05, r * 0.26, 0, Math.PI * 2); ctx.stroke(); }
+      ctx.beginPath(); ctx.moveTo(x - r * 0.05, ey - r * 0.05); ctx.lineTo(x + r * 0.05, ey - r * 0.05); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(x - r * 0.12, ey + r * 0.4); ctx.lineTo(x + r * 0.12, ey + r * 0.4); ctx.stroke();
+    },
+    reflow(e, x, ey, r, look, hurtFace) {
+      drawEyes(x, ey - r * 0.12, r * 0.34, r * 0.2, look, hurtFace ? 'hurt' : 'normal');
+      cheeks(x, ey + r * 0.14, r * 0.62, r * 0.1);
+    },
+    takt(e, x, ey, r, look, hurtFace) {
+      drawEyes(x, ey - r * 0.12, r * 0.34, r * 0.2, look, hurtFace ? 'hurt' : 'normal');
+      ctx.strokeStyle = '#1c1618'; ctx.lineWidth = 2; ctx.lineCap = 'round';
+      for (const s of [-1, 1]) {   // せっかちな眉
+        ctx.beginPath(); ctx.moveTo(x + s * r * 0.55, ey - r * 0.42); ctx.lineTo(x + s * r * 0.18, ey - r * 0.32); ctx.stroke();
+      }
+    },
+  };
+
   function drawEnemy(e) {
     const x = e.x, y = e.y, r = e.r;
     const b = reduceMotion ? 0 : Math.sin(anim * 8 + e.ph);
@@ -1041,74 +1362,27 @@
       ctx.scale(1 + b * 0.06, 1 - b * 0.06);
       ctx.fillStyle = body;
       ctx.strokeStyle = 'rgba(20,10,8,.45)'; ctx.lineWidth = 1.5;
-      if (e.type === 'bug') {
-        // バリ虫：トゲトゲのまるいバリ
-        ctx.beginPath();
-        for (let i = 0; i < 16; i++) {
-          const a = e.rot * 0.25 + i * Math.PI / 8, rr = i % 2 ? r : r * 1.28;
-          ctx.lineTo(Math.cos(a) * rr, Math.sin(a) * rr);
-        }
-        ctx.closePath(); ctx.fill(); ctx.stroke();
-        ctx.fillStyle = 'rgba(255,255,255,.18)';
-        ctx.beginPath(); ctx.arc(-r * 0.35, -r * 0.4, r * 0.35, 0, Math.PI * 2); ctx.fill();
-      } else if (e.type === 'chip') {
-        // 切粉：くるんと巻いたアホ毛つきの金属のしずく
-        ctx.strokeStyle = body; ctx.lineWidth = 2.2; ctx.lineCap = 'round';
-        ctx.beginPath(); ctx.arc(r * 0.2, -r * 1.25, r * 0.45, Math.PI * 0.6, Math.PI * 2.2); ctx.stroke();
-        ctx.beginPath(); ctx.arc(0, 0, r, 0, Math.PI * 2); ctx.fill();
-        ctx.strokeStyle = 'rgba(20,10,8,.35)'; ctx.lineWidth = 1.2; ctx.stroke();
-        ctx.fillStyle = 'rgba(255,255,255,.45)';
-        ctx.beginPath(); ctx.ellipse(-r * 0.35, -r * 0.4, r * 0.3, r * 0.18, -0.6, 0, Math.PI * 2); ctx.fill();
-      } else if (e.type === 'rust') {
-        // 錆塊：ずんぐりした眠そうな岩
-        ctx.beginPath(); ctx.ellipse(0, 0, r * 1.05, r * 0.95, 0, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
-        ctx.beginPath(); ctx.arc(-r * 0.6, -r * 0.7, r * 0.35, 0, Math.PI * 2); ctx.fill();
-        ctx.beginPath(); ctx.arc(r * 0.55, -r * 0.75, r * 0.3, 0, Math.PI * 2); ctx.fill();
-        ctx.fillStyle = e.flash > 0 ? '#fff' : 'rgba(255,138,61,.45)';
-        ctx.beginPath(); ctx.arc(-r * 0.5, r * 0.45, r * 0.22, 0, Math.PI * 2); ctx.fill();
-        ctx.beginPath(); ctx.arc(r * 0.55, r * 0.3, r * 0.14, 0, Math.PI * 2); ctx.fill();
-      } else {
-        // 品質監査官：帽子とメガネとクリップボード
-        ctx.beginPath(); ctx.arc(0, 0, r, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
-        ctx.fillStyle = '#23324a';
-        ctx.beginPath(); ctx.arc(0, -r * 0.62, r * 0.62, Math.PI, 0); ctx.closePath(); ctx.fill();
-        ctx.fillRect(-r * 0.2, -r * 0.7, r * 0.95, r * 0.14);
-        ctx.fillStyle = '#f2c230';
-        ctx.beginPath(); ctx.arc(0, -r * 0.95, r * 0.1, 0, Math.PI * 2); ctx.fill();
-        const cxp = (P.x < x ? -1 : 1) * r * 0.85;
-        ctx.fillStyle = '#8a6a44'; ctx.fillRect(cxp - r * 0.28, r * 0.05, r * 0.56, r * 0.7);
-        ctx.fillStyle = '#f4f1e8'; ctx.fillRect(cxp - r * 0.22, r * 0.14, r * 0.44, r * 0.56);
-        ctx.fillStyle = '#9aa4ae';
-        for (let i = 0; i < 3; i++) ctx.fillRect(cxp - r * 0.16, r * (0.24 + i * 0.14), r * 0.32, 1.5);
-        ctx.fillStyle = '#f4f1e8'; ctx.fillRect(-r * 0.95, r * 0.18, r * 0.42, r * 0.34);
-        ctx.fillStyle = '#b8323a'; ctx.font = Math.round(r * 0.3) + 'px DotGothic16, monospace';
-        ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-        ctx.fillText('監', -r * 0.74, r * 0.36);
-      }
+      BODY[e.type](r, body, e);
       ctx.restore();
 
-      const ey = y - r * 0.08 - b * r * 0.06;
-      if (e.type === 'boss') {
-        drawEyes(x, ey - r * 0.05, r * 0.3, r * 0.17, look, e.flash > 0 ? 'hurt' : 'normal');
-        ctx.strokeStyle = '#1c1618'; ctx.lineWidth = 2;
-        for (const s of [-1, 1]) { ctx.beginPath(); ctx.arc(x + s * r * 0.3, ey - r * 0.05, r * 0.26, 0, Math.PI * 2); ctx.stroke(); }
-        ctx.beginPath(); ctx.moveTo(x - r * 0.05, ey - r * 0.05); ctx.lineTo(x + r * 0.05, ey - r * 0.05); ctx.stroke();
-        ctx.beginPath(); ctx.moveTo(x - r * 0.12, ey + r * 0.4); ctx.lineTo(x + r * 0.12, ey + r * 0.4); ctx.stroke();
-      } else {
-        const mood = e.flash > 0 ? 'hurt' : 'normal';
-        drawEyes(x, ey, r * 0.36, r * 0.3, look, mood, e.type === 'rust' && mood === 'normal' ? e.color : null);
-        if (e.type === 'bug' && mood === 'normal') {
-          // ちょっと怒った眉
-          ctx.strokeStyle = '#1c1618'; ctx.lineWidth = 1.6; ctx.lineCap = 'round';
+      const hurtFace = e.flash > 0;
+      const f = e.face;
+      const ey = y + r * (f.ey ?? -0.08) - b * r * 0.06;
+      if (BOSS_FACE[e.type]) BOSS_FACE[e.type](e, x, ey, r, look, hurtFace);
+      else {
+        drawEyes(x, ey, r * 0.36, r * (f.size ?? 0.3), look, hurtFace ? 'hurt' : 'normal', f.lid && !hurtFace ? e.color : null);
+        const ink = f.ink || '#1c1618';
+        if (f.brows && !hurtFace) {
+          ctx.strokeStyle = ink; ctx.lineWidth = 1.6; ctx.lineCap = 'round';
           for (const s of [-1, 1]) {
             ctx.beginPath(); ctx.moveTo(x + s * r * 0.6, ey - r * 0.5); ctx.lineTo(x + s * r * 0.15, ey - r * 0.36); ctx.stroke();
           }
         }
-        if (e.type === 'chip') {
-          ctx.fillStyle = '#1c1618';
+        if (f.mouth === 'o') {
+          ctx.fillStyle = ink;
           ctx.beginPath(); ctx.ellipse(x, ey + r * 0.5, r * 0.14, r * 0.18, 0, 0, Math.PI * 2); ctx.fill();
         }
-        if (e.type === 'rust') cheeks(x, ey + r * 0.38, r * 0.58, r * 0.16);
+        if (f.cheeks) cheeks(x, ey + r * 0.38, r * 0.58, r * 0.16);
       }
     }
     if (e.boss) {
@@ -1312,17 +1586,18 @@
     if (actx && actx.state === 'suspended') actx.resume();
     reset();
     state = 'play';
-    BGM.start();
+    BGM.start(stage.bgm);
+    $('stageText').textContent = stage.level + '・' + stage.name;
     showOverlay(null);
     $('hud').hidden = false; $('gear').hidden = false;
-    banner('22:00 夜勤スタート');
+    banner('22:00 ' + stage.name + ' 夜勤スタート');
   }
   function pause() { state = 'pause'; joy = null; BGM.duck(true); showOverlay('ovPause'); $('resumeBtn').focus(); }
   function resume() { if (state === 'pause') BGM.duck(false); state = 'play'; showOverlay(null); last = performance.now(); }
   function toTitle() {
     state = 'title'; BGM.stop(); showOverlay('ovTitle');
     $('hud').hidden = true; $('gear').hidden = true;
-    renderBest(); $('startBtn').focus();
+    setupDemo(); renderStages(); $('startBtn').focus();
   }
 
   let choices = [];
@@ -1384,7 +1659,8 @@
     BGM.stop();
     const best = Math.max(loadBest(), Math.floor(time));
     saveBest(best);
-    $('overEyebrow').textContent = win ? 'SHIFT COMPLETE 06:00' : 'LINE STOP ' + shiftClock(time);
+    if (win) saveCleared(stageId);
+    $('overEyebrow').textContent = stage.level + '・' + stage.name + '　' + (win ? 'SHIFT COMPLETE 06:00' : 'LINE STOP ' + shiftClock(time));
     $('overTitle').textContent = win ? '定時退勤！' : 'ライン停止';
     $('overLead').textContent = win
       ? '朝6時まで持ち場を守り切りました。お疲れさまでした。'
@@ -1392,13 +1668,39 @@
     $('stTime').textContent = fmt(time);
     $('stLv').textContent = P.level;
     $('stKills').textContent = kills;
-    $('bestOver').textContent = 'この端末での最長記録 ' + fmt(best);
+    $('bestOver').textContent = stage.name + 'の最長記録（この端末） ' + fmt(best);
     showOverlay('ovOver');
     $('retryBtn').focus();
   }
-  function renderBest() {
-    const b = loadBest();
-    $('bestTitle').textContent = b ? 'この端末での最長記録 ' + fmt(b) + '（工場時刻 ' + shiftClock(b) + '）' : '';
+  function renderStages() {
+    const box = $('stages');
+    box.innerHTML = '';
+    for (const id in STAGES) {
+      const S = STAGES[id];
+      const btn = document.createElement('button');
+      btn.type = 'button'; btn.className = 'stage';
+      btn.setAttribute('role', 'radio');
+      btn.setAttribute('aria-checked', String(id === stageId));
+      btn.innerHTML = '<span class="lvchip"></span><b></b><small class="sub"></small><small class="rec"></small>';
+      const chip = btn.querySelector('.lvchip');
+      chip.className = 'lvchip l' + S.lv; chip.textContent = S.level + ' ' + '★'.repeat(S.lv);
+      btn.querySelector('b').textContent = S.name;
+      btn.querySelector('.sub').textContent = S.sub;
+      const best = loadBest(id);
+      btn.querySelector('.rec').textContent = isCleared(id) ? '定時退勤済み' : best ? '最長 ' + fmt(best) : '未挑戦';
+      btn.addEventListener('click', () => selectStage(id));
+      box.appendChild(btn);
+    }
+    const R = stage.roles;
+    $('roster').textContent = stage.desc + '　出没する不良品：' + ETYPES[R.basic].name + '／' + ETYPES[R.fast].name + '（速い）／' +
+      ETYPES[R.tank].name + '（硬い）／' + ETYPES[R.boss].name + '（ボス）';
+  }
+  function selectStage(id) {
+    stageId = id; stage = STAGES[id];
+    try { localStorage.setItem('yakin-stage', id); } catch (e) {}
+    renderStages(); setupDemo();
+    const cur = $('stages').querySelector('[aria-checked="true"]');
+    if (cur) cur.focus();
   }
 
   $('startBtn').addEventListener('click', start);
@@ -1434,14 +1736,18 @@
     requestAnimationFrame(loop);
   }
 
-  // タイトル背景用に、少しだけ敵を並べておく
-  reset();
-  for (let i = 0; i < 14; i++) {
-    const e = spawnEnemy(i % 5 === 0 ? 'rust' : i % 3 === 0 ? 'chip' : 'bug', i / 14 * Math.PI * 2);
-    e.x = P.x + (e.x - P.x) * 0.55; e.y = P.y + (e.y - P.y) * 0.55;
+  // タイトル背景用に、選んだステージの敵を少しだけ並べておく
+  function setupDemo() {
+    reset();
+    const R = stage.roles;
+    for (let i = 0; i < 14; i++) {
+      const e = spawnEnemy(i % 5 === 0 ? R.tank : i % 3 === 0 ? R.fast : R.basic, i / 14 * Math.PI * 2);
+      e.x = P.x + (e.x - P.x) * 0.55; e.y = P.y + (e.y - P.y) * 0.55;
+    }
+    for (let i = 0; i < 20; i++) dropGem(rand(-260, 260), rand(-200, 200), i % 6 === 0 ? 4 : 1);
   }
-  for (let i = 0; i < 20; i++) dropGem(rand(-260, 260), rand(-200, 200), i % 6 === 0 ? 4 : 1);
-  renderBest();
+  setupDemo();
+  renderStages();
   requestAnimationFrame(loop);
 })();
 </script>
