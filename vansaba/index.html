@@ -321,6 +321,7 @@
         <button class="btn" id="startBtn" type="button">作業開始</button>
         <button class="btn ghost" id="shopBtn" type="button">設備投資・福利厚生</button>
         <button class="btn ghost" id="rulesBtn" type="button">ルールと給料</button>
+        <button class="btn ghost" id="trialBtn" type="button">覚醒の試運転</button>
       </div>
     </div>
   </div>
@@ -1327,7 +1328,7 @@
     else if (state === 'level') {
       const n = { Digit1: 0, Digit2: 1, Digit3: 2, Digit4: 3, Numpad1: 0, Numpad2: 1, Numpad3: 2, Numpad4: 3 }[e.code];
       if (n !== undefined && choices[n]) choose(choices[n], luckyFlags[n]);
-    } else if (state === 'title' && e.code === 'Enter' && !(document.activeElement && document.activeElement.classList.contains('stage'))) { e.preventDefault(); start(); }
+    } else if (state === 'title' && e.code === 'Enter' && !(document.activeElement && document.activeElement.tagName === 'BUTTON')) { e.preventDefault(); start(); }
     else if (state === 'title') {
       const n = { Digit1: 0, Digit2: 1, Digit3: 2, Numpad1: 0, Numpad2: 1, Numpad3: 2 }[e.code];
       if (n !== undefined) selectStage(Object.keys(STAGES)[n]);
@@ -2436,7 +2437,7 @@
     $('xpfill').style.width = Math.min(100, P.xp / P.xpNext * 100).toFixed(1) + '%';
     setText('lvText', 'Lv.' + P.level);
     setText('killText', '撃破 ' + kills);
-    setText('payText', '給料 ' + yen(payFor(time, kills, false).total));
+    setText('payText', trial ? '試運転（給料なし）' : '給料 ' + yen(payFor(time, kills, false).total));
     setText('timerText', fmt(time));
     setText('shiftText', '工場時刻 ' + shiftClock(time));
     const buffs = [];
@@ -2474,16 +2475,27 @@
   const OVERLAYS = ['ovTitle', 'ovLevel', 'ovPause', 'ovOver', 'ovShop', 'ovRules'];
   function showOverlay(id) { for (const o of OVERLAYS) $(o).hidden = o !== id; }
 
-  function start() {
+  // 試運転：覚醒装備4つをそろえた状態で遊べる。給料・記録・貯金は増えない
+  let trial = false;
+  function start(opt) {
+    trial = !!(opt && opt.trial);
     initAudio();
     if (actx && actx.state === 'suspended') actx.resume();
     reset();
+    if (trial) {
+      Object.assign(lv, { rivet: 10, spanner: 10, weld: 10, spark: 10, oil: 5, gloves: 5, heart: 5, magnet: 5 });
+      awake = { rivet: true, spanner: true, weld: true, spark: true };
+      P.hp = stat.maxHp;
+      time = 110;   // 敵が増えてくる時間から始め、10秒ほどでボスが来る
+      nextSwarm = 120;
+      renderGear();
+    }
     state = 'play';
     BGM.start(stage.bgm);
-    $('stageText').textContent = stage.level + '・' + stage.name;
+    $('stageText').textContent = (trial ? '試運転・' : '') + stage.level + '・' + stage.name;
     showOverlay(null);
     $('hud').hidden = false; $('gear').hidden = false;
-    banner('22:00 ' + stage.name + ' 夜勤スタート');
+    banner(trial ? '試運転：覚醒装備4つを体験中（給料・記録は出ません）' : '22:00 ' + stage.name + ' 夜勤スタート');
   }
   function pause() {
     state = 'pause'; joy = null; BGM.duck(true);
@@ -2583,9 +2595,9 @@
   function finish(win) {
     state = 'over';
     BGM.stop();
-    const best = Math.max(loadBest(), Math.floor(time));
-    saveBest(best);
-    if (win) saveCleared(stageId);
+    const best = trial ? loadBest() : Math.max(loadBest(), Math.floor(time));
+    if (!trial) saveBest(best);
+    if (win && !trial) saveCleared(stageId);
     $('overEyebrow').textContent = stage.level + '・' + stage.name + '　' + (win ? 'SHIFT COMPLETE 06:00' : 'LINE STOP ' + shiftClock(time));
     $('overTitle').textContent = win ? '定時退勤！' : 'ライン停止';
     $('overLead').textContent = win
@@ -2596,9 +2608,16 @@
     $('stKills').textContent = kills;
     $('bestOver').textContent = stage.name + 'の最長記録（この端末） ' + fmt(best);
     const pay = payFor(time, kills, win);
-    meta.money += pay.total; meta.earned += pay.total;
-    saveMeta();
-    fillSlip($('slip'), pay, win, true);
+    if (trial) {
+      $('overLead').textContent = '試運転はここまでです。本番で覚醒するには、自己投資で検定1級を取ってください。';
+      const slip = $('slip'); slip.innerHTML = '';
+      const tr = document.createElement('tr'); const th = document.createElement('th'); const td = document.createElement('td');
+      th.textContent = '試運転のため、給料と記録は出ません'; td.textContent = '—'; tr.append(th, td); slip.appendChild(tr);
+    } else {
+      meta.money += pay.total; meta.earned += pay.total;
+      saveMeta();
+      fillSlip($('slip'), pay, win, true);
+    }
     showOverlay('ovOver');
     $('retryBtn').focus();
   }
@@ -2764,13 +2783,14 @@
     if (cur) cur.focus();
   }
 
-  $('startBtn').addEventListener('click', start);
+  $('startBtn').addEventListener('click', () => start());
   $('shopBtn').addEventListener('click', openShop);
   $('shopClose').addEventListener('click', closeShop);
   $('rulesBtn').addEventListener('click', openRules);
   $('pauseRules').addEventListener('click', openRules);
   $('rulesClose').addEventListener('click', closeRules);
-  $('retryBtn').addEventListener('click', start);
+  $('retryBtn').addEventListener('click', () => start({ trial }));
+  $('trialBtn').addEventListener('click', () => start({ trial: true }));
   $('titleBtn').addEventListener('click', toTitle);
   $('quitBtn').addEventListener('click', toTitle);
   $('resumeBtn').addEventListener('click', resume);
