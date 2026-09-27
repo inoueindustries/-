@@ -195,6 +195,14 @@
   .rtable th, .rtable td { color: var(--ink); font-size: 13px; padding: 8px 10px; border-bottom: 1px solid var(--line); vertical-align: top; line-height: 1.6; }
   .rtable th { text-align: left; white-space: nowrap; color: var(--safety); font-weight: 700; }
   .hudleft .pay { color: var(--safety); font-size: 13px; }
+  .card.awaken {
+    border-color: #ffe27a;
+    background: linear-gradient(120deg, #3a1f4a, #1b222a 45%, #3a2f10);
+    background-size: 220% 100%;
+    animation: shine 1.6s linear infinite;
+    box-shadow: 0 0 18px rgba(255,226,122,.35);
+  }
+  .gear span.aw { border-color: #ffe27a; color: #ffe27a; box-shadow: 0 0 8px rgba(255,226,122,.5); }
   .card.lucky {
     border-color: var(--safety);
     background: linear-gradient(120deg, #3a2f10, #1b222a 45%, #3a2f10);
@@ -256,7 +264,7 @@
   }
   @media (prefers-reduced-motion: reduce) {
     .banner, .xpfill { transition: none; }
-    .card.lucky { animation: none; }
+    .card.lucky, .card.awaken { animation: none; }
   }
 </style>
 
@@ -365,9 +373,11 @@
         <h2>設備投資・福利厚生</h2>
         <p class="money" id="shopMoney"></p>
       </div>
-      <p class="lead">夜勤で稼いだ給料で、次の夜勤を楽にします。買った強化はずっと続きます。</p>
+      <p class="lead">夜勤で稼いだ給料で、次の夜勤を楽にします。買った強化と資格はずっと続きます。</p>
       <h3 class="shopsec">持ち込み工具（最初から装備）</h3>
       <div class="shoplist" id="shopTools"></div>
+      <h3 class="shopsec">自己投資（資格・研修でスキル上限アップ → 覚醒）</h3>
+      <div class="shoplist" id="shopSelf"></div>
       <h3 class="shopsec">福利厚生（ずっと効く強化）</h3>
       <div class="shoplist" id="shopPerks"></div>
       <div class="actions"><button class="btn" id="shopClose" type="button">タイトルへ戻る</button></div>
@@ -390,6 +400,9 @@
           <li>操作は移動だけ。武器は自動で攻撃します。</li>
           <li>敵が落とすネジを拾うとレベルアップ。「改善提案」を1つ選びます（武器4種・強化6種、各Lv5まで）。</li>
           <li>金色の「ラッキー！」カードは、3段階まとめてレベルアップ。</li>
+          <li>武器と強化は最初 Lv5 まで。「設備投資・福利厚生」の自己投資（講習・研修）で Lv10 まで上げられます。</li>
+          <li>覚醒：検定1級を取った武器が Lv10、相棒の強化が Lv5 になると「覚醒」カードが出ます（リベット銃＋潤滑油／回転スパナ＋熟練の手袋／溶接アーク＋健康診断／高圧放電＋マグネット）。</li>
+          <li>取れる改善がなくなると「表彰状」カード（威力+2%・最大HP+5）が何度でも出ます。</li>
           <li>HPが35%を切っているときのレベルアップでは、4枚目に「救急箱（HP全回復）」が加わります。</li>
           <li>1分ごとに敵の「嵐」、経過 02:00・05:00・08:00 にボスが出ます。ボスを倒すとHP全回復と特別ボーナス箱（金色）。</li>
         </ul>
@@ -522,23 +535,43 @@
   }
 
   // 武器ごとのレベル別性能（添字 = レベル - 1）
-  const WR = { count: [1, 2, 2, 3, 3], dmg: [10, 10, 14, 14, 15], pierce: [1, 1, 1, 2, 2], cd: [0.8, 0.8, 0.8, 0.8, 0.56] };
-  const WS = { count: [1, 2, 2, 3, 4], radius: [70, 70, 88, 88, 96], dmg: [9, 9, 14, 14, 17], spin: [3, 3, 3.2, 3.2, 4.2] };
-  const WW = { radius: [60, 72, 72, 86, 86], dps: [14, 14, 20, 20, 30] };
-  const WK = { count: [1, 2, 2, 3, 5], dmg: [30, 30, 42, 42, 44], cd: [2.6, 2.6, 2.6, 2.0, 2.0] };
+  // 武器ごとのレベル別性能（添字 = レベル - 1）。Lv6〜10 は自己投資（講習）で解禁
+  const WR = { count: [1, 2, 2, 3, 3, 4, 4, 5, 5, 6], dmg: [10, 10, 14, 14, 15, 17, 19, 21, 23, 26], pierce: [1, 1, 1, 2, 2, 2, 3, 3, 3, 4], cd: [0.8, 0.8, 0.8, 0.8, 0.56, 0.54, 0.52, 0.5, 0.48, 0.45] };
+  const WS = { count: [1, 2, 2, 3, 4, 4, 5, 5, 5, 6], radius: [70, 70, 88, 88, 96, 100, 104, 108, 112, 118], dmg: [9, 9, 14, 14, 17, 19, 21, 23, 25, 28], spin: [3, 3, 3.2, 3.2, 4.2, 4.3, 4.4, 4.5, 4.6, 4.8] };
+  const WW = { radius: [60, 72, 72, 86, 86, 92, 98, 104, 110, 118], dps: [14, 14, 20, 20, 30, 33, 36, 40, 44, 50] };
+  const WK = { count: [1, 2, 2, 3, 5, 5, 6, 6, 7, 8], dmg: [30, 30, 42, 42, 44, 48, 52, 56, 60, 66], cd: [2.6, 2.6, 2.6, 2.0, 2.0, 1.9, 1.8, 1.7, 1.6, 1.5] };
+  const WD = { count: [1, 2, 2, 2, 3, 3, 3, 4, 4, 5], dmg: [18, 18, 24, 28, 28, 33, 38, 38, 44, 50], cd: [1.6, 1.6, 1.5, 1.4, 1.4, 1.35, 1.25, 1.25, 1.15, 1.05] };
+  const WF = { count: [1, 1, 2, 2, 2, 3, 3, 3, 4, 4], dmg: [40, 55, 55, 65, 75, 75, 90, 100, 110, 135], cd: [4.5, 4.5, 4.3, 4.0, 4.0, 3.8, 3.5, 3.5, 3.1, 3.0] };
 
   const UPG = {
-    rivet:   { w: true, icon: '鋲', name: 'リベット銃', desc: ['近くの不良品へリベットを撃つ', '発射数 +1', '威力 +40%', '発射数 +1・貫通 +1', '連射速度 +30%'] },
-    spanner: { w: true, icon: '回', name: '回転スパナ', desc: ['身のまわりをスパナが回る', 'スパナ +1', '回転半径と威力アップ', 'スパナ +1', 'スパナ +1・回転速度アップ'] },
-    weld:    { w: true, icon: '溶', name: '溶接アーク', desc: ['周囲の敵にじわじわダメージ', '範囲 +20%', '威力 +40%', '範囲 +20%', '威力 +50%'] },
-    spark:   { w: true, icon: '電', name: '高圧放電', desc: ['画面内の敵にランダムで落雷', '落雷 +1', '威力 +40%', '落雷 +1・間隔短縮', '落雷 +2'] },
+    rivet:   { w: true, icon: '鋲', name: 'リベット銃', desc: ['近くの不良品へリベットを撃つ', '発射数 +1', '威力 +40%', '発射数 +1・貫通 +1', '連射速度 +30%', '威力アップ', '発射数 +1', '貫通 +1・威力アップ', '発射数 +1', '発射数・威力・連射アップ'] },
+    spanner: { w: true, icon: '回', name: '回転スパナ', desc: ['身のまわりをスパナが回る', 'スパナ +1', '回転半径と威力アップ', 'スパナ +1', 'スパナ +1・回転速度アップ', '威力・半径アップ', 'スパナ +1', '威力・半径アップ', '威力・回転速度アップ', 'スパナ +1・威力アップ'] },
+    weld:    { w: true, icon: '溶', name: '溶接アーク', desc: ['周囲の敵にじわじわダメージ', '範囲 +20%', '威力 +40%', '範囲 +20%', '威力 +50%', '範囲・威力アップ', '範囲・威力アップ', '範囲・威力アップ', '範囲・威力アップ', '範囲・威力大アップ'] },
+    spark:   { w: true, icon: '電', name: '高圧放電', desc: ['画面内の敵にランダムで落雷', '落雷 +1', '威力 +40%', '落雷 +1・間隔短縮', '落雷 +2', '威力アップ・間隔短縮', '落雷 +1', '威力アップ・間隔短縮', '落雷 +1', '落雷 +1・威力アップ'] },
+    drill:   { w: true, icon: '穿', name: '自動ドリル', desc: ['向いている方向へ、敵を貫くドリルを飛ばす', 'ドリル +1', '威力アップ', '威力アップ・間隔短縮', 'ドリル +1', '威力アップ', '威力アップ・間隔短縮', 'ドリル +1', '威力アップ・間隔短縮', 'ドリル +1・威力アップ'] },
+    fork:    { w: true, icon: '運', name: 'フォークリフト', desc: ['数秒ごとにフォークリフトが画面を横切り、敵をはね飛ばす', '威力アップ', '台数 +1', '威力アップ・間隔短縮', '威力アップ', '台数 +1', '威力アップ・間隔短縮', '威力アップ', '台数 +1・間隔短縮', '威力大アップ'] },
     boots:   { icon: '靴', name: '安全靴', desc: '移動速度 +10%' },
     heart:   { icon: '心', name: '健康診断', desc: '最大HP +20、HPを20回復' },
     magnet:  { icon: '磁', name: 'マグネット', desc: 'ネジの回収範囲 +35%' },
     oil:     { icon: '油', name: '潤滑油', desc: '攻撃の間隔 -8%' },
     gloves:  { icon: '手', name: '熟練の手袋', desc: 'すべての攻撃の威力 +12%' },
     armor:   { icon: '盾', name: 'ヘルメット', desc: '受けるダメージ -1' },
+    belt:    { icon: '帯', name: '安全帯', desc: '受けるダメージ -4%' },
+    note:    { icon: '記', name: '改善ノート', desc: '手に入る経験値 +8%' },
   };
+
+  // 覚醒：自己投資で「検定1級」を取り、ゲーム中に武器Lv10＋相棒の強化Lv5がそろうとカードが出る
+  const AWAKE = {
+    rivet:   { icon: '嵐', name: '全自動リベッター「嵐」', desc: '全方向に16連射。当たると火花の小爆発', partner: 'oil' },
+    spanner: { icon: '輪', name: '大車輪レンチ', desc: '巨大スパナ6本が伸び縮みしながら回転。触れた敵を大きく吹き飛ばす', partner: 'gloves' },
+    weld:    { icon: '炎', name: 'プラズマ溶断', desc: '範囲が大きく広がり、3秒ごとに青白い大爆発', partner: 'heart' },
+    spark:   { icon: '雷', name: '雷神の配電盤', desc: '稲妻が敵から敵へ連鎖して画面中を走る', partner: 'magnet' },
+  };
+  const AWARD = { icon: '賞', name: '表彰状', desc: '威力 +2%・最大HP +5（何度でも取れる）' };
+  const capOf = (k) => (UPG[k].w ? (ml('cap_' + k) >= 1 ? 10 : 5) : (ml('cap_perk') >= 1 ? 10 : 5));
+  // 強化の Lv6〜10 は効き目を半分にする
+  const pl = (k) => Math.min(lv[k], 5) + Math.max(0, lv[k] - 5) * 0.5;
+  const canAwaken = (k) => !!AWAKE[k] && !awake[k] && ml('cap_' + k) >= 2 && lv[k] >= 10 && lv[AWAKE[k].partner] >= 5;
   const MAXLV = 5;
   const COFFEE = { icon: '缶', name: '缶コーヒー', desc: 'HPを30回復' };
   const MEDKIT = { icon: '救', name: '救急箱', desc: 'HPを全回復（HPが少ないときだけ出る）' };
@@ -587,6 +620,13 @@
     hurt:  [150, () => tone(160, 0.18, 'sawtooth', 0.06, -90)],
     level: [300, () => { tone(660, 0.1, 'square', 0.04); setTimeout(() => tone(990, 0.16, 'square', 0.04), 90); }],
     lucky: [300, () => { [784, 988, 1175, 1568].forEach((f, i) => setTimeout(() => tone(f, 0.14, 'square', 0.045), i * 80)); }],
+    drill: [250, () => tone(260, 0.14, 'sawtooth', 0.018, 260)],
+    fork:  [700, () => { tone(392, 0.12, 'square', 0.03); setTimeout(() => tone(392, 0.12, 'square', 0.03), 160); }],
+    plasma: [500, () => { tone(90, 0.7, 'sawtooth', 0.07, -50); tone(1400, 0.35, 'sine', 0.04, -1100); }],
+    awaken: [1500, () => {
+      tone(60, 1.4, 'sine', 0.16, 20);
+      [392, 523, 659, 784, 1047, 1319, 1568].forEach((f, i) => setTimeout(() => tone(f, 0.3, 'square', 0.04), i * 90));
+    }],
     box:   [150, () => { [660, 880, 1320].forEach((f, i) => setTimeout(() => tone(f, 0.1, 'triangle', 0.05), i * 60)); }],
     coin:  [60,  () => { tone(1568, 0.05, 'square', 0.03); setTimeout(() => tone(2093, 0.09, 'square', 0.03), 50); }],
     bossdown: [1000, () => {
@@ -1029,6 +1069,9 @@
   let time, kills, spawnT, rivetT, sparkT, weldT, spanA, pending, nextSwarm, bossIdx, shake, weldPulse;
   // アイテムBOX・拾得金・ギミック・ボス撃破演出
   let boxes = [], pops = [], found = 0, freezeT = 0, buffT = 0, boxT = 0, medCool = 0, fx = null, flash = 0;
+  // 新しい武器・覚醒・表彰状
+  let forks = [], drillT = 0, forkT = 0, awake = {}, awards = 0, stormT = 0, plasmaT = 0, plasma = null, chainT = 0, blue = 0, awakenFx = null;
+  const near2 = [];
 
   // ---------- 給料・貯金・設備投資（この端末に保存） ----------
   const WAGE = 1200;          // 基本の時給（円）
@@ -1049,6 +1092,13 @@
     { id: 'spanner', start: true, icon: '回', name: '回転スパナを持ち込む', desc: '最初から回転スパナを装備', max: 3, base: 2500 },
     { id: 'weld',    start: true, icon: '溶', name: '溶接機を持ち込む', desc: '最初から溶接アークを装備', max: 3, base: 2500 },
     { id: 'spark',   start: true, icon: '電', name: '放電装置を持ち込む', desc: '最初から高圧放電を装備', max: 3, base: 3000 },
+    { id: 'cap_rivet',   cap: true, icon: '鋲', name: 'リベット打ち技能', max: 2, costs: [4000, 12000], steps: ['講習：リベット銃の上限 Lv5 → Lv10', '検定1級：リベット銃Lv10＋潤滑油Lv5で「全自動リベッター「嵐」」に覚醒'] },
+    { id: 'cap_spanner', cap: true, icon: '回', name: '機械組立技能', max: 2, costs: [4000, 12000], steps: ['講習：回転スパナの上限 Lv5 → Lv10', '検定1級：回転スパナLv10＋熟練の手袋Lv5で「大車輪レンチ」に覚醒'] },
+    { id: 'cap_weld',    cap: true, icon: '溶', name: '溶接技能者', max: 2, costs: [4000, 12000], steps: ['講習：溶接アークの上限 Lv5 → Lv10', '検定1級：溶接アークLv10＋健康診断Lv5で「プラズマ溶断」に覚醒'] },
+    { id: 'cap_spark',   cap: true, icon: '電', name: '電気工事士', max: 2, costs: [4000, 12000], steps: ['講習：高圧放電の上限 Lv5 → Lv10', '検定1級：高圧放電Lv10＋マグネットLv5で「雷神の配電盤」に覚醒'] },
+    { id: 'cap_drill',   cap: true, icon: '穿', name: '穴あけ技能', max: 1, costs: [4000], steps: ['講習：自動ドリルの上限 Lv5 → Lv10'] },
+    { id: 'cap_fork',    cap: true, icon: '運', name: 'フォークリフト運転技能', max: 1, costs: [4000], steps: ['講習：フォークリフトの上限 Lv5 → Lv10'] },
+    { id: 'cap_perk',    cap: true, icon: '研', name: 'スキルアップ研修', max: 1, costs: [8000], steps: ['強化8種（安全靴・安全帯など）の上限 Lv5 → Lv10（Lv6以降は効き目半分）'] },
     { id: 'body',    icon: '体', name: '体力づくり', desc: '最大HP +10', max: 5, base: 800 },
     { id: 'arm',     icon: '力', name: '筋トレ', desc: 'すべての攻撃の威力 +5%', max: 5, base: 1000 },
     { id: 'dandori', icon: '段', name: '段取り上手', desc: '攻撃の間隔 -3%', max: 5, base: 1000 },
@@ -1058,7 +1108,7 @@
     { id: 'luck',    icon: '福', name: '幸運のお守り', desc: 'ラッキーボーナスの確率 +3%', max: 5, base: 1200 },
     { id: 'raise',   icon: '昇', name: '昇給交渉', desc: '時給 +10%', max: 5, base: 1500 },
   ];
-  const shopCost = (it, l) => Math.round(it.base * Math.pow(l + 1, 1.6) / 100) * 100;
+  const shopCost = (it, l) => (it.costs ? it.costs[Math.min(l, it.costs.length - 1)] : Math.round(it.base * Math.pow(l + 1, 1.6) / 100) * 100);
 
   function payFor(t, k, win) {
     const hours = t * 0.8 / 60;                        // 工場時刻での勤務時間
@@ -1071,13 +1121,14 @@
   }
 
   const stat = {
-    get speed() { return 150 * (1 + 0.1 * lv.boots + 0.04 * ml('legs')) * (buffT > 0 ? 1.4 : 1); },
-    get maxHp() { return 100 + 20 * lv.heart + 10 * ml('body'); },
-    get magnet() { return 70 * (1 + 0.35 * lv.magnet + 0.1 * ml('mag')); },
-    get cd() { return Math.max(0.4, 1 - 0.08 * lv.oil - 0.03 * ml('dandori')) * (buffT > 0 ? 0.7 : 1); },
-    get dmg() { return 1 + 0.12 * lv.gloves + 0.05 * ml('arm'); },
-    get armor() { return lv.armor; },
-    get xp() { return 1 + 0.08 * ml('keiken'); },
+    get speed() { return 150 * (1 + 0.1 * pl('boots') + 0.04 * ml('legs')) * (buffT > 0 ? 1.4 : 1); },
+    get maxHp() { return 100 + 20 * pl('heart') + 10 * ml('body') + 5 * awards; },
+    get magnet() { return 70 * (1 + 0.35 * pl('magnet') + 0.1 * ml('mag')); },
+    get cd() { return Math.max(0.4, 1 - 0.08 * pl('oil') - 0.03 * ml('dandori')) * (buffT > 0 ? 0.7 : 1); },
+    get dmg() { return 1 + 0.12 * pl('gloves') + 0.05 * ml('arm') + 0.02 * awards; },
+    get armor() { return pl('armor'); },
+    get guard() { return Math.max(0.5, 1 - 0.04 * pl('belt')); },
+    get xp() { return 1 + 0.08 * ml('keiken') + 0.08 * pl('note'); },
     get luck() { return 0.08 + 0.03 * ml('luck'); },
   };
 
@@ -1092,6 +1143,7 @@
     time = 0; kills = 0; spawnT = 0.6; rivetT = 0.2; sparkT = 1; weldT = 0; spanA = 0;
     pending = 0; nextSwarm = 60; bossIdx = 0; shake = 0; weldPulse = 0;
     boxes = []; pops = []; found = 0; freezeT = 0; buffT = 0; boxT = 12; medCool = 0; fx = null; flash = 0;
+    forks = []; drillT = 0.5; forkT = 1; awake = {}; awards = 0; stormT = 0; plasmaT = 1; plasma = null; chainT = 0.5; blue = 0; awakenFx = null;
     renderGear();
   }
   function xpFor(l) { return Math.floor(5 + (l - 1) * 4 + Math.pow(l - 1, 1.6) * 0.8); }
@@ -1234,6 +1286,26 @@
     P.hp = stat.maxHp;
     if (!enemies.some((o) => o.boss && !o.dead)) BGM.boss(false);
     banner(stage.bossOut);
+  }
+
+  function spanParams() {
+    if (awake.spanner) return { n: 6, R: 115 + Math.sin(anim * 1.6) * 50, dmg: 45, spin: 3.6, hit: 30, kb: 560, scale: 2.1 };
+    const L = lv.spanner - 1;
+    return { n: WS.count[L], R: WS.radius[L], dmg: WS.dmg[L], spin: WS.spin[L], hit: 16, kb: 240, scale: 1 };
+  }
+  function weldParams() {
+    if (awake.weld) return { R: 200, dps: 80 };
+    const L = lv.weld - 1;
+    return { R: WW.radius[L], dps: WW.dps[L] };
+  }
+  // ぎざぎざの稲妻の線
+  function jag(x1, y1, x2, y2) {
+    const pts = [];
+    for (let s = 0; s <= 6; s++) {
+      const t = s / 6, j = s && s < 6 ? 12 : 0;
+      pts.push([x1 + (x2 - x1) * t + rand(-j, j), y1 + (y2 - y1) * t + rand(-j, j)]);
+    }
+    return pts;
   }
 
   function gainXp(v) {
@@ -1382,6 +1454,32 @@
         sfx('shot');
       } else rivetT = 0.1;
     }
+    // 覚醒：全自動リベッター「嵐」— 全方向16連射、当たると小爆発
+    if (awake.rivet) {
+      stormT -= dt;
+      if (stormT <= 0) {
+        stormT = 0.5 * stat.cd;
+        const off = anim * 1.3;
+        for (let i = 0; i < 16; i++) {
+          const a = off + i * Math.PI / 8;
+          bullets.push({ x: P.x, y: P.y, vx: Math.cos(a) * 520, vy: Math.sin(a) * 520, a, r: 6, dmg: 30, pierce: 3, life: 1.1, hit: [], aw: true });
+        }
+        sfx('shot');
+      }
+    }
+    // 自動ドリル
+    if (lv.drill) {
+      drillT -= dt;
+      if (drillT <= 0) {
+        const L = lv.drill - 1, n = WD.count[L];
+        drillT = WD.cd[L] * stat.cd;
+        for (let i = 0; i < n; i++) {
+          const a = P.face + (i - (n - 1) / 2) * 0.3 + rand(-0.08, 0.08);
+          bullets.push({ x: P.x, y: P.y, vx: Math.cos(a) * 300, vy: Math.sin(a) * 300, a, r: 9, dmg: WD.dmg[L], pierce: 999, life: 2.2, hit: [], drill: true });
+        }
+        sfx('drill');
+      }
+    }
     for (const b of bullets) {
       b.x += b.vx * dt; b.y += b.vy * dt; b.life -= dt;
       query(b.x, b.y, b.r + MAXR, near);
@@ -1390,48 +1488,70 @@
         const m = e.r + b.r;
         if ((e.x - b.x) ** 2 + (e.y - b.y) ** 2 < m * m) {
           b.hit.push(e);
-          hurt(e, b.dmg, b.vx / 460 * 140, b.vy / 460 * 140);
+          const sp = Math.hypot(b.vx, b.vy) || 1;
+          hurt(e, b.dmg, b.vx / sp * 140, b.vy / sp * 140);
+          if (b.aw) {   // 火花の小爆発
+            query(b.x, b.y, 42 + MAXR, near2);
+            for (const o of near2) if (o !== e && (o.x - b.x) ** 2 + (o.y - b.y) ** 2 < 42 * 42) hurt(o, b.dmg * 0.4);
+            if (parts.length < 240) burst(b.x, b.y, '#ffb347', 3);
+          }
           if (--b.pierce <= 0) { b.life = 0; break; }
         }
       }
     }
     bullets = bullets.filter((b) => b.life > 0);
 
-    // 回転スパナ
+    // 回転スパナ（覚醒：大車輪レンチ）
     if (lv.spanner) {
-      const L = lv.spanner - 1, n = WS.count[L], R = WS.radius[L];
-      spanA += WS.spin[L] * dt;
-      for (let i = 0; i < n; i++) {
-        const a = spanA + i * Math.PI * 2 / n, x = P.x + Math.cos(a) * R, y = P.y + Math.sin(a) * R;
-        query(x, y, 16 + MAXR, near);
+      const S = spanParams();
+      spanA += S.spin * dt;
+      for (let i = 0; i < S.n; i++) {
+        const a = spanA + i * Math.PI * 2 / S.n, x = P.x + Math.cos(a) * S.R, y = P.y + Math.sin(a) * S.R;
+        query(x, y, S.hit + MAXR, near);
         for (const e of near) {
-          const m = e.r + 16;
-          if ((e.x - x) ** 2 + (e.y - y) ** 2 < m * m && time - e.spanHit > 0.4) {
+          const m = e.r + S.hit;
+          if ((e.x - x) ** 2 + (e.y - y) ** 2 < m * m && time - e.spanHit > 0.35) {
             e.spanHit = time;
             const d = Math.hypot(e.x - P.x, e.y - P.y) || 1;
-            hurt(e, WS.dmg[L], (e.x - P.x) / d * 240, (e.y - P.y) / d * 240);
+            hurt(e, S.dmg, (e.x - P.x) / d * S.kb, (e.y - P.y) / d * S.kb);
             sfx('clang');
           }
         }
       }
     }
 
-    // 溶接アーク
+    // 溶接アーク（覚醒：プラズマ溶断）
     if (lv.weld) {
       weldPulse += dt;
       weldT -= dt;
+      const Wp = weldParams();
       if (weldT <= 0) {
-        const L = lv.weld - 1, R = WW.radius[L];
         weldT = 0.25 * stat.cd;
-        query(P.x, P.y, R + MAXR, near);
+        query(P.x, P.y, Wp.R + MAXR, near);
         for (const e of near) {
-          const m = R + e.r * 0.5;
-          if ((e.x - P.x) ** 2 + (e.y - P.y) ** 2 < m * m) hurt(e, WW.dps[L] * 0.25);
+          const m = Wp.R + e.r * 0.5;
+          if ((e.x - P.x) ** 2 + (e.y - P.y) ** 2 < m * m) hurt(e, Wp.dps * 0.25);
+        }
+      }
+      if (awake.weld) {
+        plasmaT -= dt;
+        if (plasmaT <= 0) {
+          plasmaT = 3 * stat.cd;
+          plasma = { t: 0 };
+          blue = Math.max(blue, 0.45);
+          if (!reduceMotion) shake = Math.max(shake, 8);
+          query(P.x, P.y, 320 + MAXR, near);
+          for (const e of near) {
+            const d = Math.hypot(e.x - P.x, e.y - P.y) || 1;
+            if (d < 320) hurt(e, 160, (e.x - P.x) / d * 320, (e.y - P.y) / d * 320);
+          }
+          sfx('plasma');
         }
       }
     }
+    if (plasma) { plasma.t += dt; if (plasma.t > 0.5) plasma = null; }
 
-    // 高圧放電
+    // 高圧放電（覚醒：雷神の配電盤）
     if (lv.spark) {
       sparkT -= dt;
       if (sparkT <= 0) {
@@ -1446,19 +1566,69 @@
           for (const o of near) if (o !== e && (o.x - x) ** 2 + (o.y - y) ** 2 < 46 * 46) hurt(o, WK.dmg[L] * 0.5);
           const pts = [];
           for (let s = 0; s <= 7; s++) pts.push([x + (s === 7 ? 0 : rand(-14, 14)), y - 280 + s * 40]);
-          bolts.push({ pts, x, y, life: 0.28 });
+          bolts.push({ pts, x, y, life: 0.28, r: 46 });
           burst(x, y, COL.weld, 5);
         }
         if (bolts.length) sfx('zap');
       }
+      if (awake.spark) {
+        chainT -= dt;
+        if (chainT <= 0) {
+          chainT = 1.1 * stat.cd;
+          const vis = enemies.filter((e) => !e.dead && onScreen(e));
+          if (vis.length) {
+            let cur = vis[(Math.random() * vis.length) | 0];
+            const done = new Set([cur]);
+            bolts.push({ pts: jag(cur.x, cur.y - 320, cur.x, cur.y), x: cur.x, y: cur.y, life: 0.35, r: 34 });
+            hurt(cur, 70);
+            for (let j = 0; j < 12; j++) {
+              let nx = null, bd = 230 * 230;
+              for (const o of vis) {
+                if (done.has(o) || o.dead) continue;
+                const d2 = (o.x - cur.x) ** 2 + (o.y - cur.y) ** 2;
+                if (d2 < bd) { bd = d2; nx = o; }
+              }
+              if (!nx) break;
+              bolts.push({ pts: jag(cur.x, cur.y, nx.x, nx.y), x: nx.x, y: nx.y, life: 0.35, r: 22 });
+              hurt(nx, 70);
+              done.add(nx); cur = nx;
+            }
+            flash = Math.max(flash, 0.15);
+            sfx('zap');
+          }
+        }
+      }
     }
+
+    // フォークリフト
+    if (lv.fork) {
+      forkT -= dt;
+      if (forkT <= 0) {
+        const L = lv.fork - 1;
+        forkT = WF.cd[L] * stat.cd;
+        for (let i = 0; i < WF.count[L]; i++) {
+          const dir = Math.random() < 0.5 ? 1 : -1;
+          forks.push({ x: P.x - dir * (W / 2 + 60), y: P.y + rand(-150, 150), dir, life: (W + 180) / 560, hit: [], dmg: WF.dmg[L] });
+        }
+        sfx('fork');
+      }
+    }
+    for (const f of forks) {
+      f.x += f.dir * 560 * dt; f.life -= dt;
+      query(f.x, f.y, 34 + MAXR, near);
+      for (const e of near) {
+        if (f.hit.includes(e)) continue;
+        if (Math.abs(e.x - f.x) < 30 + e.r && Math.abs(e.y - f.y) < 16 + e.r) { f.hit.push(e); hurt(e, f.dmg, f.dir * 520, rand(-160, 160)); }
+      }
+    }
+    forks = forks.filter((f) => f.life > 0);
 
     // プレイヤーへの接触
     query(P.x, P.y, P.r + MAXR, near);
     for (const e of near) {
       const m = e.r + P.r - 2;
       if (P.iframe <= 0 && (e.x - P.x) ** 2 + (e.y - P.y) ** 2 < m * m) {
-        P.hp -= Math.max(1, e.dmg - stat.armor);
+        P.hp -= Math.max(1, (e.dmg - stat.armor) * stat.guard);
         P.iframe = 0.45;
         if (!reduceMotion) shake = Math.min(10, shake + 6);
         sfx('hurt');
@@ -1979,6 +2149,63 @@
     ctx.fillStyle = ratio > 0.35 ? COL.good : COL.hazard; ctx.fillRect(bx, by, w * ratio, 4);
   }
 
+  function drawDrill(b) {
+    ctx.save(); ctx.translate(b.x, b.y); ctx.rotate(b.a);
+    ctx.fillStyle = '#9aa4ae';
+    ctx.beginPath(); ctx.moveTo(14, 0); ctx.lineTo(-6, -7); ctx.lineTo(-6, 7); ctx.closePath(); ctx.fill();
+    ctx.strokeStyle = '#e9edf1'; ctx.lineWidth = 1.5;
+    const sp = (anim * 30) % 6;
+    ctx.beginPath();
+    for (let k = -6 + sp; k < 12; k += 6) { const h = 7 * (1 - (k + 6) / 20); ctx.moveTo(k, -h); ctx.lineTo(k + 3, h); }
+    ctx.stroke();
+    ctx.fillStyle = '#3a6fa8'; ctx.fillRect(-12, -4, 6, 8);
+    ctx.restore();
+  }
+  function drawFork(f) {
+    ctx.save(); ctx.translate(f.x, f.y); ctx.scale(f.dir, 1);
+    ctx.fillStyle = 'rgba(0,0,0,.3)'; ctx.fillRect(-26, 14, 52, 5);
+    ctx.fillStyle = '#6f7880'; ctx.fillRect(18, -22, 4, 36);                 // マスト
+    ctx.fillStyle = '#c9d2da'; ctx.fillRect(22, 6, 18, 3); ctx.fillRect(22, 11, 18, 3);   // フォーク
+    ctx.fillStyle = '#f08a24';
+    ctx.beginPath(); ctx.roundRect(-26, -8, 44, 20, 4); ctx.fill();       // 車体
+    ctx.fillStyle = '#2b2d33'; ctx.fillRect(-10, -20, 3, 12); ctx.fillRect(10, -20, 3, 12); ctx.fillRect(-10, -22, 23, 3);  // 屋根
+    ctx.fillStyle = COL.safety; ctx.beginPath(); ctx.arc(1, -12, 5, Math.PI, 0); ctx.fill();   // 運転手のヘルメット
+    ctx.fillStyle = '#1c1618';
+    ctx.beginPath(); ctx.arc(-15, 13, 5, 0, Math.PI * 2); ctx.arc(10, 13, 5, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = '#ff5a2a'; ctx.fillRect(-26, -6, 3, 4);                // 回転灯
+    ctx.restore();
+  }
+  function drawAwakenWorld() {
+    if (!awakenFx) return;
+    const t = awakenFx.t, a = Math.max(0, 1 - t / 1.8);
+    const g = ctx.createLinearGradient(P.x, P.y - 400, P.x, P.y + 20);
+    g.addColorStop(0, 'rgba(255,226,122,0)'); g.addColorStop(1, `rgba(255,226,122,${0.55 * a})`);
+    ctx.fillStyle = g; ctx.fillRect(P.x - 36, P.y - 400, 72, 420);
+    for (let i = 0; i < 3; i++) {
+      const p = ((t * 1.4 + i / 3) % 1);
+      ctx.strokeStyle = `rgba(255,226,122,${(1 - p) * a})`; ctx.lineWidth = 4;
+      ctx.beginPath(); ctx.arc(P.x, P.y, 20 + p * 160, 0, Math.PI * 2); ctx.stroke();
+    }
+  }
+  function drawAwakenScreen() {
+    if (blue > 0) { ctx.fillStyle = `rgba(127,227,255,${blue * 0.45})`; ctx.fillRect(0, 0, W, H); }
+    if (!awakenFx) return;
+    const t = awakenFx.t;
+    const s = t < 0.25 ? 2.4 - 1.4 * (t / 0.25) : 1;
+    const alpha = t > 1.9 ? Math.max(0, 1 - (t - 1.9) / 0.5) : 1;
+    ctx.save();
+    ctx.globalAlpha = alpha;
+    ctx.translate(W / 2, H * 0.44); ctx.scale(s, s);
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.font = '84px DotGothic16, monospace';
+    ctx.lineWidth = 10; ctx.strokeStyle = 'rgba(30,18,4,.85)'; ctx.strokeText('覚醒', 0, 0);
+    ctx.fillStyle = '#ffe27a'; ctx.fillText('覚醒', 0, 0);
+    ctx.font = '20px DotGothic16, monospace';
+    ctx.lineWidth = 6; ctx.strokeText(awakenFx.name, 0, 62);
+    ctx.fillStyle = '#ffffff'; ctx.fillText(awakenFx.name, 0, 62);
+    ctx.restore();
+  }
+
   function drawBox(b) {
     const x = b.x, y = b.y + (reduceMotion ? 0 : Math.sin(anim * 3 + b.ph) * 2);
     const glow = 0.18 + (reduceMotion ? 0 : Math.sin(anim * 4 + b.ph) * 0.08);
@@ -2066,8 +2293,9 @@
     ctx.fillStyle = '#161b21'; ctx.beginPath(); ctx.arc(g.x, g.y, r * 0.42, 0, Math.PI * 2); ctx.fill();
   }
 
-  function drawSpanner(x, y, a) {
-    ctx.save(); ctx.translate(x, y); ctx.rotate(a);
+  function drawSpanner(x, y, a, sc = 1, glow = false) {
+    ctx.save(); ctx.translate(x, y); ctx.rotate(a); ctx.scale(sc, sc);
+    if (glow) { ctx.shadowColor = '#ffe27a'; ctx.shadowBlur = 12; }
     ctx.fillStyle = '#c9d2da';
     ctx.fillRect(-14, -3, 22, 6);
     ctx.beginPath(); ctx.arc(10, 0, 7, 0, Math.PI * 2); ctx.fill();
@@ -2086,10 +2314,10 @@
 
     // 溶接アーク
     if (lv.weld) {
-      const R = WW.radius[lv.weld - 1];
+      const R = weldParams().R;
       const g = ctx.createRadialGradient(P.x, P.y, R * 0.2, P.x, P.y, R);
-      g.addColorStop(0, 'rgba(127,227,255,0)');
-      g.addColorStop(1, 'rgba(127,227,255,.16)');
+      g.addColorStop(0, awake.weld ? 'rgba(200,245,255,.08)' : 'rgba(127,227,255,0)');
+      g.addColorStop(1, awake.weld ? 'rgba(160,235,255,.3)' : 'rgba(127,227,255,.16)');
       ctx.fillStyle = g; ctx.beginPath(); ctx.arc(P.x, P.y, R, 0, Math.PI * 2); ctx.fill();
       ctx.strokeStyle = 'rgba(127,227,255,.55)'; ctx.lineWidth = 1.5;
       ctx.beginPath();
@@ -2098,7 +2326,15 @@
         ctx.lineTo(P.x + Math.cos(a) * (R + j), P.y + Math.sin(a) * (R + j));
       }
       ctx.stroke();
+      if (plasma) {   // プラズマの大爆発リング
+        const p = plasma.t / 0.5;
+        ctx.strokeStyle = `rgba(230,250,255,${1 - p})`; ctx.lineWidth = 16 * (1 - p) + 2;
+        ctx.beginPath(); ctx.arc(P.x, P.y, 40 + p * 290, 0, Math.PI * 2); ctx.stroke();
+        ctx.strokeStyle = `rgba(127,227,255,${0.7 * (1 - p)})`; ctx.lineWidth = 6;
+        ctx.beginPath(); ctx.arc(P.x, P.y, 20 + p * 230, 0, Math.PI * 2); ctx.stroke();
+      }
     }
+    drawAwakenWorld();
 
     const vx0 = cx - W / 2 - 60, vx1 = cx + W / 2 + 60, vy0 = cy - H / 2 - 60, vy1 = cy + H / 2 + 60;
     const inView = (o) => o.x > vx0 && o.x < vx1 && o.y > vy0 && o.y < vy1;
@@ -2111,18 +2347,29 @@
       for (const e of enemies) if (inView(e)) { ctx.beginPath(); ctx.arc(e.x, e.y, e.r * 1.1, 0, Math.PI * 2); ctx.fill(); }
     }
 
-    // リベット
+    // リベット・ドリル
     for (const b of bullets) {
-      ctx.strokeStyle = 'rgba(255,138,61,.5)'; ctx.lineWidth = 3;
-      ctx.beginPath(); ctx.moveTo(b.x, b.y); ctx.lineTo(b.x - Math.cos(b.a) * 14, b.y - Math.sin(b.a) * 14); ctx.stroke();
-      ctx.fillStyle = '#e6ebef'; ctx.beginPath(); ctx.arc(b.x, b.y, 4, 0, Math.PI * 2); ctx.fill();
+      if (b.drill) { if (inView(b)) drawDrill(b); continue; }
+      const len = b.aw ? 22 : 14;
+      ctx.strokeStyle = b.aw ? 'rgba(255,179,71,.75)' : 'rgba(255,138,61,.5)'; ctx.lineWidth = b.aw ? 4 : 3;
+      ctx.beginPath(); ctx.moveTo(b.x, b.y); ctx.lineTo(b.x - Math.cos(b.a) * len, b.y - Math.sin(b.a) * len); ctx.stroke();
+      ctx.fillStyle = b.aw ? '#ffe27a' : '#e6ebef'; ctx.beginPath(); ctx.arc(b.x, b.y, b.aw ? 5 : 4, 0, Math.PI * 2); ctx.fill();
     }
+    for (const f of forks) drawFork(f);
 
     if (lv.spanner) {
-      const L = lv.spanner - 1, n = WS.count[L], R = WS.radius[L];
-      for (let i = 0; i < n; i++) {
-        const a = spanA + i * Math.PI * 2 / n;
-        drawSpanner(P.x + Math.cos(a) * R, P.y + Math.sin(a) * R, a * 3);
+      const S = spanParams();
+      for (let i = 0; i < S.n; i++) {
+        const a = spanA + i * Math.PI * 2 / S.n;
+        if (awake.spanner && !reduceMotion) {   // 光の残像
+          for (let k = 3; k >= 1; k--) {
+            const b2 = a - k * 0.14;
+            ctx.globalAlpha = 0.22 / k;
+            drawSpanner(P.x + Math.cos(b2) * S.R, P.y + Math.sin(b2) * S.R, b2 * 3, S.scale);
+          }
+          ctx.globalAlpha = 1;
+        }
+        drawSpanner(P.x + Math.cos(a) * S.R, P.y + Math.sin(a) * S.R, a * 3, S.scale, awake.spanner);
       }
     }
 
@@ -2137,7 +2384,7 @@
       ctx.strokeStyle = COL.weld; ctx.lineWidth = 4;
       ctx.beginPath(); for (const [px, py] of b.pts) ctx.lineTo(px, py); ctx.stroke();
       ctx.strokeStyle = '#ffffff'; ctx.lineWidth = 1.5; ctx.stroke();
-      ctx.fillStyle = 'rgba(127,227,255,.35)'; ctx.beginPath(); ctx.arc(b.x, b.y, 46, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = 'rgba(127,227,255,.35)'; ctx.beginPath(); ctx.arc(b.x, b.y, b.r || 46, 0, Math.PI * 2); ctx.fill();
     }
     ctx.globalAlpha = 1;
     for (const p of parts) { ctx.globalAlpha = Math.min(1, p.life * 3); ctx.fillStyle = p.color; ctx.fillRect(p.x - p.size / 2, p.y - p.size / 2, p.size, p.size); }
@@ -2166,6 +2413,7 @@
 
     if (state !== 'title') drawBoxArrows();
     drawBossFxScreen();
+    drawAwakenScreen();
 
     if (joy && state === 'play') {
       ctx.strokeStyle = 'rgba(233,237,241,.35)'; ctx.lineWidth = 2;
@@ -2205,8 +2453,13 @@
       s.className = UPG[k].w ? 'w' : '';
       s.title = UPG[k].name;
       s.textContent = UPG[k].icon;
-      const i = document.createElement('i'); i.textContent = lv[k]; s.appendChild(i);
+      const i = document.createElement('i'); i.textContent = awake[k] ? '覚' : lv[k]; s.appendChild(i);
+      if (awake[k]) { s.className = 'w aw'; s.textContent = AWAKE[k].icon; s.appendChild(i); s.title = AWAKE[k].name; }
       el.appendChild(s);
+    }
+    if (awards) {
+      const s = document.createElement('span'); s.textContent = '賞'; s.title = '表彰状';
+      const i = document.createElement('i'); i.textContent = awards; s.appendChild(i); el.appendChild(s);
     }
   }
   let bannerTimer = 0;
@@ -2248,8 +2501,9 @@
   function openLevel() {
     state = 'level'; joy = null;
     sfx('level');
-    const pool = Object.keys(UPG).filter((k) => lv[k] < MAXLV);
-    const picks = [];
+    const pool = Object.keys(UPG).filter((k) => lv[k] < capOf(k));
+    const aw = Object.keys(AWAKE).filter(canAwaken);
+    const picks = aw.length ? ['awaken:' + aw[0]] : [];   // 覚醒できるなら必ず1枚目に出す
     while (picks.length < 3 && pool.length) {
       // 未所持の武器は少し出やすく
       const weights = pool.map((k) => (UPG[k].w && lv[k] === 0 ? 1.6 : 1));
@@ -2257,25 +2511,28 @@
       while (r > weights[idx]) { r -= weights[idx]; idx++; }
       picks.push(pool.splice(Math.min(idx, pool.length - 1), 1)[0]);
     }
-    if (picks.length < 3) picks.push('coffee');
+    while (picks.length < 3) picks.push(picks.includes('award') ? 'coffee' : 'award');   // 取れる物がなければ表彰状
     if (P.hp < stat.maxHp * 0.35) picks.push('medkit');   // HPピンチなら4枚目に全回復
     choices = picks;
     // ラッキーボーナス：武器のカードがまれに「3段階アップ」になる
-    luckyFlags = picks.map((k) => !!(UPG[k] && UPG[k].w && lv[k] + 1 < MAXLV && Math.random() < stat.luck));
+    luckyFlags = picks.map((k) => !!(UPG[k] && UPG[k].w && lv[k] + 1 < capOf(k) && Math.random() < stat.luck));
     const cards = $('cards');
     cards.innerHTML = '';
     picks.forEach((k, n) => {
-      const u = k === 'coffee' ? COFFEE : k === 'medkit' ? MEDKIT : UPG[k];
+      const awk = k.startsWith('awaken:') ? k.slice(7) : null;
+      const u = awk ? { ...AWAKE[awk], w: true } : k === 'coffee' ? COFFEE : k === 'medkit' ? MEDKIT : k === 'award' ? AWARD : UPG[k];
       const cur = UPG[k] ? lv[k] : 0;
       const desc = Array.isArray(u.desc) ? u.desc[cur] : u.desc;
       const lucky = luckyFlags[n];
       const btn = document.createElement('button');
-      btn.type = 'button'; btn.className = 'card' + (u.w ? ' w' : '') + (lucky ? ' lucky' : '');
+      btn.type = 'button'; btn.className = 'card' + (u.w ? ' w' : '') + (lucky ? ' lucky' : '') + (awk ? ' awaken' : '');
       btn.innerHTML = '<span class="ico"></span><span class="txt"><span><b></b><span class="tag"></span></span><small></small></span><kbd></kbd>';
       btn.querySelector('.ico').textContent = u.icon;
       btn.querySelector('b').textContent = u.name;
       const tag = btn.querySelector('.tag');
-      if (lucky) { tag.className = 'luckytag'; tag.textContent = 'ラッキー！ ' + (cur ? 'Lv.' + cur : '新規') + ' → Lv.' + Math.min(MAXLV, cur + 3); }
+      if (awk) { tag.className = 'luckytag'; tag.textContent = '覚醒 ・ ' + UPG[awk].name; }
+      else if (lucky) { tag.className = 'luckytag'; tag.textContent = 'ラッキー！ ' + (cur ? 'Lv.' + cur : '新規') + ' → Lv.' + Math.min(capOf(k), cur + 3); }
+      else if (k === 'award') { tag.className = 'new'; tag.textContent = awards ? '×' + (awards + 1) + '枚目' : '何度でも'; }
       else if (k === 'medkit') { tag.className = 'new'; tag.textContent = 'HPピンチ'; }
       else if (k !== 'coffee') {
         if (cur === 0) { tag.className = 'new'; tag.textContent = '新規'; }
@@ -2295,9 +2552,22 @@
     if (state !== 'level') return;
     if (k === 'coffee') P.hp = Math.min(stat.maxHp, P.hp + 30);
     else if (k === 'medkit') { P.hp = stat.maxHp; banner('救急箱：HP全回復'); }
+    else if (k.startsWith('awaken:')) {
+      const w = k.slice(7);
+      awake[w] = true;
+      awakenFx = { t: 0, name: AWAKE[w].name };
+      flash = Math.max(flash, 0.6);
+      sfx('awaken');
+      banner('覚醒！ ' + UPG[w].name + ' → ' + AWAKE[w].name);
+    }
+    else if (k === 'award') {
+      awards++;
+      P.hp = Math.min(stat.maxHp, P.hp + 5);
+      banner('表彰状：威力 +2%・最大HP +5（' + awards + '枚目）');
+    }
     else if (lucky) {
       const before = lv[k];
-      lv[k] = Math.min(MAXLV, lv[k] + 3);
+      lv[k] = Math.min(capOf(k), lv[k] + 3);
       sfx('lucky');
       banner('ラッキーボーナス！ ' + UPG[k].name + ' Lv.' + before + ' → ' + lv[k]);
     } else {
@@ -2418,10 +2688,11 @@
   }
   function renderShop() {
     $('shopMoney').textContent = '貯金 ' + yen(meta.money);
-    for (const [boxId, isStart] of [['shopTools', true], ['shopPerks', false]]) {
+    const groups = [['shopTools', (x) => x.start], ['shopSelf', (x) => x.cap], ['shopPerks', (x) => !x.start && !x.cap]];
+    for (const [boxId, test] of groups) {
       const box = $(boxId);
       box.innerHTML = '';
-      for (const it of SHOP.filter((x) => !!x.start === isStart)) {
+      for (const it of SHOP.filter(test)) {
         const l = ml(it.id), maxed = l >= it.max, c = shopCost(it, l);
         const row = document.createElement('div');
         row.className = 'srow';
@@ -2431,8 +2702,10 @@
         let now = '';
         if (it.id === 'rivet') now = '（今は Lv.' + (1 + l) + ' で開始）';
         else if (it.start) now = l ? '（今は Lv.' + l + ' で開始）' : '';
-        row.querySelector('small').textContent = it.desc + now;
-        row.querySelector('.pips').textContent = '■'.repeat(l) + '□'.repeat(it.max - l);
+        row.querySelector('small').textContent = it.cap
+          ? (l < it.max ? '次：' + it.steps[l] : '修了：' + it.steps[it.max - 1])
+          : it.desc + now;
+        row.querySelector('.pips').textContent = '■'.repeat(Math.min(l, it.max)) + '□'.repeat(Math.max(0, it.max - l));
         const btn = row.querySelector('.buy');
         btn.id = 'buy-' + it.id;
         if (maxed) { btn.textContent = '最大'; btn.disabled = true; }
@@ -2548,7 +2821,10 @@
     const dt = Math.min(0.05, (now - last) / 1000);
     last = now;
     anim += dt;
-    if (state === 'play') { update(dt * (fx && fx.t < 0.9 ? 0.25 : 1)); updateHud(); }
+    const slow = (fx && fx.t < 0.9) || (awakenFx && awakenFx.t < 0.7);
+    if (state === 'play') { update(dt * (slow ? 0.25 : 1)); updateHud(); }
+    if (awakenFx) { awakenFx.t += dt; if (awakenFx.t > 2.4) awakenFx = null; }
+    if (blue > 0) blue = Math.max(0, blue - dt * 1.4);
     if (fx) { fx.t += dt; if (fx.t > 2.6) fx = null; }
     if (flash > 0) flash = Math.max(0, flash - dt * 1.6);
     else if (state === 'title') { P.walk += dt * 0.3; }
