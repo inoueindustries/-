@@ -653,9 +653,9 @@
   // ---------- 保存（この端末のみ） ----------
   const bestKey = (id) => (id === 'screw' ? 'yakin-best' : 'yakin-best-' + id);
   function loadBest(id = stageId) { try { return Number(localStorage.getItem(bestKey(id))) || 0; } catch (e) { return 0; } }
-  function saveBest(v, id = stageId) { try { localStorage.setItem(bestKey(id), String(v)); } catch (e) {} }
+  function saveBest(v, id = stageId) { try { localStorage.setItem(bestKey(id), String(v)); } catch (e) {} cloudPush(); }
   function isCleared(id) { try { return localStorage.getItem('yakin-clear-' + id) === '1'; } catch (e) { return false; } }
-  function saveCleared(id) { try { localStorage.setItem('yakin-clear-' + id, '1'); } catch (e) {} }
+  function saveCleared(id) { try { localStorage.setItem('yakin-clear-' + id, '1'); } catch (e) {} cloudPush(); }
   const mgrOpen = () => isCleared('screw') && isCleared('smt') && isCleared('line');
   const isLocked = (id) => !!STAGES[id].lock && !mgrOpen();
 
@@ -1639,7 +1639,7 @@
     const m = JSON.parse(localStorage.getItem('yakin-save') || 'null');
     if (m) { meta.money = Math.max(0, m.money | 0); meta.earned = Math.max(0, m.earned | 0); meta.up = m.up || {}; }
   } catch (e) {}
-  const saveMeta = () => { try { localStorage.setItem('yakin-save', JSON.stringify(meta)); } catch (e) {} };
+  const saveMeta = () => { try { localStorage.setItem('yakin-save', JSON.stringify(meta)); } catch (e) {} cloudPush(); };
   const ml = (id) => meta.up[id] || 0;
   const yen = (n) => '¥' + Math.round(n).toLocaleString('ja-JP');
 
@@ -3785,6 +3785,65 @@
     }
     for (let i = 0; i < 20; i++) dropGem(rand(-260, 260), rand(-200, 200), i % 6 === 0 ? 4 : 1);
   }
+  // ---------- クラウドセーブ（claude.ai で開いたとき、アカウントごとに保存） ----------
+  // 端末内（localStorage）の yakin-* をまとめて、本人だけが読める data/users/<id>/save に置く。
+  // 開いたとき、累計の稼ぎ（earned）が多いほうを正として、もう一方をそろえる。
+  let cloudRef = null, cloudLast = '', cloudTimer = 0, cloudBusy = false;
+  function localSnapshot() {
+    const v = {};
+    try {
+      for (let i = 0; i < localStorage.length; i++) {
+        const k = localStorage.key(i);
+        if (k && k.startsWith('yakin-')) v[k] = localStorage.getItem(k);
+      }
+    } catch (e) {}
+    return v;
+  }
+  const earnedOf = (v) => { try { return Number((JSON.parse(v['yakin-save'] || 'null') || {}).earned) || 0; } catch (e) { return 0; } };
+  function cloudPush() {
+    if (!cloudRef) return;
+    clearTimeout(cloudTimer);
+    cloudTimer = setTimeout(async () => {
+      if (cloudBusy) { cloudPush(); return; }
+      const v = localSnapshot(), j = JSON.stringify(v);
+      if (j === cloudLast) return;
+      cloudBusy = true;
+      try { await cloudRef.set({ v, t: Date.now() }); cloudLast = j; }
+      catch (e) { if (e && e.code === 'invalid_argument') cloudRef = null; }
+      cloudBusy = false;
+    }, 1500);
+  }
+  function applyCloud(v) {
+    try { for (const k in v) if (typeof v[k] === 'string') localStorage.setItem(k, v[k]); } catch (e) {}
+    try {
+      const m = JSON.parse(v['yakin-save'] || 'null');
+      if (m) { meta.money = Math.max(0, m.money | 0); meta.earned = Math.max(0, m.earned | 0); meta.up = m.up || {}; }
+    } catch (e) {}
+    const sid = v['yakin-stage'];
+    if (state === 'title' && sid && STAGES[sid] && !isLocked(sid)) { stageId = sid; stage = STAGES[sid]; setupDemo(); }
+    if (state === 'title') { renderStages(); renderMoney(); }
+    if (state === 'shop') renderShop();
+  }
+  (async () => {
+    try {
+      if (!window.claude || typeof window.claude.use !== 'function') return;
+      const [db, user] = await Promise.all([window.claude.use('db'), window.claude.use('user')]);
+      if (!db || !user) return;
+      const uid = await user.id();
+      if (!uid) return;
+      const ref = db.doc('data/users/' + uid + '/save');
+      const snap = await ref.get();
+      const data = snap && snap.exists ? snap.data() : null;
+      const cloud = data && typeof data.v === 'object' ? data.v : null;
+      cloudRef = ref;
+      if (cloud && Object.keys(cloud).length && earnedOf(cloud) >= earnedOf(localSnapshot())) {
+        applyCloud(cloud);
+        cloudLast = JSON.stringify(cloud);
+      }
+      cloudPush();
+    } catch (e) {}
+  })();
+
   if (isLocked(stageId)) { stageId = 'screw'; stage = STAGES.screw; }
   setupDemo();
   renderStages();
