@@ -437,7 +437,7 @@
           <li>上級と管理職モードには超大ボス「リコール大魔王」が出ます。弾を撃ち、手下を呼びます。倒すと特別報奨金（¥5,000×夜勤手当）。</li>
           <li>上級と管理職モードでは、まれに「⚠ クレーム発生」イベントが起き、倒せない敵「クレーム電話」が苦情（弾）を投げてきます。近くに出るオレンジの箱3つのどれかに「対策書」が入っていて、見つけると消えます（クレーム対応手当つき）。</li>
           <li>HPが満タンのときに「缶コーヒー」を選ぶと、飲まずに我慢して ¥150 を貯金します（給料の拾得金に入ります）。</li>
-          <li>HPが35%を切っているときのレベルアップでは、4枚目に「救急箱（HP全回復）」が加わります。</li>
+          <li>初級だけ、HPが35%を切っているときのレベルアップで4枚目に「救急箱（HP全回復）」が加わります。救急箱は1回の夜勤で1回しか使えません。</li>
           <li>1分ごとに敵の「嵐」、経過 02:00・05:00・08:00 にボスが出ます。ボスを倒すとHP全回復と特別ボーナス箱（金色）。</li>
         </ul>
       </section>
@@ -445,7 +445,7 @@
         <h3 class="shopsec">アイテムBOX</h3>
         <p class="rtext">フィールドに赤い工具箱が置かれます。触れると開いて、次のどれかが出ます。画面の外にある箱は、画面の端の矢印で場所がわかります。</p>
         <div class="itemgrid" id="rulesItems"></div>
-        <p class="rtext">HPが30%を切ると、近くに白い救急箱（HP全回復）が届きます（40秒に1回まで）。敵がまれに落とす小銭（¥）も給料に入ります。</p>
+        <p class="rtext">初級だけ、HPが30%を切ると近くに白い救急箱（HP全回復）が届きます（1回の夜勤で1回まで）。回復アイテムはおにぎり（HP10%・よく出る）と夜食の弁当（HP30%）。敵がまれに落とす小銭（¥）も給料に入ります。</p>
       </section>
       <section class="rsec">
         <h3 class="shopsec">給料（スコア）の内訳</h3>
@@ -628,13 +628,14 @@
   const MAXLV = 5;
   const COFFEE = { icon: '缶', name: '缶コーヒー', desc: 'HPを30回復' };
   const COFFEE_SAVE = 150;   // HP満タンのときは我慢して貯金する額（円）
-  const MEDKIT = { icon: '救', name: '救急箱', desc: 'HPを全回復（HPが少ないときだけ出る）' };
+  const MEDKIT = { icon: '救', name: '救急箱', desc: 'HPを全回復（初級のみ・1回の夜勤で1回だけ）' };
 
   // アイテムBOXの中身。w は出やすさ
   const ITEMS = {
     magnet: { icon: '磁', name: '強力マグネット', desc: '落ちているネジを全部回収', w: 3 },
-    bento:  { icon: '弁', name: '夜食の弁当', desc: 'HPを30回復', w: 3 },
-    medkit: { icon: '救', name: '救急箱', desc: 'HPを全回復', w: 0.6 },
+    onigiri: { icon: '握', name: 'おにぎり', desc: 'HPを10%回復', w: 3.2 },
+    bento:  { icon: '弁', name: '夜食の弁当', desc: 'HPを30%回復', w: 1.2 },
+    medkit: { icon: '救', name: '救急箱', desc: 'HPを全回復（初級のみ・1回だけ）', w: 0.6 },
     money:  { icon: '¥', name: '大入り袋', desc: '💰 給料に ¥300〜¥800（夜勤手当の倍率つき）', w: 2.2 },
     estop:  { icon: '止', name: '非常停止ボタン', desc: '6秒間、敵が全員止まる', w: 1.4 },
     clean:  { icon: '掃', name: '5S一斉清掃', desc: '画面内の敵に大ダメージ', w: 1.4 },
@@ -1555,7 +1556,9 @@
   let claim = null, claimT = 40;               // クレーム対応イベント
   let time, kills, spawnT, rivetT, sparkT, weldT, spanA, pending, nextSwarm, bossIdx, shake, weldPulse;
   // アイテムBOX・拾得金・ギミック・ボス撃破演出
-  let boxes = [], pops = [], found = 0, freezeT = 0, buffT = 0, boxT = 0, medCool = 0, fx = null, flash = 0;
+  let boxes = [], pops = [], found = 0, freezeT = 0, buffT = 0, boxT = 0, medCool = 0, medUsed = false, fx = null, flash = 0;
+  // 全回復の救急箱は初級だけ、1回の夜勤で1回まで
+  const medOk = () => stageId === 'screw' && !medUsed;
   // 新しい武器・覚醒・表彰状
   let forks = [], drillT = 0, forkT = 0, awake = {}, awards = 0, stormT = 0, plasmaT = 0, plasma = null, chainT = 0, blue = 0, awakenFx = null;
   const near2 = [];
@@ -1629,7 +1632,7 @@
     enemies = []; bullets = []; gems = []; texts = []; parts = []; bolts = [];
     time = 0; kills = 0; spawnT = 0.6; rivetT = 0.2; sparkT = 1; weldT = 0; spanA = 0;
     pending = 0; nextSwarm = 60; bossIdx = 0; superIdx = 0; ebullets = []; warnT = 0; shake = 0; weldPulse = 0;
-    boxes = []; pops = []; found = 0; freezeT = 0; buffT = 0; boxT = 12; medCool = 0; fx = null; flash = 0;
+    boxes = []; pops = []; found = 0; freezeT = 0; buffT = 0; boxT = 12; medCool = 0; medUsed = false; fx = null; flash = 0;
     claim = null; claimT = 40; forks = []; drillT = 0.5; forkT = 1; awake = {}; awards = 0; stormT = 0; plasmaT = 1; plasma = null; chainT = 0.5; blue = 0; awakenFx = null;
     renderGear();
   }
@@ -1694,17 +1697,18 @@
   function pop(x, y, text, color) { if (pops.length < 30) pops.push({ x, y, text, color: color || '#ffe27a', life: 1.3 }); }
   function pickItem() {
     const low = P.hp < stat.maxHp * 0.35;
-    const table = Object.keys(ITEMS).map((k) => [k, k === 'medkit' && low ? 6 : ITEMS[k].w]);
+    const table = Object.keys(ITEMS).map((k) => [k, k !== 'medkit' ? ITEMS[k].w : !medOk() || boxes.some((b) => b.forced === 'medkit') ? 0 : low ? 6 : ITEMS[k].w]);
     let r = Math.random() * table.reduce((a, [, w]) => a + w, 0);
     for (const [k, w] of table) { if ((r -= w) <= 0) return k; }
-    return 'bento';
+    return 'onigiri';
   }
   const onScreen = (o) => Math.abs(o.x - P.x) < W / 2 + 40 && Math.abs(o.y - P.y) < H / 2 + 40;
   function applyItem(k, mult = 1, quiet = false) {
     const I = ITEMS[k];
     if (k === 'magnet') for (const g of gems) { g.pull = true; g.sp = Math.max(g.sp, 500); }
-    else if (k === 'bento') P.hp = Math.min(stat.maxHp, P.hp + 30);
-    else if (k === 'medkit') P.hp = stat.maxHp;
+    else if (k === 'onigiri') P.hp = Math.min(stat.maxHp, P.hp + stat.maxHp * 0.1);
+    else if (k === 'bento') P.hp = Math.min(stat.maxHp, P.hp + stat.maxHp * 0.3);
+    else if (k === 'medkit') { P.hp = stat.maxHp; medUsed = true; }
     else if (k === 'money') {
       const v = Math.round(rand(300, 800) * stage.pay * mult / 10) * 10;
       found += v; pop(P.x, P.y - 52, '💰 +' + yen(v));
@@ -1752,7 +1756,7 @@
       return;
     }
     if (b.gold) {
-      applyItem('money', 4, true); applyItem('magnet', 1, true); applyItem('medkit', 1, true);
+      applyItem('money', 4, true); applyItem('magnet', 1, true); P.hp = stat.maxHp;
       banner('💰 特別ボーナス箱！ 大入り袋×4・全回収・HP全回復');
     } else applyItem(b.forced || pickItem());
   }
@@ -2251,10 +2255,10 @@
       boxT = rand(22, 30);
       if (boxes.length < 3) spawnBox();
     }
-    if (P.hp < stat.maxHp * 0.3 && medCool <= 0 && !boxes.some((b) => b.forced === 'medkit')) {
+    if (P.hp < stat.maxHp * 0.3 && medOk() && medCool <= 0 && !boxes.some((b) => b.forced === 'medkit')) {
       medCool = 40;
       spawnBox('medkit', rand(170, 240));
-      banner('🚑 救急箱が届いた！ 白い箱を拾うとHP全回復');
+      banner('🚑 救急箱が届いた！ 白い箱を拾うとHP全回復（この夜勤で1回だけ）');
     }
     for (const b of boxes) {
       const d = Math.hypot(b.x - P.x, b.y - P.y);
@@ -3310,7 +3314,7 @@
     // 取れる物がなければ表彰状と缶コーヒー（同じカードは1枚ずつ）。覚醒だけの画面では足さない
     if (!bonusAwaken && picks.length < 3) picks.push('award');
     if (!bonusAwaken && picks.length < 3) picks.push('coffee');
-    if (!bonusAwaken && P.hp < stat.maxHp * 0.35) picks.push('medkit');   // HPピンチなら4枚目に全回復
+    if (!bonusAwaken && P.hp < stat.maxHp * 0.35 && medOk() && !boxes.some((b) => b.forced === 'medkit')) picks.push('medkit');   // 初級でHPピンチなら4枚目に全回復（1回だけ）
     choices = picks;
     // ラッキーボーナス：武器のカードがまれに「3段階アップ」になる
     luckyFlags = picks.map((k) => !!(UPG[k] && UPG[k].w && lv[k] + 1 < capOf(k) && Math.random() < stat.luck));
@@ -3367,7 +3371,7 @@
         banner('缶コーヒーを我慢して ' + yen(COFFEE_SAVE) + ' 貯金');
       } else P.hp = Math.min(stat.maxHp, P.hp + 30);
     }
-    else if (k === 'medkit') { P.hp = stat.maxHp; banner('救急箱：HP全回復'); }
+    else if (k === 'medkit') { P.hp = stat.maxHp; medUsed = true; boxes = boxes.filter((b) => b.forced !== 'medkit'); banner('救急箱：HP全回復（この夜勤ではもう出ません）'); }
     else if (k.startsWith('awaken:')) {
       const w = k.slice(7);
       awake[w] = true;
