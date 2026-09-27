@@ -726,9 +726,8 @@
     jrpg:    { name: '決戦のファンファーレ', note: '王道JRPGの戦闘曲' },
     // 持ち込み曲。1回目は頭から流し、その後は 0:55.0〜2:31.0（96秒）を継ぎ目なくループ
     hero:    { name: 'Crown of the Fallen Titan', note: '壮大なオーケストラの戦闘曲（持ち込み曲）', file: 'bgm/crown_of_the_fallen_titan.mp3', loop: [54.98485, 151.00785], gain: 0.9 },
-    march:   { name: '決戦前夜', note: '軍楽隊風の重厚なオーケストラ' },
-    // 持ち込み曲（追加）。1回目は頭から流し、その後は 1:07.1〜2:23.9（76.8秒）を継ぎ目なくループ
-    night:   { name: 'Against the Coming Night', note: '夜に立ち向かう壮大な戦闘曲（持ち込み曲）', file: 'bgm/against_the_coming_night.mp3', loop: [67.05923, 143.87458], gain: 0.9 },
+    // 持ち込み曲。1回目は頭から流し、その後は 1:07.1〜2:23.9（76.8秒）を継ぎ目なくループ。読めないときは自動演奏の「決戦前夜」
+    march:   { name: 'Against the Coming Night', note: '夜に立ち向かう壮大な戦闘曲（持ち込み曲）', file: 'bgm/against_the_coming_night.mp3', loop: [67.05923, 143.87458], gain: 0.9 },
     ...BGM_FILES,
   };
   const BGM = (() => {
@@ -744,6 +743,7 @@
       if (saved) {
         on = saved.on !== false;
         vol = typeof saved.vol === 'number' ? saved.vol : vol;
+        if (saved.style === 'night') saved.style = 'march';   // 以前の版の枠名から移す
         if (BGM_STYLES[saved.style]) style = saved.style;
       }
     } catch (e) {}
