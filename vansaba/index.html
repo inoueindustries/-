@@ -359,6 +359,7 @@
         <input type="range" id="bgmVol" min="0" max="100" step="5">
         <output id="bgmVolOut" for="bgmVol"></output>
       </div>
+      <p class="best" id="awakeProgress"></p>
       <div class="slipwrap">
         <p class="sliphead">今夜の給料（途中経過）</p>
         <table class="slip" id="slipPause"></table>
@@ -416,7 +417,7 @@
           <li>敵が落とすネジを拾うとレベルアップ。「改善提案」を1つ選びます（武器4種・強化6種、各Lv5まで）。</li>
           <li>金色の「ラッキー！」カードは、3段階まとめてレベルアップ。</li>
           <li>武器と強化は最初 Lv5 まで。「設備投資・福利厚生」の自己投資（講習・研修）で Lv10 まで上げられます。</li>
-          <li>覚醒：検定1級を取った武器が Lv10、相棒の強化が Lv5 になると「覚醒」カードが出ます（リベット銃＋潤滑油／回転スパナ＋熟練の手袋／溶接アーク＋健康診断／高圧放電＋マグネット）。</li>
+          <li>覚醒：検定1級を取った武器が Lv10、相棒の強化が Lv5 になると、その場ですぐ「覚醒」カードが出ます（休憩画面で進み具合を確認できます）（リベット銃＋潤滑油／回転スパナ＋熟練の手袋／溶接アーク＋健康診断／高圧放電＋マグネット）。</li>
           <li>取れる改善がなくなると「表彰状」カード（威力+2%・最大HP+5）が何度でも出ます。</li>
           <li>3ステージすべてを定時退勤すると「管理職モード」が解放されます（全工場の敵とボスが出る最上級。夜勤手当×3）。</li>
           <li>上級と管理職モードには超大ボス「リコール大魔王」が出ます。弾を撃ち、手下を呼びます。倒すと特別報奨金（¥5,000×夜勤手当）。</li>
@@ -3152,6 +3153,7 @@
   function pause() {
     state = 'pause'; joy = null; BGM.duck(true);
     fillSlip($('slipPause'), payFor(time, kills, false), false, false);
+    $('awakeProgress').textContent = awakenProgress();
     showOverlay('ovPause'); $('resumeBtn').focus();
   }
   function resume() { if (state === 'pause') BGM.duck(false); state = 'play'; showOverlay(null); last = performance.now(); }
@@ -3161,13 +3163,33 @@
     setupDemo(); renderStages(); renderMoney(); $('startBtn').focus();
   }
 
-  let choices = [], luckyFlags = [];
+  // 検定1級を持っている武器について、覚醒の条件をカードに書き添える
+  function awakenHint(k) {
+    if (AWAKE[k] && ml('cap_' + k) >= 2 && !awake[k]) return '（Lv10＋' + UPG[AWAKE[k].partner].name + 'Lv5で覚醒）';
+    for (const w in AWAKE) {
+      if (AWAKE[w].partner === k && ml('cap_' + w) >= 2 && !awake[w]) return '（' + UPG[w].name + 'の覚醒に Lv5 が必要）';
+    }
+    return '';
+  }
+  function awakenProgress() {
+    const rows = [];
+    for (const w in AWAKE) {
+      if (ml('cap_' + w) < 2) continue;
+      const p = AWAKE[w].partner;
+      rows.push(awake[w] ? UPG[w].name + '：覚醒済み' : UPG[w].name + ' Lv' + lv[w] + '/10・' + UPG[p].name + ' Lv' + lv[p] + '/5');
+    }
+    return rows.length ? '覚醒の進み具合　' + rows.join('　／　') : '';
+  }
+  let choices = [], luckyFlags = [], awakenOnly = false;   // awakenOnly：条件がそろった直後の「覚醒カードだけ」の画面
   function openLevel() {
     state = 'level'; joy = null;
     sfx('level');
     const pool = Object.keys(UPG).filter((k) => lv[k] < capOf(k));
     const aw = Object.keys(AWAKE).filter(canAwaken);
     const picks = aw.length ? ['awaken:' + aw[0]] : [];   // 覚醒できるなら必ず1枚目に出す
+    const bonusAwaken = awakenOnly && aw.length > 0;
+    awakenOnly = false;
+    if (bonusAwaken) { pool.length = 0; for (const w of aw.slice(1)) picks.push('awaken:' + w); }
     while (picks.length < 3 && pool.length) {
       // 未所持の武器は少し出やすく
       const weights = pool.map((k) => (UPG[k].w && lv[k] === 0 ? 1.6 : 1));
@@ -3175,10 +3197,10 @@
       while (r > weights[idx]) { r -= weights[idx]; idx++; }
       picks.push(pool.splice(Math.min(idx, pool.length - 1), 1)[0]);
     }
-    // 取れる物がなければ表彰状と缶コーヒー（同じカードは1枚ずつ）
-    if (picks.length < 3) picks.push('award');
-    if (picks.length < 3) picks.push('coffee');
-    if (P.hp < stat.maxHp * 0.35) picks.push('medkit');   // HPピンチなら4枚目に全回復
+    // 取れる物がなければ表彰状と缶コーヒー（同じカードは1枚ずつ）。覚醒だけの画面では足さない
+    if (!bonusAwaken && picks.length < 3) picks.push('award');
+    if (!bonusAwaken && picks.length < 3) picks.push('coffee');
+    if (!bonusAwaken && P.hp < stat.maxHp * 0.35) picks.push('medkit');   // HPピンチなら4枚目に全回復
     choices = picks;
     // ラッキーボーナス：武器のカードがまれに「3段階アップ」になる
     luckyFlags = picks.map((k) => !!(UPG[k] && UPG[k].w && lv[k] + 1 < capOf(k) && Math.random() < stat.luck));
@@ -3207,12 +3229,12 @@
         if (cur === 0) { tag.className = 'new'; tag.textContent = '新規'; }
         else { tag.className = 'lvl'; tag.textContent = 'Lv.' + cur + ' → ' + (cur + 1); }
       }
-      btn.querySelector('small').textContent = lucky ? '3段階まとめてレベルアップ！' : desc;
+      btn.querySelector('small').textContent = (lucky ? '3段階まとめてレベルアップ！' : desc) + awakenHint(k);
       btn.querySelector('kbd').textContent = n + 1;
       btn.addEventListener('click', () => choose(k, lucky));
       cards.appendChild(btn);
     });
-    $('lvEyebrow').textContent = 'LEVEL UP ・ Lv.' + (P.level - pending + 1);
+    $('lvEyebrow').textContent = bonusAwaken ? 'AWAKENING ・ 覚醒の条件がそろった！' : 'LEVEL UP ・ Lv.' + (P.level - pending + 1);
     showOverlay('ovLevel');
     const first = cards.querySelector('button');
     if (first) first.focus({ preventScroll: true });
@@ -3253,6 +3275,7 @@
     }
     renderGear();
     pending--;
+    if (!k.startsWith('awaken:') && Object.keys(AWAKE).some(canAwaken)) { awakenOnly = true; pending++; }   // 条件がそろった瞬間に覚醒カードを出す
     if (pending > 0) openLevel();
     else resume();
   }
