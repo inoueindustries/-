@@ -32,7 +32,7 @@
 - 武器：リベット銃・回転スパナ・溶接アーク・高圧放電（各Lv5まで）
 - 強化：安全靴・健康診断・マグネット・潤滑油・熟練の手袋・ヘルメット
 - 毎分「切粉の嵐」、2分・5分・8分にボス出現
-- BGM：13曲から選択（タイトル画面・休憩画面）。3曲はブラウザ内の自動演奏（オリジナル曲）、10曲は持ち込み曲（`vansaba/bgm/` の mp3）
+- BGM：14曲から選択（タイトル画面・休憩画面。一覧は折りたたみ式）。3曲はブラウザ内の自動演奏（オリジナル曲）、11曲は持ち込み曲（`vansaba/bgm/` の mp3）
   - 夜想：静かなピアノとコーラス
   - 疾走：ドラムと刻むシンセベース、弦のスタッカート、金管風メロディのハイブリッド・オーケストラ
   - 幻想：ハープの分散和音とフルート、チェレスタによる3拍子のワルツ
@@ -40,6 +40,7 @@
   - Voria te no me ro（持ち込み曲 `bgm/voria_te_no_me_ro.mp3`。1回目は頭から、その後 1:13.5〜2:25.5 の72秒をループ。代用は自動演奏の「シネマ」）／Breaking the Eternal Chain（持ち込み曲 `bgm/breaking_the_eternal_chain.mp3`。0:53.7〜2:10.5 の76.8秒をループ。代用は「ファンタジー戦記」）／Dawn over the Silent Pass（持ち込み曲 `bgm/dawn_over_the_silent_pass.mp3`。1:05.4〜2:09.4 の64秒をループ。代用は「ケルトの丘」）
   - Spear Through the Heart（持ち込み曲 `bgm/spear_through_the_heart.mp3`。1回目は頭から、その後 1:00.7〜2:12.7 の72秒を継ぎ目なくループ。ファイルを直接開いたときは自動演奏の「反撃の狼煙」で代用）／Masquerade in Blue（持ち込み曲 `bgm/masquerade_in_blue.mp3`。1回目は頭から、その後 1:15.8〜2:19.8 の64秒を継ぎ目なくループ。ファイルを直接開いたときは自動演奏のアシッドジャズで代用）／The Brass Pendulum（持ち込み曲 `bgm/the_brass_pendulum.mp3`。1:11.5〜2:15.5 の64秒をループ。代用は自動演奏の「やすらぎ」）
   - Crest of the Fallen Monarch（持ち込み曲 `bgm/crest_of_the_fallen_monarch.mp3`。1回目は頭から、その後 1:11.6〜2:15.6 の64秒をループ。代用は自動演奏の「決戦のファンファーレ」）／Crown of the Fallen Titan（持ち込み曲 `bgm/crown_of_the_fallen_titan.mp3`。1回目は頭から、その後 0:55.0〜2:31.0 の96秒を継ぎ目なくループ。ファイルを直接開いたときは自動演奏の「勇者の進軍」で代用）／Against the Coming Night（持ち込み曲 `bgm/against_the_coming_night.mp3`。1回目は頭から、その後 1:07.1〜2:23.9 の76.8秒を継ぎ目なくループ。ファイルを直接開いたときは自動演奏の「決戦前夜」で代用）
+  - Beyond the Silver Spire（持ち込み曲 `bgm/beyond_the_silver_spire.mp3`。1回目は頭から、その後 1:24.1〜2:28.1 の64秒をループ）
   - ステージが上がるほどテンポが速くなり調も変わる。ボス出現中は低いリズムが加わる
 - レベルアップ時のボイス：なし／男性／女性／少年。端末の日本語読み上げ音声のうち、自然なニューラル音声（Edge の Nanami・Keita、Mac/iPhone の拡張音声、Chrome の Google 日本語など）を優先して使う
   - VOICEVOX で自然な声を作る手順とセリフ一覧は `vansaba/voice/VOICEVOXボイス作成手順.md`

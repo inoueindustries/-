@@ -332,7 +332,7 @@
         <dt>成長</dt><dd>ネジを集めてレベルアップ、改善を1つ選ぶ</dd>
         <dt>ステージ</dt><dd>下のカードか数字キー 1〜4 で選ぶ</dd>
         <dt>休憩</dt><dd>P・Esc キー（BGMの音量もここで変えられます）</dd>
-        <dt>音</dt><dd>BGMは13曲から選べる。画面右上の「曲」でBGM、「音」で効果音をオン・オフ</dd>
+        <dt>音</dt><dd>BGMは14曲から選べる。画面右上の「曲」でBGM、「音」で効果音をオン・オフ</dd>
       </dl>
       <div class="stages" id="stages" role="radiogroup" aria-label="ステージを選ぶ"></div>
       <p class="roster" id="roster"></p>
@@ -745,6 +745,8 @@
     hero:    { name: 'Crown of the Fallen Titan', note: '壮大なオーケストラの戦闘曲（持ち込み曲）', file: 'bgm/crown_of_the_fallen_titan.mp3', loop: [54.98485, 151.00785], gain: 0.9 },
     // 持ち込み曲。1回目は頭から流し、その後は 1:07.1〜2:23.9（76.8秒）を継ぎ目なくループ。読めないときは自動演奏の「決戦前夜」
     march:   { name: 'Against the Coming Night', note: '夜に立ち向かう壮大な戦闘曲（持ち込み曲）', file: 'bgm/against_the_coming_night.mp3', loop: [67.05923, 143.87458], gain: 0.9 },
+    // 持ち込み曲。1回目は頭から流し、その後は 1:24.1〜2:28.1（64秒）を継ぎ目なくループ
+    spire:   { name: 'Beyond the Silver Spire', note: '銀の尖塔の彼方へ（持ち込み曲）', file: 'bgm/beyond_the_silver_spire.mp3', loop: [84.14912, 148.14918], gain: 0.9 },
     ...BGM_FILES,
   };
   const BGM = (() => {
