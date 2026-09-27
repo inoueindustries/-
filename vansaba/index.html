@@ -114,7 +114,7 @@
   .controls dt { font-family: var(--display); color: var(--muted); letter-spacing: .08em; }
   .controls dd { margin: 0; }
   .roster { margin: 0; font-size: 13px; color: var(--muted); line-height: 1.7; }
-  .stages { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+  .stages { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; }
   .stage {
     display: grid; gap: 4px; align-content: start;
     text-align: left; padding: 10px 12px;
@@ -132,6 +132,10 @@
   .lvchip.l1 { background: var(--good); }
   .lvchip.l2 { background: var(--safety); }
   .lvchip.l3 { background: var(--hazard); color: #fff; }
+  .lvchip.l4 { background: #7b4fd6; color: #fff; }
+  .stage.boss { background: linear-gradient(135deg, #221a30, var(--panel-2)); }
+  .stage.locked { opacity: .55; cursor: not-allowed; }
+  .stage.locked .rec { color: var(--muted); }
   .best { margin: 0; font-family: var(--display); font-size: 14px; color: var(--weld); min-height: 1em; }
   .actions { display: flex; flex-wrap: wrap; gap: 10px; }
   .btn {
@@ -306,7 +310,7 @@
         <dt>移動</dt><dd>WASD・矢印キー／画面をドラッグ</dd>
         <dt>攻撃</dt><dd>自動で撃つ</dd>
         <dt>成長</dt><dd>ネジを集めてレベルアップ、改善を1つ選ぶ</dd>
-        <dt>ステージ</dt><dd>下のカードか数字キー 1〜3 で選ぶ</dd>
+        <dt>ステージ</dt><dd>下のカードか数字キー 1〜4 で選ぶ</dd>
         <dt>休憩</dt><dd>P・Esc キー（BGMの音量もここで変えられます）</dd>
         <dt>音</dt><dd>BGMは3曲から選べる。画面右上の「曲」でBGM、「音」で効果音をオン・オフ</dd>
       </dl>
@@ -404,6 +408,8 @@
           <li>武器と強化は最初 Lv5 まで。「設備投資・福利厚生」の自己投資（講習・研修）で Lv10 まで上げられます。</li>
           <li>覚醒：検定1級を取った武器が Lv10、相棒の強化が Lv5 になると「覚醒」カードが出ます（リベット銃＋潤滑油／回転スパナ＋熟練の手袋／溶接アーク＋健康診断／高圧放電＋マグネット）。</li>
           <li>取れる改善がなくなると「表彰状」カード（威力+2%・最大HP+5）が何度でも出ます。</li>
+          <li>3ステージすべてを定時退勤すると「管理職モード」が解放されます（全工場の敵とボスが出る最上級。夜勤手当×3）。</li>
+          <li>上級と管理職モードには超大ボス「リコール大魔王」が出ます。弾を撃ち、手下を呼びます。倒すと特別報奨金（¥5,000×夜勤手当）。</li>
           <li>HPが満タンのときに「缶コーヒー」を選ぶと、飲まずに我慢して ¥150 を貯金します（給料の拾得金に入ります）。</li>
           <li>HPが35%を切っているときのレベルアップでは、4枚目に「救急箱（HP全回復）」が加わります。</li>
           <li>1分ごとに敵の「嵐」、経過 02:00・05:00・08:00 にボスが出ます。ボスを倒すとHP全回復と特別ボーナス箱（金色）。</li>
@@ -472,7 +478,7 @@
   // ---------- 定数 ----------
   const SHIFT = 600;              // 10分で朝6時（定時）
   const BOSS_TIMES = [120, 300, 480];
-  const TILE = 64, CELL = 48, MAXR = 42;
+  const TILE = 64, CELL = 48, MAXR = 80;   // MAXR は一番大きい敵（超大ボス）の半径
   const COL = {
     floor: '#161b21', line: '#1e252d', safety: '#f2c230', sodium: '#ff8a3d',
     weld: '#7fe3ff', hazard: '#e5484d', good: '#5fd08a', ink: '#e9edf1',
@@ -495,6 +501,8 @@
     tag:    { name: '不良札', r: 8, hp: 7, spd: 122, dmg: 5, xp: 1, color: '#e5484d', face: { brows: true, ey: -0.35, size: 0.28 } },
     lot:    { name: '不良ロット', r: 20, hp: 70, spd: 38, dmg: 14, xp: 4, color: '#b08a5a', face: { lid: true, ey: 0.35, size: 0.22 } },
     takt:   { name: 'タクトタイム大王', r: 44, hp: 1800, spd: 52, dmg: 26, xp: 40, color: '#f4f1e8', boss: true },
+    // 超大ボス（上級・管理職モードだけ）
+    recall: { name: 'リコール大魔王', r: 78, hp: 9000, spd: 40, dmg: 40, xp: 120, color: '#3b2350', boss: true, sup: true },
   };
 
   // ステージ。hp〜xp は初級を1とした倍率
@@ -522,10 +530,24 @@
       hp: 1.8, spd: 1.18, spawn: 1.6, dmg: 1.4, xp: 1.4, pay: 2, belts: true,
       swarm: '不良札が舞い上がった！', bossIn: 'タクトタイム大王が迫ってくる！', bossOut: 'タクト達成！ HP全回復',
       bgm: { tempo: 1.16, tr: -2 },
+      superAt: [540],
+    },
+    mgr: {
+      name: '管理職モード', level: '最上級', lv: 4, sub: '全ライン統括',
+      desc: '3つの工場の不良品がまとめて押し寄せ、ボス3体が順番に巡回。リコール大魔王も2回現れる。',
+      roles: { basic: ['bug', 'tomb', 'choco'], fast: ['chip', 'solder', 'tag'], tank: ['rust', 'ic', 'lot'], boss: ['boss', 'reflow', 'takt'] },
+      hp: 2.4, spd: 1.25, spawn: 1.9, dmg: 1.6, xp: 1.6, pay: 3, belts: true,
+      swarm: '全ラインから不良品が押し寄せる！', bossIn: '巡回ボスがやって来た！', bossOut: '巡回ボス撃退！ HP全回復',
+      bgm: { tempo: 1.22, tr: 1 },
+      superAt: [300, 540],
+      lock: true,
     },
   };
   let stageId = 'screw';
   try { const saved = localStorage.getItem('yakin-stage'); if (saved && STAGES[saved]) stageId = saved; } catch (e) {}
+  // 役割が配列のステージ（管理職モード）は毎回ランダムに選ぶ
+  const pickRole = (r) => (Array.isArray(r) ? r[(Math.random() * r.length) | 0] : r);
+  const roleNames = (r) => (Array.isArray(r) ? r : [r]).map((k) => ETYPES[k].name).join('・');
   let stage = STAGES[stageId];
 
   // 組立ラインのベルトコンベア（6マスに1本、向きは交互）
@@ -596,6 +618,8 @@
   function saveBest(v, id = stageId) { try { localStorage.setItem(bestKey(id), String(v)); } catch (e) {} }
   function isCleared(id) { try { return localStorage.getItem('yakin-clear-' + id) === '1'; } catch (e) { return false; } }
   function saveCleared(id) { try { localStorage.setItem('yakin-clear-' + id, '1'); } catch (e) {} }
+  const mgrOpen = () => isCleared('screw') && isCleared('smt') && isCleared('line');
+  const isLocked = (id) => !!STAGES[id].lock && !mgrOpen();
 
   // ---------- 効果音 ----------
   let actx = null, muted = false;
@@ -630,6 +654,8 @@
       tone(60, 1.4, 'sine', 0.16, 20);
       [392, 523, 659, 784, 1047, 1319, 1568].forEach((f, i) => setTimeout(() => tone(f, 0.3, 'square', 0.04), i * 90));
     }],
+    siren: [3000, () => { for (let i = 0; i < 6; i++) setTimeout(() => tone(i % 2 ? 880 : 620, 0.28, 'square', 0.035), i * 300); }],
+    eshot: [300, () => tone(520, 0.12, 'sawtooth', 0.025, -300)],
     box:   [150, () => { [660, 880, 1320].forEach((f, i) => setTimeout(() => tone(f, 0.1, 'triangle', 0.05), i * 60)); }],
     coin:  [60,  () => { tone(1568, 0.05, 'square', 0.03); setTimeout(() => tone(2093, 0.09, 'square', 0.03), 50); }],
     bossdown: [1000, () => {
@@ -1069,6 +1095,7 @@
   let state = 'title';
   let anim = 0;   // 見た目のアニメーション用の時計（一時停止中も進む）
   let P, lv = {}, enemies, bullets, gems, texts, parts, bolts;
+  let superIdx = 0, ebullets = [], warnT = 0;   // 超大ボスまわり
   let time, kills, spawnT, rivetT, sparkT, weldT, spanA, pending, nextSwarm, bossIdx, shake, weldPulse;
   // アイテムBOX・拾得金・ギミック・ボス撃破演出
   let boxes = [], pops = [], found = 0, freezeT = 0, buffT = 0, boxT = 0, medCool = 0, fx = null, flash = 0;
@@ -1144,7 +1171,7 @@
     P.hp = stat.maxHp;
     enemies = []; bullets = []; gems = []; texts = []; parts = []; bolts = [];
     time = 0; kills = 0; spawnT = 0.6; rivetT = 0.2; sparkT = 1; weldT = 0; spanA = 0;
-    pending = 0; nextSwarm = 60; bossIdx = 0; shake = 0; weldPulse = 0;
+    pending = 0; nextSwarm = 60; bossIdx = 0; superIdx = 0; ebullets = []; warnT = 0; shake = 0; weldPulse = 0;
     boxes = []; pops = []; found = 0; freezeT = 0; buffT = 0; boxT = 12; medCool = 0; fx = null; flash = 0;
     forks = []; drillT = 0.5; forkT = 1; awake = {}; awards = 0; stormT = 0; plasmaT = 1; plasma = null; chainT = 0.5; blue = 0; awakenFx = null;
     renderGear();
@@ -1186,16 +1213,16 @@
     const e = {
       type, x: P.x + Math.cos(a) * R, y: P.y + Math.sin(a) * R,
       r: T.r, hp: T.hp * hs, max: T.hp * hs, spd: T.spd * stage.spd * rand(0.9, 1.1), dmg: Math.round(T.dmg * stage.dmg), xp: T.xp,
-      color: T.color, face: T.face || {}, boss: !!T.boss, rot: Math.random() * 6, vx: 0, vy: 0, flash: 0, dead: false, spanHit: -9, ph: Math.random() * 6.28,
+      color: T.color, face: T.face || {}, boss: !!T.boss, sup: !!T.sup, rot: Math.random() * 6, vx: 0, vy: 0, flash: 0, dead: false, spanHit: -9, ph: Math.random() * 6.28,
     };
     enemies.push(e);
     return e;
   }
   function pickType() {
     const R = stage.roles, r = Math.random();
-    if (time > 150 && r < 0.12) return R.tank;
-    if (time > 40 && r < 0.4) return R.fast;
-    return R.basic;
+    if (time > 150 && r < 0.12) return pickRole(R.tank);
+    if (time > 40 && r < 0.4) return pickRole(R.fast);
+    return pickRole(R.basic);
   }
   function dropGem(x, y, v) {
     if (gems.length > 400) { const g = gems[(Math.random() * gems.length) | 0]; if (!g.coin) { g.v += v; return; } }
@@ -1268,7 +1295,14 @@
 
   // ボス撃破：スローモーション・白フラッシュ・衝撃波・「撃退」の判子・ボーナス箱
   function bossDown(e) {
-    fx = { t: 0, x: e.x, y: e.y, name: ETYPES[e.type].name };
+    fx = { t: 0, x: e.x, y: e.y, name: ETYPES[e.type].name, sup: !!e.sup };
+    if (e.sup) {
+      const bonus = Math.round(5000 * stage.pay);
+      found += bonus;
+      pop(P.x, P.y - 70, '💰 特別報奨金 +' + yen(bonus));
+      ebullets = [];
+      setTimeout(() => banner('リコール大魔王 完全撃退！ 特別報奨金 ' + yen(bonus)), 2300);
+    }
     flash = 1;
     if (!reduceMotion) shake = 16;
     sfx('bossdown');
@@ -1332,7 +1366,7 @@
       if (n !== undefined && choices[n]) choose(choices[n], luckyFlags[n]);
     } else if (state === 'title' && e.code === 'Enter' && !(document.activeElement && document.activeElement.tagName === 'BUTTON')) { e.preventDefault(); start(); }
     else if (state === 'title') {
-      const n = { Digit1: 0, Digit2: 1, Digit3: 2, Numpad1: 0, Numpad2: 1, Numpad3: 2 }[e.code];
+      const n = { Digit1: 0, Digit2: 1, Digit3: 2, Digit4: 3, Numpad1: 0, Numpad2: 1, Numpad3: 2, Numpad4: 3 }[e.code];
       if (n !== undefined) selectStage(Object.keys(STAGES)[n]);
     }
   });
@@ -1390,15 +1424,26 @@
     if (time >= nextSwarm) {
       nextSwarm += 60;
       const n = Math.min(40, 16 + Math.floor(time / 20));
-      for (let i = 0; i < n; i++) spawnEnemy(stage.roles.fast, (i / n) * Math.PI * 2);
+      for (let i = 0; i < n; i++) spawnEnemy(pickRole(stage.roles.fast), (i / n) * Math.PI * 2);
       banner(stage.swarm);
     }
     if (bossIdx < BOSS_TIMES.length && time >= BOSS_TIMES[bossIdx]) {
+      const list = Array.isArray(stage.roles.boss) ? stage.roles.boss : [stage.roles.boss];
+      spawnEnemy(list[bossIdx % list.length]);
       bossIdx++;
-      spawnEnemy(stage.roles.boss);
       BGM.boss(true);
       banner(stage.bossIn);
       sfx('boss');
+    }
+    // 超大ボス
+    if (stage.superAt && superIdx < stage.superAt.length && time >= stage.superAt[superIdx]) {
+      superIdx++;
+      const e = spawnEnemy('recall');
+      e.shotT = 3; e.sumT = 6;
+      warnT = 4;
+      BGM.boss(true);
+      banner('⚠ 警報：リコール大魔王が現れた！ 弾に注意');
+      sfx('siren');
     }
 
     // 敵の移動
@@ -1417,6 +1462,28 @@
       }
       if (stage.belts && !e.boss) e.x += beltAt(e.y) * BELT_SPEED * dt;
       if (e.type === 'takt') e.spd += dt * 1.2;   // 時間とともに速くなる
+      if (e.sup) {
+        e.shotT -= dt; e.sumT -= dt;
+        if (e.shotT <= 0) {   // 全方向の弾＋狙い撃ち3発
+          e.shotT = 2.4;
+          const off = Math.random() * Math.PI;
+          for (let i = 0; i < 14; i++) {
+            const a = off + i * Math.PI * 2 / 14;
+            ebullets.push({ x: e.x, y: e.y, vx: Math.cos(a) * 160, vy: Math.sin(a) * 160, life: 4 });
+          }
+          const aim = Math.atan2(P.y - e.y, P.x - e.x);
+          for (const k of [-0.18, 0, 0.18]) ebullets.push({ x: e.x, y: e.y, vx: Math.cos(aim + k) * 230, vy: Math.sin(aim + k) * 230, life: 4 });
+          sfx('eshot');
+        }
+        if (e.sumT <= 0) {    // 手下を呼ぶ
+          e.sumT = 9;
+          for (let i = 0; i < 10; i++) {
+            const m = spawnEnemy(pickRole(stage.roles.fast));
+            const a = i * Math.PI / 5;
+            m.x = e.x + Math.cos(a) * (e.r + 30); m.y = e.y + Math.sin(a) * (e.r + 30);
+          }
+        }
+      }
       e.x += (dx / d * e.spd + e.vx) * dt;
       e.y += (dy / d * e.spd + e.vy) * dt;
       e.vx *= damp; e.vy *= damp;
@@ -1626,6 +1693,20 @@
     }
     forks = forks.filter((f) => f.life > 0);
 
+    // 敵の弾
+    for (const b of ebullets) {
+      if (freezeT <= 0) { b.x += b.vx * dt; b.y += b.vy * dt; }
+      b.life -= dt;
+      if (P.iframe <= 0 && (b.x - P.x) ** 2 + (b.y - P.y) ** 2 < (P.r + 5) ** 2) {
+        P.hp -= Math.max(1, (12 * stage.dmg - stat.armor) * stat.guard);
+        P.iframe = 0.45; b.life = 0;
+        if (!reduceMotion) shake = Math.min(10, shake + 5);
+        sfx('hurt');
+      }
+    }
+    ebullets = ebullets.filter((b) => b.life > 0);
+    if (warnT > 0) warnT -= dt;
+
     // プレイヤーへの接触
     query(P.x, P.y, P.r + MAXR, near);
     for (const e of near) {
@@ -1705,6 +1786,7 @@
     screw: { base: '#161b21', line: '#1e252d', aisle: 'rgba(242,194,48,.35)', dash: [26, 18], width: 4 },
     smt:   { base: '#0c231d', line: '#123029', aisle: 'rgba(200,140,70,.4)', dash: [], width: 6 },
     line:  { base: '#1a1c21', line: '#22252b', aisle: 'rgba(95,208,138,.3)', dash: [14, 10], width: 4 },
+    mgr:   { base: '#15121b', line: '#211c2a', aisle: 'rgba(242,194,48,.45)', dash: [], width: 3 },
   };
   const COPPER = 'rgba(200,140,70,.45)';
   function drawFloor(cx, cy) {
@@ -1758,7 +1840,7 @@
     ctx.setLineDash(F.dash);
     ctx.beginPath();
     for (let i = x0; i <= x1; i++) if (mod(i, 8) === 0) { const px = i * TILE + ox; ctx.moveTo(px, 0); ctx.lineTo(px, H); }
-    if (stageId !== 'line') for (let j = y0; j <= y1; j++) if (mod(j, 8) === 0) { const py = j * TILE + oy; ctx.moveTo(0, py); ctx.lineTo(W, py); }
+    if (!stage.belts) for (let j = y0; j <= y1; j++) if (mod(j, 8) === 0) { const py = j * TILE + oy; ctx.moveTo(0, py); ctx.lineTo(W, py); }
     ctx.stroke();
     ctx.setLineDash([]);
     // 16マスごとの目印：ネジ工場は立入禁止ゾーン、基板はフィデューシャルマーク
@@ -1774,6 +1856,11 @@
           ctx.beginPath(); ctx.moveTo(px + s, py + TILE * 2); ctx.lineTo(px + s + 8, py + TILE * 2); ctx.lineTo(px + s + 8 + TILE * 2, py); ctx.lineTo(px + s + TILE * 2, py); ctx.fill();
         }
         ctx.restore();
+      } else if (stageId === 'mgr') {   // 管理職モード：金の社章
+        ctx.strokeStyle = 'rgba(242,194,48,.35)'; ctx.lineWidth = 3;
+        ctx.beginPath(); ctx.arc(px + TILE, py + TILE, 22, 0, Math.PI * 2); ctx.stroke();
+        ctx.fillStyle = 'rgba(242,194,48,.35)'; ctx.font = '22px DotGothic16, monospace'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+        ctx.fillText('管', px + TILE, py + TILE + 1);
       } else if (stageId === 'smt') {
         ctx.fillStyle = 'rgba(214,160,90,.55)';
         ctx.beginPath(); ctx.arc(px + TILE, py + TILE, 8, 0, Math.PI * 2); ctx.fill();
@@ -1817,6 +1904,7 @@
     bug: null, chip: null, rust: null, boss: null,          // ネジ工場
     tomb: null, solder: null, ic: null, reflow: null,      // 電子機器工場
     choco: null, tag: null, lot: null, takt: null,         // 組立ライン
+    recall: null,                                           // 超大ボス
   };
   const SPR = {};
   for (const k in SPRITE_FILES) {
@@ -2032,8 +2120,38 @@
     },
   };
 
+  BODY.recall = function (r, body, e) {
+    // リコール大魔王：NG札の冠、額に警告マーク、ぎざぎざのマント
+    ctx.fillStyle = `rgba(229,72,77,${0.12 + Math.sin(anim * 4) * 0.05})`;
+    ctx.beginPath(); ctx.arc(0, 0, r * 1.35, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = body;
+    ctx.beginPath();
+    ctx.arc(0, -r * 0.1, r, Math.PI, 0);
+    for (let i = 0; i <= 8; i++) ctx.lineTo(r - i * r / 4, r * 0.8 - (i % 2 ? r * 0.2 : 0));
+    ctx.closePath(); ctx.fill(); ctx.stroke();
+    for (let k = -2; k <= 2; k++) {
+      ctx.save(); ctx.translate(k * r * 0.32, -r * 1.05 + Math.abs(k) * r * 0.08); ctx.rotate(k * 0.18);
+      ctx.fillStyle = e.flash > 0 ? '#fff' : '#e5484d'; ctx.fillRect(-r * 0.12, -r * 0.16, r * 0.24, r * 0.3);
+      ctx.fillStyle = '#ffffff'; ctx.font = Math.round(r * 0.13) + 'px DotGothic16, monospace';
+      ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText('NG', 0, 0);
+      ctx.restore();
+    }
+    ctx.fillStyle = '#f2c230';
+    ctx.beginPath(); ctx.moveTo(0, -r * 0.78); ctx.lineTo(r * 0.17, -r * 0.48); ctx.lineTo(-r * 0.17, -r * 0.48); ctx.closePath(); ctx.fill();
+    ctx.fillStyle = '#1c1618'; ctx.fillRect(-r * 0.02, -r * 0.7, r * 0.04, r * 0.12); ctx.fillRect(-r * 0.02, -r * 0.55, r * 0.04, r * 0.04);
+  };
+
   // ボスだけは顔を個別に描く
   const BOSS_FACE = {
+    recall(e, x, ey, r, look, hurtFace) {
+      drawEyes(x, ey, r * 0.3, r * 0.17, look, hurtFace ? 'hurt' : 'normal');
+      ctx.strokeStyle = '#e5484d'; ctx.lineWidth = 3; ctx.lineCap = 'round';
+      for (const s of [-1, 1]) { ctx.beginPath(); ctx.moveTo(x + s * r * 0.5, ey - r * 0.32); ctx.lineTo(x + s * r * 0.14, ey - r * 0.2); ctx.stroke(); }
+      ctx.fillStyle = '#1c1618';
+      ctx.beginPath(); ctx.ellipse(x, ey + r * 0.34, r * 0.2, r * 0.1, 0, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = '#ffffff';
+      for (const s of [-1, 1]) { ctx.beginPath(); ctx.moveTo(x + s * r * 0.1, ey + r * 0.26); ctx.lineTo(x + s * r * 0.05, ey + r * 0.36); ctx.lineTo(x + s * r * 0.15, ey + r * 0.28); ctx.fill(); }
+    },
     boss(e, x, ey, r, look, hurtFace) {
       drawEyes(x, ey - r * 0.05, r * 0.3, r * 0.17, look, hurtFace ? 'hurt' : 'normal');
       ctx.strokeStyle = '#1c1618'; ctx.lineWidth = 2;
@@ -2093,7 +2211,7 @@
         if (f.cheeks) cheeks(x, ey + r * 0.38, r * 0.58, r * 0.16);
       }
     }
-    if (e.boss) {
+    if (e.boss && !e.sup) {
       const w = 70, bx = x - w / 2, by = y - r - 18;
       ctx.fillStyle = 'rgba(0,0,0,.7)'; ctx.fillRect(bx - 1, by - 1, w + 2, 7);
       ctx.fillStyle = COL.hazard; ctx.fillRect(bx, by, w * Math.max(0, e.hp / e.max), 5);
@@ -2252,7 +2370,7 @@
       if (p <= 0 || p >= 1) continue;
       ctx.strokeStyle = i === 1 ? `rgba(255,255,255,${1 - p})` : `rgba(242,194,48,${1 - p})`;
       ctx.lineWidth = 14 * (1 - p) + 1;
-      ctx.beginPath(); ctx.arc(fx.x, fx.y, p * 720, 0, Math.PI * 2); ctx.stroke();
+      ctx.beginPath(); ctx.arc(fx.x, fx.y, p * (fx.sup ? 1100 : 720), 0, Math.PI * 2); ctx.stroke();
     }
     if (fx.t < 1.6 && !reduceMotion) {
       ctx.fillStyle = `rgba(255,226,122,${0.2 * (1 - fx.t / 1.6)})`;
@@ -2262,13 +2380,32 @@
       }
     }
   }
+  // 超大ボスの大きなHPバーと出現時の警報
+  function drawSuperHud() {
+    if (warnT > 0) {
+      const a = 0.35 + Math.sin(anim * 14) * 0.25;
+      ctx.strokeStyle = `rgba(229,72,77,${a})`; ctx.lineWidth = 18; ctx.strokeRect(0, 0, W, H);
+      if (Math.sin(anim * 10) > -0.3) {
+        ctx.font = '40px DotGothic16, monospace'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+        ctx.lineWidth = 6; ctx.strokeStyle = 'rgba(0,0,0,.8)'; ctx.strokeText('⚠ WARNING ⚠', W / 2, H * 0.34);
+        ctx.fillStyle = '#e5484d'; ctx.fillText('⚠ WARNING ⚠', W / 2, H * 0.34);
+      }
+    }
+    const sb = enemies.find((e) => e.sup && !e.dead);
+    if (!sb || state === 'title') return;
+    const w = Math.min(520, W - 32), x = (W - w) / 2, y = 104;
+    ctx.fillStyle = 'rgba(8,6,12,.8)'; ctx.fillRect(x - 2, y - 2, w + 4, 16);
+    ctx.fillStyle = '#e5484d'; ctx.fillRect(x, y, w * Math.max(0, sb.hp / sb.max), 12);
+    ctx.font = '13px DotGothic16, monospace'; ctx.textAlign = 'center'; ctx.textBaseline = 'bottom';
+    ctx.fillStyle = '#ffffff'; ctx.fillText('超大ボス　リコール大魔王', W / 2, y - 4);
+  }
   function drawBossFxScreen() {
     if (flash > 0) { ctx.fillStyle = `rgba(255,255,255,${flash * 0.75})`; ctx.fillRect(0, 0, W, H); }
     if (!fx) return;
     const t = fx.t;
     const s = t < 0.22 ? 3 - 2 * (t / 0.22) : 1;               // 判子をドンと押す
     const alpha = t > 2.1 ? Math.max(0, 1 - (t - 2.1) / 0.5) : 1;
-    const w = 210, h = 130;
+    const w = fx.sup ? 320 : 210, h = 130;
     ctx.save();
     ctx.globalAlpha = alpha;
     ctx.translate(W / 2, H * 0.46); ctx.rotate(-0.12); ctx.scale(s, s);
@@ -2277,7 +2414,7 @@
     ctx.strokeStyle = '#d7263d'; ctx.lineWidth = 8; ctx.strokeRect(-w / 2, -h / 2, w, h);
     ctx.lineWidth = 2; ctx.strokeRect(-w / 2 + 10, -h / 2 + 10, w - 20, h - 20);
     ctx.fillStyle = '#d7263d'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-    ctx.font = '64px DotGothic16, monospace'; ctx.fillText('撃退', 0, -8);
+    ctx.font = '64px DotGothic16, monospace'; ctx.fillText(fx.sup ? '完全撃退' : '撃退', 0, -8);
     ctx.font = '14px DotGothic16, monospace'; ctx.fillText(fx.name, 0, h / 2 - 24);
     ctx.restore();
   }
@@ -2359,6 +2496,11 @@
       ctx.fillStyle = b.aw ? '#ffe27a' : '#e6ebef'; ctx.beginPath(); ctx.arc(b.x, b.y, b.aw ? 5 : 4, 0, Math.PI * 2); ctx.fill();
     }
     for (const f of forks) drawFork(f);
+    for (const b of ebullets) {   // 超大ボスの弾
+      ctx.fillStyle = 'rgba(229,72,77,.3)'; ctx.beginPath(); ctx.arc(b.x, b.y, 10, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = '#e5484d'; ctx.beginPath(); ctx.arc(b.x, b.y, 6, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = '#ffffff'; ctx.beginPath(); ctx.arc(b.x, b.y, 2.5, 0, Math.PI * 2); ctx.fill();
+    }
 
     if (lv.spanner) {
       const S = spanParams();
@@ -2415,6 +2557,7 @@
     ctx.fillStyle = vg; ctx.fillRect(0, 0, W, H);
 
     if (state !== 'title') drawBoxArrows();
+    drawSuperHud();
     drawBossFxScreen();
     drawAwakenScreen();
 
@@ -2608,6 +2751,7 @@
   function finish(win) {
     state = 'over';
     BGM.stop();
+    const wasOpen = mgrOpen();
     const best = trial ? loadBest() : Math.max(loadBest(), Math.floor(time));
     if (!trial) saveBest(best);
     if (win && !trial) saveCleared(stageId);
@@ -2616,6 +2760,7 @@
     $('overLead').textContent = win
       ? '朝6時まで持ち場を守り切りました。お疲れさまでした。'
       : '工場時刻 ' + shiftClock(time) + ' で倒れました。改善の組み合わせを変えて、もう一度挑戦してみてください。';
+    if (!wasOpen && mgrOpen()) $('overLead').textContent += '　🎉 3ステージすべて定時退勤！「管理職モード」が解放されました。';
     $('stTime').textContent = fmt(time);
     $('stLv').textContent = P.level;
     $('stKills').textContent = kills;
@@ -2688,7 +2833,7 @@
       ['基本給', '時給 ' + yen(wage) + ' × 勤務時間。ゲームの1分が工場の48分なので、10分で8時間分（' + yen(wage * 8) + '）' + (ml('raise') ? '　※昇給交渉で時給アップ中' : '')],
       ['撃破手当', '倒した敵1体につき ' + yen(KILL_PAY)],
       ['定時退勤手当', '06:00まで生き延びると ' + yen(CLEAR_PAY)],
-      ['夜勤手当', '上の3つの合計に倍率をかける：初級 ×' + STAGES.screw.pay + '／中級 ×' + STAGES.smt.pay + '／上級 ×' + STAGES.line.pay],
+      ['夜勤手当', '上の3つの合計に倍率をかける：初級 ×' + STAGES.screw.pay + '／中級 ×' + STAGES.smt.pay + '／上級 ×' + STAGES.line.pay + '／管理職 ×' + STAGES.mgr.pay],
       ['拾得金 💰', '大入り袋・小銭・ボス撃破のボーナス箱。拾った額（倍率込み）がそのまま加算'],
       ['支給額', '合計が貯金に入り、「設備投資・福利厚生」で強化に使えます'],
     ];
@@ -2770,8 +2915,10 @@
     for (const id in STAGES) {
       const S = STAGES[id];
       const btn = document.createElement('button');
-      btn.type = 'button'; btn.className = 'stage';
+      const locked = isLocked(id);
+      btn.type = 'button'; btn.className = 'stage' + (locked ? ' locked' : '') + (S.lv === 4 ? ' boss' : '');
       btn.setAttribute('role', 'radio');
+      if (locked) btn.setAttribute('aria-disabled', 'true');
       btn.setAttribute('aria-checked', String(id === stageId));
       btn.innerHTML = '<span class="lvchip"></span><b></b><small class="sub"></small><small class="rec"></small>';
       const chip = btn.querySelector('.lvchip');
@@ -2779,15 +2926,19 @@
       btn.querySelector('b').textContent = S.name;
       btn.querySelector('.sub').textContent = S.sub;
       const best = loadBest(id);
-      btn.querySelector('.rec').textContent = isCleared(id) ? '定時退勤済み' : best ? '最長 ' + fmt(best) : '未挑戦';
+      btn.querySelector('.rec').textContent = locked ? '🔒 3ステージすべて定時退勤で解放' : isCleared(id) ? '定時退勤済み' : best ? '最長 ' + fmt(best) : '未挑戦';
       btn.addEventListener('click', () => selectStage(id));
       box.appendChild(btn);
     }
     const R = stage.roles;
-    $('roster').textContent = stage.desc + '　出没する不良品：' + ETYPES[R.basic].name + '／' + ETYPES[R.fast].name + '（速い）／' +
-      ETYPES[R.tank].name + '（硬い）／' + ETYPES[R.boss].name + '（ボス）';
+    $('roster').textContent = stage.desc + '　出没する不良品：' + roleNames(R.basic) + '／' + roleNames(R.fast) + '（速い）／' +
+      roleNames(R.tank) + '（硬い）／' + roleNames(R.boss) + '（ボス）' + (stage.superAt ? '／リコール大魔王（超大ボス）' : '');
   }
   function selectStage(id) {
+    if (!id || isLocked(id)) {
+      if (id) $('roster').textContent = '管理職モードは、初級・中級・上級の3ステージすべてを定時退勤（クリア）すると解放されます。';
+      return;
+    }
     stageId = id; stage = STAGES[id];
     try { localStorage.setItem('yakin-stage', id); } catch (e) {}
     renderStages(); setupDemo();
@@ -2870,11 +3021,12 @@
     reset();
     const R = stage.roles;
     for (let i = 0; i < 14; i++) {
-      const e = spawnEnemy(i % 5 === 0 ? R.tank : i % 3 === 0 ? R.fast : R.basic, i / 14 * Math.PI * 2);
+      const e = spawnEnemy(pickRole(i % 5 === 0 ? R.tank : i % 3 === 0 ? R.fast : R.basic), i / 14 * Math.PI * 2);
       e.x = P.x + (e.x - P.x) * 0.55; e.y = P.y + (e.y - P.y) * 0.55;
     }
     for (let i = 0; i < 20; i++) dropGem(rand(-260, 260), rand(-200, 200), i % 6 === 0 ? 4 : 1);
   }
+  if (isLocked(stageId)) { stageId = 'screw'; stage = STAGES.screw; }
   setupDemo();
   renderStages();
   renderMoney();
