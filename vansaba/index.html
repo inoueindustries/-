@@ -718,7 +718,7 @@
     yoru:    { name: '夜想', note: '静かなピアノとコーラス' },
     shissou: { name: '疾走', note: 'ドラムと弦で駆けるハイブリッド' },
     gensou:  { name: '幻想', note: 'ハープとフルートのワルツ' },
-    tekko:   { name: '鉄工所', note: 'プレス機が定期的にガーンと鳴るだけのシンプルな音' },
+    tekko:   { name: '鉄工所', note: 'プレス機が定期的にガシャーン！と鳴るだけのシンプルな音' },
     // 持ち込み曲。1回目は頭から流し、その後は 1:13.5〜2:25.5（72秒）を継ぎ目なくループ。読めないときは自動演奏の「シネマ」
     cinema:  { name: 'Voria te no me ro', note: '壮大なコーラスとオーケストラ（持ち込み曲）', file: 'bgm/voria_te_no_me_ro.mp3', loop: [73.46794, 145.46798], gain: 0.9 },
     // 持ち込み曲。1回目は頭から流し、その後は 0:53.7〜2:10.5（76.8秒）を継ぎ目なくループ。読めないときは自動演奏の「ファンタジー戦記」
@@ -998,22 +998,42 @@
       const g2 = gainNode(0.3); g2.connect(g);
       osc('triangle', f * 1.5, 0, g2, t, t + 0.4);
     }
-    // 鉄工所用：プレス機の「ガーン」。低い衝撃＋金属の響き（倍音をずらして鐘っぽく）＋打撃のノイズ
-    function press(t, amp = 0.3, base = 150) {
+    // 鉄工所用：プレス機の「ガシャーン！」
+    //  ガ  … 低い衝撃と、全帯域の短い打撃ノイズ（少し歪ませる）
+    //  シャーン … 金属板が鳴るような高いノイズの響き（ずらした周波数を何本も重ねる）
+    //  最後に、跳ねた部品が「カラカラ」と散らばる小さな音
+    let crunchCurve = null;
+    function press(t, amp = 0.3, bright = 1) {
       const o = actx.createOscillator(), g = actx.createGain();
       o.type = 'sine';
-      o.frequency.setValueAtTime(90, t); o.frequency.exponentialRampToValueAtTime(34, t + 0.25);
-      g.gain.setValueAtTime(amp * 1.4, t); g.gain.exponentialRampToValueAtTime(0.0001, t + 0.6);
-      o.connect(g).connect(busDrum); o.start(t); o.stop(t + 0.65);
-      const ring = actx.createGain(); env(ring, t, amp * 0.5, 0.002, amp * 0.12, 0.25, t + 1.8);
-      const lp = filter('lowpass', 2400, 0.7); ring.connect(lp).connect(busDrum);
-      [[1, 1], [1.59, 0.7], [2.14, 0.5], [2.83, 0.35], [3.91, 0.22], [5.4, 0.12]].forEach(([r, a2], k) => {
-        const pg = gainNode(a2); pg.connect(ring);
-        osc('sine', base * r, k * 3, pg, t, t + (1.8 - k * 0.2));
-      });
-      const ng = actx.createGain(); env(ng, t, amp * 0.8, 0.001, 0.0001, 0.09, t + 0.12);
-      const bp = filter('bandpass', 1100, 0.9); bp.connect(ng).connect(busDrum);
-      noise(bp, t, t + 0.14);
+      o.frequency.setValueAtTime(110, t); o.frequency.exponentialRampToValueAtTime(38, t + 0.18);
+      g.gain.setValueAtTime(amp * 1.3, t); g.gain.exponentialRampToValueAtTime(0.0001, t + 0.45);
+      o.connect(g).connect(busDrum); o.start(t); o.stop(t + 0.5);
+      if (!crunchCurve) {
+        crunchCurve = new Float32Array(1024);
+        for (let k = 0; k < 1024; k++) { const x = k / 511.5 - 1; crunchCurve[k] = Math.tanh(x * 4); }
+      }
+      const hitG = actx.createGain(); env(hitG, t, amp * 1.1, 0.001, amp * 0.2, 0.06, t + 0.2);
+      const ws = actx.createWaveShaper(); ws.curve = crunchCurve;
+      const hbp = filter('bandpass', 1500, 0.5);
+      hbp.connect(ws).connect(hitG).connect(busDrum);
+      noise(hbp, t, t + 0.22);
+      const tail = actx.createGain(); env(tail, t, amp * 0.9 * bright, 0.004, amp * 0.25 * bright, 0.35, t + 1.5);
+      tail.connect(busDrum);
+      const src = gainNode(1);
+      for (const [f, q, a2] of [[1850, 9, 1], [2720, 11, 0.9], [3930, 12, 0.8], [5250, 14, 0.6], [7100, 10, 0.5], [9400, 6, 0.35]]) {
+        src.connect(filter('bandpass', f * (0.97 + Math.random() * 0.06), q)).connect(gainNode(a2)).connect(tail);
+      }
+      noise(src, t, t + 1.55);
+      const sh = actx.createGain(); env(sh, t, amp * 0.35 * bright, 0.002, 0.0001, 0.5, t + 0.6);
+      const hp = filter('highpass', 6000); hp.connect(sh).connect(busDrum);
+      noise(hp, t, t + 0.62);
+      for (let k = 0; k < 5; k++) {            // カラカラ
+        const tt = t + 0.12 + k * 0.07 + Math.random() * 0.05, a3 = amp * 0.22 * (1 - k * 0.15);
+        const cg = actx.createGain(); env(cg, tt, a3, 0.001, 0.0001, 0.05, tt + 0.07);
+        const cbp = filter('bandpass', 2500 + Math.random() * 3500, 6); cbp.connect(cg).connect(busDrum);
+        noise(cbp, tt, tt + 0.08);
+      }
     }
     function airHiss(t, dur, amp = 0.025) {          // プレスが上がるときの「シュー」
       const g = actx.createGain(); env(g, t, amp, 0.05, amp * 0.4, dur * 0.6, t + dur);
@@ -1041,16 +1061,15 @@
 
     // ---- 曲 ----
     const SONGS = {
-      // 鉄工所：プレス機が2秒ごとに「ガーン」と鳴るだけ。進むと空気の抜ける音と、遠くのもう1台が加わる
+      // 鉄工所：プレス機が2秒ごとに「ガシャーン！」と鳴るだけ。進むと空気の抜ける音と、遠くのもう1台が加わる
       tekko: {
         bpm: 60, beats: 4,
         play(i, t, sec) {
-          const wob = () => 1 + (Math.random() - 0.5) * 0.02;
-          press(t, 0.3, 150 * wob());
-          press(t + BEAT * 2, 0.27, 150 * wob());
+          press(t, 0.34);
+          press(t + BEAT * 2, 0.3);
           if (sec >= 1) { airHiss(t + BEAT * 0.9, 0.7); airHiss(t + BEAT * 2.9, 0.7); }
-          if (sec === 2) press(t + BEAT * 1.25, 0.08, 230 * wob());   // 遠くのもう1台
-          if (sec === 3 && i % 2) press(t + BEAT * 3.25, 0.06, 260 * wob());
+          if (sec === 2) press(t + BEAT * 1.25, 0.09, 0.7);   // 遠くのもう1台
+          if (sec === 3 && i % 2) press(t + BEAT * 3.25, 0.07, 0.7);
         },
       },
       yoru: {
