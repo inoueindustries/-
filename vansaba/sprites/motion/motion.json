@@ -83,6 +83,9 @@
    "sprites/motion/smt/awaken3.png",
    "sprites/motion/smt/awaken4.png",
    "sprites/motion/smt/awaken5.png"
+  ],
+  "up": [
+   "sprites/motion/smt/up1.png"
   ]
  },
  "line": {
