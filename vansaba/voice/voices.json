@@ -1,0 +1,45 @@
+{
+ "credit": "ボイス：Google AI Studio（Gemini 音声生成）",
+ "male": {
+  "level": [
+   "voice/male_level1.wav",
+   "voice/male_level2.wav",
+   "voice/male_level3.wav"
+  ],
+  "lucky": [
+   "voice/male_lucky1.wav",
+   "voice/male_lucky2.wav"
+  ],
+  "awaken": [
+   "voice/male_awaken1.wav"
+  ]
+ },
+ "female": {
+  "level": [
+   "voice/female_level1.wav",
+   "voice/female_level2.wav",
+   "voice/female_level3.wav"
+  ],
+  "lucky": [
+   "voice/female_lucky1.wav",
+   "voice/female_lucky2.wav"
+  ],
+  "awaken": [
+   "voice/female_awaken1.wav"
+  ]
+ },
+ "boy": {
+  "level": [
+   "voice/boy_level1.wav",
+   "voice/boy_level2.wav",
+   "voice/boy_level3.wav"
+  ],
+  "lucky": [
+   "voice/boy_lucky1.wav",
+   "voice/boy_lucky2.wav"
+  ],
+  "awaken": [
+   "voice/boy_awaken1.wav"
+  ]
+ }
+}
