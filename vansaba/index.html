@@ -278,6 +278,9 @@
   .slip tr.total th, .slip tr.total td { font-weight: 700; font-size: 16px; border-top: 2px solid #1f1c16; }
   .slip tr.bank th, .slip tr.bank td { color: #6b6353; }
   .hint { margin: 0; font-size: 12px; color: var(--muted); }
+  .slip.report th { font-size: 12px; }
+  .slip.report td { font-size: 12px; padding-left: 8px; }
+  .slip.report tr.head th, .slip.report tr.head td { font-weight: 700; color: #6b6353; }
 
   .stats { margin: 0; display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
   .stats div { padding: 10px 12px; background: var(--panel-2); border: 1px solid var(--line); border-radius: 4px; display: grid; gap: 2px; }
@@ -359,6 +362,7 @@
         <button class="btn" id="startBtn" type="button">作業開始</button>
         <button class="btn ghost" id="shopBtn" type="button">設備投資・福利厚生</button>
         <button class="btn ghost" id="rulesBtn" type="button">ルールと給料</button>
+        <button class="btn ghost" id="reportBtn" type="button">業務日報</button>
         <button class="btn ghost" id="trialBtn" type="button">覚醒の試運転</button>
       </div>
     </div>
@@ -431,6 +435,24 @@
   </div>
 
   <!-- ルール -->
+  <div class="overlay" id="ovReport" hidden>
+    <div class="panel">
+      <div class="stripe"></div>
+      <p class="eyebrow">DAILY REPORT</p>
+      <h2>業務日報</h2>
+      <p class="lead">これまでの出勤の記録です（試運転は数えません）。</p>
+      <div class="slipwrap">
+        <p class="sliphead">ステージ別</p>
+        <table class="slip report" id="reportStages"></table>
+      </div>
+      <div class="slipwrap">
+        <p class="sliphead">通算</p>
+        <table class="slip" id="reportTotal"></table>
+      </div>
+      <div class="actions"><button class="btn" id="reportClose" type="button">閉じる</button></div>
+    </div>
+  </div>
+
   <div class="overlay" id="ovRules" hidden>
     <div class="panel">
       <div class="stripe"></div>
@@ -2514,39 +2536,51 @@
       if (j) for (const k in j) if (k in SPRITE_FILES && typeof j[k] === 'string') loadSprite(k, j[k]);
     }).catch(() => {});
   } catch (e) {}
-  // 主人公のモーション（初級の作業着）：sprites/motion/motion.json に歩き・ダメージ・やられ・覚醒のコマを並べる
-  const MOT = {};
+  // 主人公のモーション：sprites/motion/motion.json に、ステージ（服装）ごとの歩き・ダメージ・やられ・覚醒のコマを並べる
+  //   { "screw": { "down": [...], "up": [...], "left": [...], "right": [...], "hurt": [...], "ko": [...], "awaken": [...] }, "smt": {...}, ... }
+  //   向きのコマが足りないときは、右⇔左は反転して使い、上がなければ下を使う
+  const MOTS = {};
   try {
     fetch('sprites/motion/motion.json').then((r) => (r.ok ? r.json() : null)).then((j) => {
       if (!j) return;
-      for (const k in j) {
-        if (!Array.isArray(j[k])) continue;
-        MOT[k] = j[k].map((src) => { const img = new Image(); img.src = src; return img; });
+      if (Array.isArray(j.down)) j = { screw: j };            // 古い形式（初級だけ）
+      for (const st in j) {
+        MOTS[st] = {};
+        for (const k in j[st]) {
+          if (!Array.isArray(j[st][k])) continue;
+          MOTS[st][k] = j[st][k].map((src) => { const img = new Image(); img.src = src; return img; });
+        }
       }
     }).catch(() => {});
   } catch (e) {}
-  const motReady = (k) => MOT[k] && MOT[k].length && MOT[k].every((i) => i.complete && i.naturalWidth);
+  const motOk = (M, k) => M && M[k] && M[k].length && M[k].every((i) => i.complete && i.naturalWidth);
   let lastLook = 'down';
-  // 今の状態に合うコマを選ぶ。モーションがない（または初級以外）ときは null
+  // 今の状態に合うコマを選ぶ。そのステージのモーションがないときは null
   function playerMotion() {
-    if (stageId !== 'screw' || !motReady('down')) return null;
-    if (P.ko && motReady('ko') && motReady('hurt')) {
-      const seq = [MOT.hurt[4], MOT.ko[0], MOT.ko[0], MOT.ko[1], MOT.ko[2]];
-      return { img: seq[Math.min(seq.length - 1, Math.floor(P.ko / 0.3))], size: 58 };
+    const M = MOTS[stageId];
+    if (!motOk(M, 'down')) return null;
+    const pick = (arr, i) => arr[Math.max(0, Math.min(arr.length - 1, i))];
+    if (P.ko && motOk(M, 'ko')) {
+      const seq = [M.ko[0]].concat(M.ko);
+      return { img: pick(seq, Math.floor(P.ko / (1.5 / seq.length))), size: 58 };
     }
-    if (awakenFx && awakenFx.t < 1.6 && motReady('awaken')) {
-      return { img: MOT.awaken[Math.min(6, Math.floor(awakenFx.t / 0.22))], size: 87 };
+    if (awakenFx && awakenFx.t < 1.6 && motOk(M, 'awaken')) {
+      return { img: pick(M.awaken, Math.floor(awakenFx.t / (1.5 / M.awaken.length))), size: 87 };
     }
-    if (P.iframe > 0 && motReady('hurt')) {
-      return { img: MOT.hurt[Math.min(3, Math.floor((0.45 - P.iframe) / 0.45 * 4))], size: 58 };
+    if (P.iframe > 0 && motOk(M, 'hurt')) {
+      const n = Math.min(4, M.hurt.length);
+      return { img: pick(M.hurt, Math.floor((0.45 - P.iframe) / 0.45 * n)), size: 58 };
     }
     if (P.moving) {
       const cx = Math.cos(P.face), cy = Math.sin(P.face);
       lastLook = Math.abs(cx) >= Math.abs(cy) ? (cx < 0 ? 'left' : 'right') : (cy < 0 ? 'up' : 'down');
     }
-    const set = motReady(lastLook) ? MOT[lastLook] : MOT.down;
-    const f = P.moving && !reduceMotion ? Math.floor(P.walk * 9) % 4 : 0;
-    return { img: set[f], size: 58 };
+    let set = M.down, flip = false;
+    if (motOk(M, lastLook)) set = M[lastLook];
+    else if (lastLook === 'right' && motOk(M, 'left')) { set = M.left; flip = true; }
+    else if (lastLook === 'left' && motOk(M, 'right')) { set = M.right; flip = true; }
+    const f = P.moving && !reduceMotion ? Math.floor(P.walk * 9) % set.length : 0;
+    return { img: set[f], size: 58, flip, bob: set.length === 1 && P.moving ? Math.abs(Math.sin(P.walk * 14)) * 2 : 0 };
   }
   function drawSprite(img, x, y, size, flip) {
     ctx.save(); ctx.translate(x, y);
@@ -2891,7 +2925,7 @@
     const pm = playerMotion();
     const pimg = SPR['player_' + stageId] || SPR.player;
     if (pm) {
-      drawSprite(pm.img, P.x, P.y - 8 - (pm.size - 58) / 2, pm.size, false);
+      drawSprite(pm.img, P.x, P.y - 8 - (pm.size - 58) / 2 - (pm.bob || 0), pm.size, !!pm.flip);
     } else if (pimg) {
       drawSprite(pimg, x, y - 4, 50, d < 0);
     } else {
@@ -3337,7 +3371,7 @@
   }
 
   // ---------- 画面遷移 ----------
-  const OVERLAYS = ['ovTitle', 'ovLevel', 'ovPause', 'ovOver', 'ovShop', 'ovRules'];
+  const OVERLAYS = ['ovTitle', 'ovLevel', 'ovPause', 'ovOver', 'ovShop', 'ovRules', 'ovReport'];
   function showOverlay(id) { for (const o of OVERLAYS) $(o).hidden = o !== id; }
 
   // 試運転：覚醒装備4つをそろえた状態で遊べる。給料・記録・貯金は増えない
@@ -3525,6 +3559,13 @@
     const best = trial ? loadBest() : Math.max(loadBest(), Math.floor(time));
     if (!trial) saveBest(best);
     if (win && !trial) saveCleared(stageId);
+    if (!trial) {                                  // 業務日報の記録
+      const R = loadReport();
+      R.plays[stageId] = (R.plays[stageId] || 0) + 1;
+      if (win) R.clears[stageId] = (R.clears[stageId] || 0) + 1;
+      R.kills += kills; R.time += Math.floor(time);
+      saveReport(R);
+    }
     $('overEyebrow').textContent = stage.level + '・' + stage.name + '　' + (win ? 'SHIFT COMPLETE 06:00' : 'LINE STOP ' + shiftClock(time));
     $('overTitle').textContent = win ? '定時退勤！' : 'ライン停止';
     $('overLead').textContent = win
@@ -3571,6 +3612,46 @@
 
   // ---------- ルール画面 ----------
   let rulesBack = null;
+  // 業務日報：出勤回数・定時退社回数など（yakin-report に保存。クラウドセーブにも乗る）
+  function loadReport() {
+    const R = { plays: {}, clears: {}, kills: 0, time: 0 };
+    try {
+      const j = JSON.parse(localStorage.getItem('yakin-report') || 'null');
+      if (j) { R.plays = j.plays || {}; R.clears = j.clears || {}; R.kills = j.kills | 0; R.time = j.time | 0; }
+    } catch (e) {}
+    return R;
+  }
+  function saveReport(R) { try { localStorage.setItem('yakin-report', JSON.stringify(R)); } catch (e) {} cloudPush(); }
+  function renderReport() {
+    const R = loadReport();
+    const tb = $('reportStages'); tb.innerHTML = '';
+    const row = (cls, cells) => {
+      const tr = document.createElement('tr'); if (cls) tr.className = cls;
+      cells.forEach((c, i) => { const el = document.createElement(i ? 'td' : 'th'); el.textContent = c; tr.appendChild(el); });
+      tb.appendChild(tr);
+    };
+    row('head', ['ステージ', '出勤', '定時退社', '最長']);
+    let plays = 0, clears = 0;
+    for (const id in STAGES) {
+      const p = R.plays[id] || 0, c = R.clears[id] || 0; plays += p; clears += c;
+      const best = loadBest(id);
+      row('', [STAGES[id].level + '・' + STAGES[id].name, isLocked(id) ? '未解放' : p + '回', isLocked(id) ? '—' : c + '回', best ? fmt(best) : '—']);
+    }
+    const tt = $('reportTotal'); tt.innerHTML = '';
+    const h = Math.floor(R.time / 3600), m = Math.floor(R.time / 60) % 60;
+    for (const [k, v] of [['出勤回数', plays + '回'], ['定時退社回数', clears + '回'], ['定時退社率', plays ? Math.round(clears / plays * 100) + '%' : '—'],
+                          ['累計勤務時間', (h ? h + '時間' : '') + m + '分'], ['累計撃破数', R.kills.toLocaleString('ja-JP') + '体'], ['累計給料', yen(meta.earned)]]) {
+      const tr = document.createElement('tr'); const th = document.createElement('th'); const td = document.createElement('td');
+      th.textContent = k; td.textContent = v; tr.append(th, td); tt.appendChild(tr);
+    }
+  }
+  function openReport() {
+    rulesBack = { state, overlay: OVERLAYS.find((o) => !$(o).hidden) || null, focus: document.activeElement };
+    state = 'rules';                 // 閉じ方（Esc・閉じるボタン）はルール画面と同じ
+    renderReport();
+    showOverlay('ovReport');
+    $('reportClose').focus();
+  }
   function openRules() {
     rulesBack = { state, overlay: OVERLAYS.find((o) => !$(o).hidden) || null, focus: document.activeElement };
     state = 'rules';
@@ -3725,6 +3806,8 @@
   $('rulesBtn').addEventListener('click', openRules);
   $('pauseRules').addEventListener('click', openRules);
   $('rulesClose').addEventListener('click', closeRules);
+  $('reportBtn').addEventListener('click', openReport);
+  $('reportClose').addEventListener('click', closeRules);
   $('retryBtn').addEventListener('click', () => start({ trial }));
   $('trialBtn').addEventListener('click', () => start({ trial: true }));
   $('titleBtn').addEventListener('click', toTitle);
