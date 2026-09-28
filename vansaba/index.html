@@ -1655,6 +1655,7 @@
     if (!force && now - lastSay < 1500) return;   // 連続レベルアップでしゃべりすぎない
     lastSay = now;
     const files = VOICE_FILES[voiceId] && VOICE_FILES[voiceId][kind];
+    if (!LINES[voiceId][kind] && !(files && files.length)) return;   // やられた時（ko）は録音ファイルがある声だけ
     const speak = () => {
       try {
         const V = VOICES[voiceId], list = LINES[voiceId][kind];
@@ -2409,7 +2410,7 @@
     shake = Math.max(0, shake - 30 * dt);
 
     // 終了判定
-    if (P.hp <= 0) { P.hp = 0; if (!P.ko) P.ko = 0.0001; return; }
+    if (P.hp <= 0) { P.hp = 0; if (!P.ko) { P.ko = 0.0001; say('ko', true); } return; }
     if (time >= SHIFT) { finish(true); return; }
     if (pending > 0) openLevel();
   }
