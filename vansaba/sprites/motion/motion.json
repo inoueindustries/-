@@ -97,17 +97,16 @@
  },
  "line": {
   "down": [
-   "sprites/motion/line/down1.png"
+   "sprites/motion/line/down1.png",
+   "sprites/motion/line/down2.png",
+   "sprites/motion/line/down3.png",
+   "sprites/motion/line/down4.png"
   ],
   "up": [
    "sprites/motion/line/up1.png",
-   "sprites/motion/line/up2.png"
-  ],
-  "right": [
-   "sprites/motion/line/right1.png",
-   "sprites/motion/line/right2.png",
-   "sprites/motion/line/right3.png",
-   "sprites/motion/line/right4.png"
+   "sprites/motion/line/up2.png",
+   "sprites/motion/line/up3.png",
+   "sprites/motion/line/up4.png"
   ],
   "left": [
    "sprites/motion/line/left1.png",
@@ -115,23 +114,33 @@
    "sprites/motion/line/left3.png",
    "sprites/motion/line/left4.png"
   ],
+  "right": [
+   "sprites/motion/line/right1.png",
+   "sprites/motion/line/right2.png",
+   "sprites/motion/line/right3.png",
+   "sprites/motion/line/right4.png"
+  ],
   "hurt": [
    "sprites/motion/line/hurt1.png",
    "sprites/motion/line/hurt2.png",
-   "sprites/motion/line/hurt3.png"
+   "sprites/motion/line/hurt3.png",
+   "sprites/motion/line/hurt4.png",
+   "sprites/motion/line/hurt5.png",
+   "sprites/motion/line/hurt6.png"
   ],
   "ko": [
    "sprites/motion/line/ko1.png",
    "sprites/motion/line/ko2.png",
-   "sprites/motion/line/ko3.png",
-   "sprites/motion/line/ko4.png"
+   "sprites/motion/line/ko3.png"
   ],
   "awaken": [
    "sprites/motion/line/awaken1.png",
    "sprites/motion/line/awaken2.png",
    "sprites/motion/line/awaken3.png",
    "sprites/motion/line/awaken4.png",
-   "sprites/motion/line/awaken5.png"
+   "sprites/motion/line/awaken5.png",
+   "sprites/motion/line/awaken6.png",
+   "sprites/motion/line/awaken7.png"
   ]
  },
  "mgr": {
@@ -142,13 +151,10 @@
    "sprites/motion/mgr/down4.png"
   ],
   "up": [
-   "sprites/motion/mgr/up1.png"
-  ],
-  "right": [
-   "sprites/motion/mgr/right1.png",
-   "sprites/motion/mgr/right2.png",
-   "sprites/motion/mgr/right3.png",
-   "sprites/motion/mgr/right4.png"
+   "sprites/motion/mgr/up1.png",
+   "sprites/motion/mgr/up2.png",
+   "sprites/motion/mgr/up3.png",
+   "sprites/motion/mgr/up4.png"
   ],
   "left": [
    "sprites/motion/mgr/left1.png",
@@ -156,23 +162,33 @@
    "sprites/motion/mgr/left3.png",
    "sprites/motion/mgr/left4.png"
   ],
+  "right": [
+   "sprites/motion/mgr/right1.png",
+   "sprites/motion/mgr/right2.png",
+   "sprites/motion/mgr/right3.png",
+   "sprites/motion/mgr/right4.png"
+  ],
   "hurt": [
    "sprites/motion/mgr/hurt1.png",
    "sprites/motion/mgr/hurt2.png",
-   "sprites/motion/mgr/hurt3.png"
+   "sprites/motion/mgr/hurt3.png",
+   "sprites/motion/mgr/hurt4.png",
+   "sprites/motion/mgr/hurt5.png",
+   "sprites/motion/mgr/hurt6.png"
   ],
   "ko": [
    "sprites/motion/mgr/ko1.png",
    "sprites/motion/mgr/ko2.png",
-   "sprites/motion/mgr/ko3.png",
-   "sprites/motion/mgr/ko4.png"
+   "sprites/motion/mgr/ko3.png"
   ],
   "awaken": [
    "sprites/motion/mgr/awaken1.png",
    "sprites/motion/mgr/awaken2.png",
    "sprites/motion/mgr/awaken3.png",
    "sprites/motion/mgr/awaken4.png",
-   "sprites/motion/mgr/awaken5.png"
+   "sprites/motion/mgr/awaken5.png",
+   "sprites/motion/mgr/awaken6.png",
+   "sprites/motion/mgr/awaken7.png"
   ]
  }
 }
