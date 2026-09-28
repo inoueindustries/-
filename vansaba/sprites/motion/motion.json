@@ -54,11 +54,11 @@
    "sprites/motion/smt/down3.png",
    "sprites/motion/smt/down4.png"
   ],
-  "right": [
-   "sprites/motion/smt/right1.png",
-   "sprites/motion/smt/right2.png",
-   "sprites/motion/smt/right3.png",
-   "sprites/motion/smt/right4.png"
+  "up": [
+   "sprites/motion/smt/up1.png",
+   "sprites/motion/smt/up2.png",
+   "sprites/motion/smt/up3.png",
+   "sprites/motion/smt/up4.png"
   ],
   "left": [
    "sprites/motion/smt/left1.png",
@@ -66,26 +66,33 @@
    "sprites/motion/smt/left3.png",
    "sprites/motion/smt/left4.png"
   ],
+  "right": [
+   "sprites/motion/smt/right1.png",
+   "sprites/motion/smt/right2.png",
+   "sprites/motion/smt/right3.png",
+   "sprites/motion/smt/right4.png"
+  ],
   "hurt": [
    "sprites/motion/smt/hurt1.png",
    "sprites/motion/smt/hurt2.png",
-   "sprites/motion/smt/hurt3.png"
+   "sprites/motion/smt/hurt3.png",
+   "sprites/motion/smt/hurt4.png",
+   "sprites/motion/smt/hurt5.png",
+   "sprites/motion/smt/hurt6.png"
   ],
   "ko": [
    "sprites/motion/smt/ko1.png",
    "sprites/motion/smt/ko2.png",
-   "sprites/motion/smt/ko3.png",
-   "sprites/motion/smt/ko4.png"
+   "sprites/motion/smt/ko3.png"
   ],
   "awaken": [
    "sprites/motion/smt/awaken1.png",
    "sprites/motion/smt/awaken2.png",
    "sprites/motion/smt/awaken3.png",
    "sprites/motion/smt/awaken4.png",
-   "sprites/motion/smt/awaken5.png"
-  ],
-  "up": [
-   "sprites/motion/smt/up1.png"
+   "sprites/motion/smt/awaken5.png",
+   "sprites/motion/smt/awaken6.png",
+   "sprites/motion/smt/awaken7.png"
   ]
  },
  "line": {
