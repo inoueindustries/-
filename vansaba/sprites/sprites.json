@@ -1,0 +1,19 @@
+{
+ "player_screw": "sprites/player_screw.png",
+ "player_smt": "sprites/player_smt.png",
+ "player_line": "sprites/player_line.png",
+ "player_mgr": "sprites/player_mgr.png",
+ "bug": "sprites/bug.png",
+ "chip": "sprites/chip.png",
+ "rust": "sprites/rust.png",
+ "boss": "sprites/boss.png",
+ "tomb": "sprites/tomb.png",
+ "solder": "sprites/solder.png",
+ "ic": "sprites/ic.png",
+ "reflow": "sprites/reflow.png",
+ "choco": "sprites/choco.png",
+ "tag": "sprites/tag.png",
+ "lot": "sprites/lot.png",
+ "takt": "sprites/takt.png",
+ "recall": "sprites/recall.png"
+}
