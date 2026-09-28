@@ -47,6 +47,13 @@
   - Gemini TTS で作る場合：環境変数 `GEMINI_API_KEY` を設定して `python3 vansaba/tools/make_voices_gemini.py` を実行すると、`vansaba/voice/` に wav と `voices.json` ができ、ゲームが自動で読み込む（声は `VOICES` で変更可）
   - 録音や音声合成ソフトで作ったボイスファイルを `vansaba/voice/` に入れ、`index.html` の `VOICE_FILES` に書くと、読み上げの代わりにそのファイルを鳴らす
 
+### 一般公開（GitHub Pages）
+
+- リポジトリの Settings → Pages で「Deploy from a branch」→ `main` / `/(root)` を選ぶと、`https://inoueindustries.github.io/-/` で公開される（ルートの `index.html` がゲームへ自動で移動）
+- スマホで開いて「ホーム画面に追加」すると、`vansaba/icons/` のアイコンと「夜勤サバイバー」の名前でアプリのように起動できる（`manifest.webmanifest`）
+- アイコンを差し替えるときは `vansaba/icons/icon-1024.png` と縮小版（512・192・180）を置き換える
+- GitHub Pages で遊ぶ場合、セーブはその端末のブラウザの中だけ（クラウドセーブは claude.ai で開いたときのみ）
+
 ### セーブ
 
 - 貯金・設備投資・記録・クリア状況は端末（ブラウザ）に保存し、claude.ai で開いたときはアカウントごとのクラウドにも保存する（本人だけが読める領域）。端末のデータが消えても、次に開いたときクラウドから戻る。端末とクラウドで違うときは累計の稼ぎが多いほうを使う
