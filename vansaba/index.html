@@ -281,6 +281,20 @@
   .slip.report th { font-size: 12px; }
   .slip.report td { font-size: 12px; padding-left: 8px; }
   .slip.report tr.head th, .slip.report tr.head td { font-weight: 700; color: #6b6353; }
+  .news { margin: 0; white-space: pre-line; font-family: var(--display); color: var(--safety); line-height: 1.6; }
+  .rankcard { background: var(--panel-2); border: 1px solid var(--safety); border-radius: 4px; padding: 12px 14px; display: grid; gap: 6px; }
+  .rklabel { margin: 0; font-size: 12px; color: var(--muted); letter-spacing: .1em; }
+  .rkname { margin: 0; font-family: var(--display); font-size: 26px; color: var(--safety); }
+  .rkbar { height: 8px; background: #0b0f13; border-radius: 4px; overflow: hidden; }
+  .rkbar i { display: block; height: 100%; background: var(--safety); }
+  .trophies { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 6px; }
+  .trophies li { display: grid; grid-template-columns: 28px 1fr; gap: 0 6px; align-items: center; padding: 6px; border: 1px solid #cfc6b2; border-radius: 3px; background: #fbf8f0; }
+  .trophies .ic { grid-row: span 2; font-size: 22px; text-align: center; }
+  .trophies b { font-size: 12px; color: #1f1c16; }
+  .trophies small { font-size: 11px; color: #6b6353; }
+  .trophies li.locked { background: transparent; border-style: dashed; }
+  .trophies li.locked .ic { filter: grayscale(1); opacity: .35; }
+  .trophies li.locked b { color: #8a826f; }
 
   .stats { margin: 0; display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
   .stats div { padding: 10px 12px; background: var(--panel-2); border: 1px solid var(--line); border-radius: 4px; display: grid; gap: 2px; }
@@ -441,6 +455,12 @@
       <p class="eyebrow">DAILY REPORT</p>
       <h2>業務日報</h2>
       <p class="lead">これまでの出勤の記録です（試運転は数えません）。</p>
+      <div class="rankcard">
+        <p class="rklabel">現在のランク</p>
+        <p class="rkname" id="rankName"></p>
+        <div class="rkbar" aria-hidden="true"><i id="rankBar"></i></div>
+        <p class="hint" id="rankNext"></p>
+      </div>
       <div class="slipwrap">
         <p class="sliphead">ステージ別</p>
         <table class="slip report" id="reportStages"></table>
@@ -448,6 +468,10 @@
       <div class="slipwrap">
         <p class="sliphead">通算</p>
         <table class="slip" id="reportTotal"></table>
+      </div>
+      <div class="slipwrap">
+        <p class="sliphead">トロフィー <span id="trophyCount"></span></p>
+        <ul class="trophies" id="trophyList"></ul>
       </div>
       <div class="actions"><button class="btn" id="reportClose" type="button">閉じる</button></div>
     </div>
@@ -502,6 +526,7 @@
       <p class="eyebrow" id="overEyebrow">LINE STOP</p>
       <h2 id="overTitle">ライン停止</h2>
       <p class="lead" id="overLead"></p>
+      <p class="news" id="overNews" hidden></p>
       <dl class="stats">
         <div><dt>生存時間</dt><dd id="stTime">00:00</dd></div>
         <div><dt>到達レベル</dt><dd id="stLv">1</dd></div>
@@ -1651,6 +1676,7 @@
   let anim = 0;   // 見た目のアニメーション用の時計（一時停止中も進む）
   let P, lv = {}, enemies, bullets, gems, texts, parts, bolts;
   let superIdx = 0, ebullets = [], warnT = 0;   // 超大ボスまわり
+  let runSup = 0, runBoss = 0, runClaim = 0;     // 業務日報用：この夜勤で倒した超大ボス・ボスと、作った対策書の数
   let claim = null, claimT = 40;               // クレーム対応イベント
   let time, kills, spawnT, rivetT, sparkT, weldT, spanA, pending, nextSwarm, bossIdx, shake, weldPulse;
   // アイテムBOX・拾得金・ギミック・ボス撃破演出
@@ -1731,6 +1757,7 @@
     time = 0; kills = 0; spawnT = 0.6; rivetT = 0.2; sparkT = 1; weldT = 0; spanA = 0;
     pending = 0; nextSwarm = 60; bossIdx = 0; superIdx = 0; ebullets = []; warnT = 0; shake = 0; weldPulse = 0;
     boxes = []; pops = []; found = 0; freezeT = 0; buffT = 0; boxT = 12; medCool = 0; medUsed = false; fx = null; flash = 0;
+    runSup = 0; runBoss = 0; runClaim = 0;
     claim = null; claimT = 40; forks = []; drillT = 0.5; forkT = 1; awake = {}; awards = 0; stormT = 0; plasmaT = 1; plasma = null; chainT = 0.5; blue = 0; awakenFx = null;
     renderGear();
   }
@@ -1829,6 +1856,7 @@
     sfx('siren');
   }
   function resolveClaim() {
+    runClaim++;
     if (claim) {
       burst(claim.x, claim.y, '#ffffff', 30);
       claim.dead = true;
@@ -1888,6 +1916,7 @@
   // ボス撃破：スローモーション・白フラッシュ・衝撃波・「撃退」の判子・ボーナス箱
   function bossDown(e) {
     fx = { t: 0, x: e.x, y: e.y, name: ETYPES[e.type].name, sup: !!e.sup };
+    if (e.sup) runSup++; else runBoss++;
     if (e.sup) {
       const bonus = Math.round(5000 * stage.pay);
       found += bonus;
@@ -3561,13 +3590,6 @@
     const best = trial ? loadBest() : Math.max(loadBest(), Math.floor(time));
     if (!trial) saveBest(best);
     if (win && !trial) saveCleared(stageId);
-    if (!trial) {                                  // 業務日報の記録
-      const R = loadReport();
-      R.plays[stageId] = (R.plays[stageId] || 0) + 1;
-      if (win) R.clears[stageId] = (R.clears[stageId] || 0) + 1;
-      R.kills += kills; R.time += Math.floor(time);
-      saveReport(R);
-    }
     $('overEyebrow').textContent = stage.level + '・' + stage.name + '　' + (win ? 'SHIFT COMPLETE 06:00' : 'LINE STOP ' + shiftClock(time));
     $('overTitle').textContent = win ? '定時退勤！' : 'ライン停止';
     $('overLead').textContent = win
@@ -3585,10 +3607,28 @@
       const tr = document.createElement('tr'); const th = document.createElement('th'); const td = document.createElement('td');
       th.textContent = '試運転のため、給料と記録は出ません'; td.textContent = '—'; tr.append(th, td); slip.appendChild(tr);
     } else {
-      meta.money += pay.total; meta.earned += pay.total;
+      meta.money += pay.total; meta.earned += pay.total; lastPay = pay.total;
       saveMeta();
       fillSlip($('slip'), pay, win, true);
     }
+    newTrophies = []; rankUp = null; lastWin = win; if (trial) lastPay = 0;
+    if (!trial) {                                  // 業務日報の記録
+      const R = loadReport();
+      R.plays[stageId] = (R.plays[stageId] || 0) + 1;
+      if (win) R.clears[stageId] = (R.clears[stageId] || 0) + 1;
+      R.kills += kills; R.time += Math.floor(time);
+      R.sup[stageId] = (R.sup[stageId] || 0) + runSup; R.bosses += runBoss; R.claims += runClaim;
+      const before = new Set(R.trophies);
+      R.trophies = TROPHIES.filter((t) => before.has(t.id) || t.ok(repStats(R))).map((t) => t.id);
+      newTrophies = TROPHIES.filter((t) => R.trophies.includes(t.id) && !before.has(t.id));
+      const r0 = rankOf(repStats(R, -1)), r1 = rankOf(repStats(R));
+      rankUp = r1.i > r0.i ? r1 : null;
+      saveReport(R);
+    }
+    const news = [];
+    if (!trial && rankUp) news.push('📈 昇進！ ランク「' + rankUp.name + '」になりました');
+    if (!trial) for (const t of newTrophies) news.push('🏆 トロフィー獲得「' + t.name + '」');
+    $('overNews').textContent = news.join('\n'); $('overNews').hidden = !news.length;
     showOverlay('ovOver');
     $('retryBtn').focus();
   }
@@ -3615,14 +3655,62 @@
   // ---------- ルール画面 ----------
   let rulesBack = null;
   // 業務日報：出勤回数・定時退社回数など（yakin-report に保存。クラウドセーブにも乗る）
+  // 追加で記録：超大ボス（リコール大魔王）の撃破数（ステージ別）・ボス撃破数・対策書の作成回数・獲得トロフィー
   function loadReport() {
-    const R = { plays: {}, clears: {}, kills: 0, time: 0 };
+    const R = { plays: {}, clears: {}, kills: 0, time: 0, sup: {}, bosses: 0, claims: 0, trophies: [] };
     try {
       const j = JSON.parse(localStorage.getItem('yakin-report') || 'null');
-      if (j) { R.plays = j.plays || {}; R.clears = j.clears || {}; R.kills = j.kills | 0; R.time = j.time | 0; }
+      if (j) {
+        R.plays = j.plays || {}; R.clears = j.clears || {}; R.kills = j.kills | 0; R.time = j.time | 0;
+        R.sup = j.sup || {}; R.bosses = j.bosses | 0; R.claims = j.claims | 0; R.trophies = Array.isArray(j.trophies) ? j.trophies : [];
+      }
     } catch (e) {}
     return R;
   }
+  const sumOf = (o) => Object.values(o).reduce((a, b) => a + (b | 0), 0);
+  // トロフィー・ランクの判定に使う数字。back=-1 は「この夜勤の分を引いた」昇進前の値
+  function repStats(R, back) {
+    const b = back === -1;
+    const cleared = {}; for (const id in STAGES) cleared[id] = (R.clears[id] || 0) - (b && id === stageId && lastWin ? 1 : 0);
+    return {
+      plays: sumOf(R.plays) - (b ? 1 : 0), clears: sumOf(cleared), cleared,
+      kills: R.kills - (b ? kills : 0), time: R.time - (b ? Math.floor(time) : 0),
+      sup: sumOf(R.sup) - (b ? runSup : 0), bosses: R.bosses - (b ? runBoss : 0), claims: R.claims - (b ? runClaim : 0),
+      earned: meta.earned - (b ? lastPay : 0),
+    };
+  }
+  // 業績ポイント：定時退社・超大ボス・対策書を重く数える
+  const rankPts = (S) => S.plays + S.clears * 10 + S.bosses * 3 + S.sup * 30 + S.claims * 15;
+  const RANKS = [
+    [0, '見習い'], [30, '作業員'], [100, '班長'], [250, '職長'], [500, '係長'],
+    [1000, '課長'], [2000, '部長'], [4000, '工場長'], [8000, '伝説の工場長'],
+  ];
+  function rankOf(S) {
+    const pts = rankPts(S); let i = 0;
+    while (i + 1 < RANKS.length && pts >= RANKS[i + 1][0]) i++;
+    return { i, pts, name: RANKS[i][1], next: RANKS[i + 1] || null, floor: RANKS[i][0] };
+  }
+  const TROPHIES = [
+    { id: 'first',   icon: '🔰', name: '初出勤',             how: '夜勤に1回出勤する',                 ok: (S) => S.plays >= 1 },
+    { id: 'clear1',  icon: '🌅', name: '初めての定時退社',   how: 'どこかのステージで定時退社',         ok: (S) => S.clears >= 1 },
+    { id: 'all3',    icon: '🎖', name: '3工場制覇',          how: '初級・中級・上級で定時退社',         ok: (S) => ['screw', 'smt', 'line'].every((id) => S.cleared[id] > 0) },
+    { id: 'mgr',     icon: '💼', name: '管理職の手腕',       how: '管理職モードで定時退社',             ok: (S) => S.cleared.mgr > 0 },
+    { id: 'clear20', icon: '⏰', name: '定時の鬼',           how: '定時退社 通算20回',                  ok: (S) => S.clears >= 20 },
+    { id: 'play50',  icon: '📅', name: '皆勤賞',             how: '出勤 通算50回',                      ok: (S) => S.plays >= 50 },
+    { id: 'boss10',  icon: '👮', name: '監査なんて怖くない', how: 'ボス撃破 通算10体',                  ok: (S) => S.bosses >= 10 },
+    { id: 'sup1',    icon: '👑', name: 'リコール初撃退',     how: 'リコール大魔王を1回倒す',            ok: (S) => S.sup >= 1 },
+    { id: 'sup10',   icon: '🛡', name: 'リコール処理班',     how: 'リコール大魔王を通算10回倒す',       ok: (S) => S.sup >= 10 },
+    { id: 'sup30',   icon: '🏯', name: 'リコール根絶',       how: 'リコール大魔王を通算30回倒す',       ok: (S) => S.sup >= 30 },
+    { id: 'claim1',  icon: '📄', name: '初めての対策書',     how: 'クレーム対応で対策書を1回作る',      ok: (S) => S.claims >= 1 },
+    { id: 'claim10', icon: '📑', name: '対策書のプロ',       how: '対策書を通算10回作る',               ok: (S) => S.claims >= 10 },
+    { id: 'claim30', icon: '📚', name: '品質保証の鑑',       how: '対策書を通算30回作る',               ok: (S) => S.claims >= 30 },
+    { id: 'kill10k', icon: '🔧', name: '不良ハンター',       how: '累計撃破 10,000体',                  ok: (S) => S.kills >= 10000 },
+    { id: 'kill100k',icon: '⚙', name: '不良ゼロの鬼',       how: '累計撃破 100,000体',                 ok: (S) => S.kills >= 100000 },
+    { id: 'hours10', icon: '🌙', name: '夜勤の主',           how: '累計勤務 10時間',                    ok: (S) => S.time >= 36000 },
+    { id: 'yen1m',   icon: '💴', name: 'ミリオンワーカー',   how: '累計給料 ¥1,000,000',                ok: (S) => S.earned >= 1000000 },
+    { id: 'yen10m',  icon: '💰', name: '億の背中',           how: '累計給料 ¥10,000,000',               ok: (S) => S.earned >= 10000000 },
+  ];
+  let newTrophies = [], rankUp = null, lastWin = false, lastPay = 0;
   function saveReport(R) { try { localStorage.setItem('yakin-report', JSON.stringify(R)); } catch (e) {} cloudPush(); }
   function renderReport() {
     const R = loadReport();
@@ -3632,20 +3720,40 @@
       cells.forEach((c, i) => { const el = document.createElement(i ? 'td' : 'th'); el.textContent = c; tr.appendChild(el); });
       tb.appendChild(tr);
     };
-    row('head', ['ステージ', '出勤', '定時退社', '最長']);
+    row('head', ['ステージ', '出勤', '定時退社', '大魔王', '最長']);
     let plays = 0, clears = 0;
     for (const id in STAGES) {
       const p = R.plays[id] || 0, c = R.clears[id] || 0; plays += p; clears += c;
-      const best = loadBest(id);
-      row('', [STAGES[id].level + '・' + STAGES[id].name, isLocked(id) ? '未解放' : p + '回', isLocked(id) ? '—' : c + '回', best ? fmt(best) : '—']);
+      const best = loadBest(id), lock = isLocked(id);
+      row('', [STAGES[id].level + '・' + STAGES[id].name, lock ? '未解放' : p + '回', lock ? '—' : c + '回',
+               lock || !STAGES[id].superAt ? '—' : (R.sup[id] || 0) + '体', best ? fmt(best) : '—']);
     }
     const tt = $('reportTotal'); tt.innerHTML = '';
     const h = Math.floor(R.time / 3600), m = Math.floor(R.time / 60) % 60;
     for (const [k, v] of [['出勤回数', plays + '回'], ['定時退社回数', clears + '回'], ['定時退社率', plays ? Math.round(clears / plays * 100) + '%' : '—'],
-                          ['累計勤務時間', (h ? h + '時間' : '') + m + '分'], ['累計撃破数', R.kills.toLocaleString('ja-JP') + '体'], ['累計給料', yen(meta.earned)]]) {
+                          ['累計勤務時間', (h ? h + '時間' : '') + m + '分'], ['累計撃破数', R.kills.toLocaleString('ja-JP') + '体'],
+                          ['ボス撃破数', R.bosses + '体'], ['リコール大魔王 撃破数', sumOf(R.sup) + '体'], ['対策書の作成回数', R.claims + '回'], ['累計給料', yen(meta.earned)]]) {
       const tr = document.createElement('tr'); const th = document.createElement('th'); const td = document.createElement('td');
       th.textContent = k; td.textContent = v; tr.append(th, td); tt.appendChild(tr);
     }
+    // ランク
+    const S = repStats(R), rk = rankOf(S);
+    $('rankName').textContent = rk.name;
+    $('rankBar').style.width = (rk.next ? Math.min(100, (rk.pts - rk.floor) / (rk.next[0] - rk.floor) * 100) : 100) + '%';
+    $('rankNext').textContent = '業績ポイント ' + rk.pts.toLocaleString('ja-JP') + (rk.next ? '　次の「' + rk.next[1] + '」まで あと' + (rk.next[0] - rk.pts).toLocaleString('ja-JP') : '　最高ランクです')
+      + '（出勤1・ボス撃破3・定時退社10・対策書15・大魔王30）';
+    // トロフィー
+    const ul = $('trophyList'); ul.innerHTML = ''; let got = 0;
+    for (const t of TROPHIES) {
+      const ok = R.trophies.includes(t.id) || t.ok(S); if (ok) got++;
+      const li = document.createElement('li'); if (!ok) li.className = 'locked';
+      const ic = document.createElement('span'); ic.className = 'ic'; ic.textContent = t.icon; ic.setAttribute('aria-hidden', 'true');
+      const b = document.createElement('b'); b.textContent = ok ? t.name : '？？？';
+      const sm = document.createElement('small'); sm.textContent = t.how;
+      li.append(ic, b, sm); li.setAttribute('aria-label', (ok ? '獲得：' : '未獲得：') + t.name + '（' + t.how + '）');
+      ul.appendChild(li);
+    }
+    $('trophyCount').textContent = got + ' / ' + TROPHIES.length;
   }
   function openReport() {
     rulesBack = { state, overlay: OVERLAYS.find((o) => !$(o).hidden) || null, focus: document.activeElement };
