@@ -1703,7 +1703,7 @@
     // 設備投資で買った「持ち込み工具」
     lv.rivet = 1 + ml('rivet');
     lv.spanner = ml('spanner'); lv.weld = ml('weld'); lv.spark = ml('spark');
-    P = { x: 0, y: 0, r: 13, hp: 100, iframe: 0, face: 0, dir: 1, moving: false, walk: 0, level: 1, xp: 0, xpNext: xpFor(1) };
+    P = { x: 0, y: 0, r: 13, hp: 100, iframe: 0, face: 0, dir: 1, moving: false, walk: 0, ko: 0, level: 1, xp: 0, xpNext: xpFor(1) };
     P.hp = stat.maxHp;
     enemies = []; bullets = []; gems = []; texts = []; parts = []; bolts = [];
     time = 0; kills = 0; spawnT = 0.6; rivetT = 0.2; sparkT = 1; weldT = 0; spanA = 0;
@@ -1972,6 +1972,8 @@
 
   // ---------- 更新 ----------
   function update(dt) {
+    // HP0：やられモーションを少し見せてから終了（その間は時間を止める）
+    if (P.ko) { P.ko += dt; if (P.ko >= 1.5) finish(false); return; }
     time += dt;
 
     // 移動
@@ -2356,7 +2358,7 @@
     shake = Math.max(0, shake - 30 * dt);
 
     // 終了判定
-    if (P.hp <= 0) { P.hp = 0; finish(false); return; }
+    if (P.hp <= 0) { P.hp = 0; if (!P.ko) P.ko = 0.0001; return; }
     if (time >= SHIFT) { finish(true); return; }
     if (pending > 0) openLevel();
   }
@@ -2512,6 +2514,40 @@
       if (j) for (const k in j) if (k in SPRITE_FILES && typeof j[k] === 'string') loadSprite(k, j[k]);
     }).catch(() => {});
   } catch (e) {}
+  // 主人公のモーション（初級の作業着）：sprites/motion/motion.json に歩き・ダメージ・やられ・覚醒のコマを並べる
+  const MOT = {};
+  try {
+    fetch('sprites/motion/motion.json').then((r) => (r.ok ? r.json() : null)).then((j) => {
+      if (!j) return;
+      for (const k in j) {
+        if (!Array.isArray(j[k])) continue;
+        MOT[k] = j[k].map((src) => { const img = new Image(); img.src = src; return img; });
+      }
+    }).catch(() => {});
+  } catch (e) {}
+  const motReady = (k) => MOT[k] && MOT[k].length && MOT[k].every((i) => i.complete && i.naturalWidth);
+  let lastLook = 'down';
+  // 今の状態に合うコマを選ぶ。モーションがない（または初級以外）ときは null
+  function playerMotion() {
+    if (stageId !== 'screw' || !motReady('down')) return null;
+    if (P.ko && motReady('ko') && motReady('hurt')) {
+      const seq = [MOT.hurt[4], MOT.ko[0], MOT.ko[0], MOT.ko[1], MOT.ko[2]];
+      return { img: seq[Math.min(seq.length - 1, Math.floor(P.ko / 0.3))], size: 58 };
+    }
+    if (awakenFx && awakenFx.t < 1.6 && motReady('awaken')) {
+      return { img: MOT.awaken[Math.min(6, Math.floor(awakenFx.t / 0.22))], size: 87 };
+    }
+    if (P.iframe > 0 && motReady('hurt')) {
+      return { img: MOT.hurt[Math.min(3, Math.floor((0.45 - P.iframe) / 0.45 * 4))], size: 58 };
+    }
+    if (P.moving) {
+      const cx = Math.cos(P.face), cy = Math.sin(P.face);
+      lastLook = Math.abs(cx) >= Math.abs(cy) ? (cx < 0 ? 'left' : 'right') : (cy < 0 ? 'up' : 'down');
+    }
+    const set = motReady(lastLook) ? MOT[lastLook] : MOT.down;
+    const f = P.moving && !reduceMotion ? Math.floor(P.walk * 9) % 4 : 0;
+    return { img: set[f], size: 58 };
+  }
   function drawSprite(img, x, y, size, flip) {
     ctx.save(); ctx.translate(x, y);
     if (flip) ctx.scale(-1, 1);
@@ -2852,8 +2888,11 @@
     shadow(P.x, P.y + 15, 11);
     ctx.globalAlpha = faded ? 0.45 : 1;
 
+    const pm = playerMotion();
     const pimg = SPR['player_' + stageId] || SPR.player;
-    if (pimg) {
+    if (pm) {
+      drawSprite(pm.img, P.x, P.y - 8 - (pm.size - 58) / 2, pm.size, false);
+    } else if (pimg) {
       drawSprite(pimg, x, y - 4, 50, d < 0);
     } else {
       // ステージごとの服装：初級＝作業着、中級＝静電気防止スモック、上級＝班長（白い作業帽）、管理職＝スーツ
