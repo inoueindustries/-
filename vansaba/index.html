@@ -2576,9 +2576,11 @@
       lastLook = Math.abs(cx) >= Math.abs(cy) ? (cx < 0 ? 'left' : 'right') : (cy < 0 ? 'up' : 'down');
     }
     let set = M.down, flip = false;
-    if (motOk(M, lastLook)) set = M[lastLook];
-    else if (lastLook === 'right' && motOk(M, 'left')) { set = M.left; flip = true; }
-    else if (lastLook === 'left' && motOk(M, 'right')) { set = M.right; flip = true; }
+    // 上向き（後ろ姿）のコマがない服装は、上に進むときに正面を向かないよう、直前の左右向きのコマで代用する
+    const look = lastLook === 'up' && !motOk(M, 'up') ? (P.dir < 0 ? 'left' : 'right') : lastLook;
+    if (motOk(M, look)) set = M[look];
+    else if (look === 'right' && motOk(M, 'left')) { set = M.left; flip = true; }
+    else if (look === 'left' && motOk(M, 'right')) { set = M.right; flip = true; }
     const f = P.moving && !reduceMotion ? Math.floor(P.walk * 9) % set.length : 0;
     return { img: set[f], size: 58, flip, bob: set.length === 1 && P.moving ? Math.abs(Math.sin(P.walk * 14)) * 2 : 0 };
   }
