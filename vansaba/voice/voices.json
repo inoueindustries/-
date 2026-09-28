@@ -40,6 +40,9 @@
   ],
   "awaken": [
    "voice/boy_awaken1.wav"
+  ],
+  "ko": [
+   "voice/boy_ko1.wav"
   ]
  }
 }
