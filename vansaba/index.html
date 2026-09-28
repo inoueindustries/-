@@ -1,0 +1,3862 @@
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>夜勤サバイバー</title>
+<!-- ホーム画面に追加したときのアイコンと名前（GitHub Pages などで公開したとき用） -->
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icons/icon-192.png">
+<link rel="apple-touch-icon" href="icons/icon-180.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="夜勤サバイバー">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#161b21">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DotGothic16&family=Zen+Kaku+Gothic+New:wght@500;700&display=swap">
+<style>
+  /* 深夜の工場という一つの世界観に固定したダークデザイン */
+  :root {
+    color-scheme: dark;
+    --floor: #161b21;
+    --panel: #12171d;
+    --panel-2: #1b222a;
+    --line: #2f3a45;
+    --ink: #e9edf1;
+    --muted: #8e9aa6;
+    --safety: #f2c230;
+    --sodium: #ff8a3d;
+    --weld: #7fe3ff;
+    --hazard: #e5484d;
+    --good: #5fd08a;
+    --display: "DotGothic16", "Osaka-Mono", "MS Gothic", monospace;
+    --body: "Zen Kaku Gothic New", "Hiragino Sans", "Yu Gothic", "Meiryo", sans-serif;
+  }
+  [hidden] { display: none !important; }
+  html, body { height: 100%; }
+  body {
+    margin: 0;
+    background: var(--floor);
+    color: var(--ink);
+    font-family: var(--body);
+    overflow: hidden;
+    touch-action: none;
+    user-select: none;
+    -webkit-user-select: none;
+  }
+  #app { position: relative; width: 100%; height: 100%; overflow: hidden; }
+  canvas { display: block; width: 100%; height: 100%; }
+
+  /* HUD */
+  .hud {
+    position: absolute; inset: 0 0 auto 0;
+    padding: 10px 16px 0;
+    display: grid; gap: 6px;
+    pointer-events: none;
+  }
+  .xpbar { height: 10px; background: #05070acc; border: 1px solid var(--line); border-radius: 2px; overflow: hidden; }
+  .xpfill { height: 100%; width: 0; background: repeating-linear-gradient(90deg, var(--weld) 0 6px, #4fb8d8 6px 8px); transition: width .12s linear; }
+  .hudrow { display: grid; grid-template-columns: 1fr auto 1fr; align-items: start; gap: 8px; font-family: var(--display); font-variant-numeric: tabular-nums; }
+  .hudleft { display: grid; gap: 2px; font-size: 16px; }
+  .hudleft .kills { color: var(--muted); font-size: 13px; }
+  .clockbox { text-align: center; display: grid; gap: 0; }
+  .timer { font-size: 30px; letter-spacing: .06em; line-height: 1.1; text-shadow: 0 2px 0 #000; }
+  .shift { font-size: 12px; color: var(--safety); letter-spacing: .1em; }
+  .hudright { display: flex; justify-content: flex-end; gap: 8px; }
+  .iconbtn {
+    pointer-events: auto;
+    width: 40px; height: 40px;
+    display: grid; place-items: center;
+    background: #0b0f13cc; color: var(--ink);
+    border: 1px solid var(--line); border-radius: 4px;
+    font-family: var(--display); font-size: 16px; cursor: pointer;
+  }
+  .iconbtn:focus-visible { outline: 2px solid var(--weld); outline-offset: 2px; }
+  .gear {
+    position: absolute; left: 16px; bottom: calc(12px + env(safe-area-inset-bottom, 0px));
+    display: flex; flex-wrap: wrap; gap: 6px; max-width: calc(100% - 32px);
+    pointer-events: none;
+  }
+  .gear span {
+    display: grid; place-items: center;
+    width: 30px; height: 30px; position: relative;
+    background: #0b0f13cc; border: 1px solid var(--line); border-radius: 3px;
+    font-family: var(--display); font-size: 15px;
+  }
+  .gear span.w { border-color: #6a5a20; color: var(--safety); }
+  .gear span i {
+    position: absolute; right: -4px; bottom: -5px;
+    font-style: normal; font-size: 10px; line-height: 1;
+    background: var(--ink); color: #111; padding: 1px 3px; border-radius: 2px;
+  }
+
+  .banner {
+    position: absolute; left: 50%; top: 22%;
+    transform: translate(-50%, -8px);
+    padding: 8px 18px;
+    background: #0b0f13e6; border: 1px solid var(--safety);
+    font-family: var(--display); font-size: clamp(16px, 4.5vw, 22px);
+    color: var(--safety); white-space: nowrap;
+    opacity: 0; transition: opacity .25s, transform .25s;
+    pointer-events: none;
+  }
+  .banner.show { opacity: 1; transform: translate(-50%, 0); }
+
+  /* オーバーレイ */
+  .overlay {
+    position: absolute; inset: 0;
+    display: grid; place-items: center;
+    padding: 24px 16px;
+    background: radial-gradient(ellipse at center, #0b0e12aa, #07090cee 75%);
+    overflow-y: auto;
+  }
+  .panel { width: min(560px, 100%); display: grid; gap: 16px; }
+  .stripe { height: 10px; background: repeating-linear-gradient(-45deg, var(--safety) 0 12px, #15120a 12px 24px); }
+  .eyebrow { margin: 0; font-family: var(--display); font-size: 13px; letter-spacing: .18em; color: var(--sodium); }
+  h1, h2 { font-family: var(--display); font-weight: 400; margin: 0; text-wrap: balance; }
+  h1 { white-space: nowrap; font-size: clamp(36px, 11vw, 68px); line-height: 1; color: var(--safety); letter-spacing: .04em; text-shadow: 0 4px 0 #000; }
+  h2 { font-size: clamp(26px, 7vw, 38px); line-height: 1.15; }
+  .lead { margin: 0; line-height: 1.8; font-size: 15px; max-width: 34em; }
+  .controls {
+    margin: 0; display: grid; grid-template-columns: auto 1fr; gap: 6px 16px;
+    font-size: 14px; padding: 12px 14px; background: var(--panel-2); border: 1px solid var(--line); border-radius: 4px;
+  }
+  .controls dt { font-family: var(--display); color: var(--muted); letter-spacing: .08em; }
+  .controls dd { margin: 0; }
+  .roster { margin: 0; font-size: 13px; color: var(--muted); line-height: 1.7; }
+  .stages { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; }
+  .stage {
+    display: grid; gap: 4px; align-content: start;
+    text-align: left; padding: 10px 12px;
+    background: var(--panel-2); color: var(--ink);
+    border: 1px solid var(--line); border-radius: 4px;
+    font: inherit; cursor: pointer;
+  }
+  .stage:hover { background: #222b35; }
+  .stage[aria-checked="true"] { border-color: var(--safety); box-shadow: inset 0 0 0 1px var(--safety); background: #232a2f; }
+  .stage:focus-visible { outline: 2px solid var(--weld); outline-offset: 2px; }
+  .stage b { font-size: 15px; }
+  .stage .sub { font-size: 12px; color: var(--muted); }
+  .stage .rec { font-family: var(--display); font-size: 11px; color: var(--weld); font-variant-numeric: tabular-nums; }
+  .lvchip { justify-self: start; font-family: var(--display); font-size: 11px; padding: 1px 6px; border-radius: 2px; color: #111; }
+  .lvchip.l1 { background: var(--good); }
+  .lvchip.l2 { background: var(--safety); }
+  .lvchip.l3 { background: var(--hazard); color: #fff; }
+  .lvchip.l4 { background: #7b4fd6; color: #fff; }
+  .stage.boss { background: linear-gradient(135deg, #221a30, var(--panel-2)); }
+  .stage.locked { opacity: .55; cursor: not-allowed; }
+  .stage.locked .rec { color: var(--muted); }
+  .best { margin: 0; font-family: var(--display); font-size: 14px; color: var(--weld); min-height: 1em; }
+  .actions { display: flex; flex-wrap: wrap; gap: 10px; }
+  .btn {
+    font-family: var(--display); font-size: 20px;
+    padding: 12px 24px;
+    background: var(--safety); color: #15120a;
+    border: 0; border-radius: 3px; cursor: pointer;
+    box-shadow: 0 4px 0 #8a6d12;
+  }
+  .btn:active { transform: translateY(2px); box-shadow: 0 2px 0 #8a6d12; }
+  .btn.ghost { background: transparent; color: var(--ink); border: 1px solid var(--line); box-shadow: none; }
+  .btn:focus-visible { outline: 3px solid var(--weld); outline-offset: 3px; }
+
+  .cards { display: grid; gap: 10px; }
+  .card {
+    display: grid; grid-template-columns: 48px 1fr auto; gap: 14px; align-items: center;
+    text-align: left; padding: 12px 14px;
+    background: var(--panel-2); color: var(--ink);
+    border: 1px solid var(--line); border-radius: 4px;
+    font: inherit; cursor: pointer;
+  }
+  .card:hover, .card:focus-visible { border-color: var(--safety); background: #222b35; outline: none; }
+  .card .ico {
+    width: 48px; height: 48px; display: grid; place-items: center;
+    font-family: var(--display); font-size: 26px;
+    background: #0b0f13; border: 1px solid var(--line); border-radius: 3px;
+  }
+  .card.w .ico { color: var(--safety); border-color: #6a5a20; }
+  .card .txt { display: grid; gap: 3px; min-width: 0; }
+  .card b { font-size: 16px; }
+  .card .lvl { font-family: var(--display); font-size: 12px; color: var(--muted); margin-left: 6px; font-weight: 400; }
+  .card .new { font-family: var(--display); font-size: 11px; color: #15120a; background: var(--sodium); padding: 1px 5px; margin-left: 6px; border-radius: 2px; }
+  .card small { font-size: 13px; color: #c4ccd4; line-height: 1.5; }
+  .card kbd { font-family: var(--display); font-size: 13px; color: var(--muted); border: 1px solid var(--line); border-radius: 3px; padding: 2px 7px; }
+  .bgmpick { display: grid; gap: 6px; }
+  .bgmpick .label { font-family: var(--display); font-size: 12px; color: var(--muted); letter-spacing: .08em; }
+  .bgmtoggle { display: flex; align-items: center; justify-content: space-between; gap: 10px; width: 100%; text-align: left; padding: 9px 12px; border: 1px solid var(--weld); border-radius: 4px; background: #1a2129; color: inherit; font: inherit; cursor: pointer; }
+  .bgmtoggle:hover { background: #222b35; }
+  .bgmtoggle:focus-visible { outline: 2px solid var(--weld); outline-offset: 2px; }
+  .bgmtoggle .cur { font-family: var(--display); font-size: 15px; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .bgmtoggle .more { font-size: 12px; color: var(--muted); white-space: nowrap; flex: none; }
+  .seg { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 6px; }
+  .seg button {
+    display: grid; gap: 2px; align-content: start; text-align: left;
+    padding: 8px 10px; background: var(--panel-2); color: var(--ink);
+    border: 1px solid var(--line); border-radius: 4px; font: inherit; cursor: pointer;
+  }
+  .seg button:hover { background: #222b35; }
+  .seg.voice { grid-template-columns: repeat(4, 1fr); }
+  .seg.voice button { text-align: center; }
+  .seg button b { font-family: var(--display); font-weight: 400; font-size: 15px; }
+  .seg button small { font-size: 11px; color: var(--muted); line-height: 1.4; }
+  .seg button[aria-checked="true"] { border-color: var(--weld); box-shadow: inset 0 0 0 1px var(--weld); }
+  .seg button:focus-visible { outline: 2px solid var(--weld); outline-offset: 2px; }
+  .vol { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; font-size: 14px; }
+  .vol input { flex: 1 1 160px; accent-color: var(--safety); }
+  .vol output { font-family: var(--display); font-variant-numeric: tabular-nums; min-width: 3ch; text-align: right; }
+  .buff { font-size: 12px; color: var(--sodium); min-height: 1em; }
+  .rsec { display: grid; gap: 8px; }
+  .rtext { margin: 0; font-size: 14px; line-height: 1.75; }
+  .rlist { margin: 0; padding-left: 1.2em; display: grid; gap: 4px; font-size: 14px; line-height: 1.7; }
+  .itemgrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 8px; }
+  .ritem { display: grid; grid-template-columns: 34px 1fr; gap: 10px; align-items: center; padding: 8px 10px; background: var(--panel-2); border: 1px solid var(--line); border-radius: 4px; }
+  .ritem .ico { width: 34px; height: 34px; display: grid; place-items: center; font-family: var(--display); font-size: 18px; color: var(--safety); background: #0b0f13; border: 1px solid var(--line); border-radius: 3px; }
+  .ritem b { display: block; font-size: 14px; }
+  .ritem small { display: block; font-size: 12px; color: #c4ccd4; line-height: 1.5; }
+  .rtable { width: 100%; border-collapse: collapse; font-size: 13px; color: var(--ink); }
+  .rtable th, .rtable td { color: var(--ink); font-size: 13px; padding: 8px 10px; border-bottom: 1px solid var(--line); vertical-align: top; line-height: 1.6; }
+  .rtable th { text-align: left; white-space: nowrap; color: var(--safety); font-weight: 700; }
+  .hudleft .pay { color: var(--safety); font-size: 13px; }
+  .card.awaken {
+    border-color: #ffe27a;
+    background: linear-gradient(120deg, #3a1f4a, #1b222a 45%, #3a2f10);
+    background-size: 220% 100%;
+    animation: shine 1.6s linear infinite;
+    box-shadow: 0 0 18px rgba(255,226,122,.35);
+  }
+  .gear span.aw { border-color: #ffe27a; color: #ffe27a; box-shadow: 0 0 8px rgba(255,226,122,.5); }
+  .card.awnear { border-color: #b98cff; box-shadow: inset 0 0 0 1px #b98cff, 0 0 14px rgba(185,140,255,.35); }
+  .awbadge {
+    justify-self: start; margin-top: 4px;
+    font-family: var(--display); font-size: 13px; line-height: 1.4; color: #ffffff;
+    background: linear-gradient(90deg, #7b4fd6, #d7263d);
+    padding: 3px 8px; border-radius: 3px;
+    animation: awpulse 1.2s ease-in-out infinite;
+  }
+  @keyframes awpulse { 50% { filter: brightness(1.35); } }
+  .awline {
+    margin: 0; font-family: var(--display); font-size: 13px; line-height: 1.6; color: #e2d0ff;
+    background: #221a30; border: 1px solid #7b4fd6; padding: 6px 10px; border-radius: 3px;
+  }
+  .card.lucky {
+    border-color: var(--safety);
+    background: linear-gradient(120deg, #3a2f10, #1b222a 45%, #3a2f10);
+    background-size: 220% 100%;
+    animation: shine 2.4s linear infinite;
+  }
+  @keyframes shine { from { background-position: 0% 0; } to { background-position: 220% 0; } }
+  .luckytag { font-family: var(--display); font-size: 12px; color: #15120a; background: var(--safety); padding: 1px 6px; margin-left: 6px; border-radius: 2px; }
+  .shophead { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 8px 16px; }
+  .money { margin: 0; font-family: var(--display); font-size: 22px; color: var(--safety); font-variant-numeric: tabular-nums; }
+  .shopsec { margin: 4px 0 0; font-size: 14px; color: var(--sodium); font-weight: 700; letter-spacing: .06em; }
+  .shoplist { display: grid; gap: 8px; }
+  .srow {
+    display: grid; grid-template-columns: 40px 1fr auto; gap: 12px; align-items: center;
+    padding: 10px 12px; background: var(--panel-2); border: 1px solid var(--line); border-radius: 4px;
+  }
+  .srow .ico {
+    width: 40px; height: 40px; display: grid; place-items: center;
+    font-family: var(--display); font-size: 22px; color: var(--safety);
+    background: #0b0f13; border: 1px solid var(--line); border-radius: 3px;
+  }
+  .stxt { display: grid; gap: 2px; min-width: 0; }
+  .stxt b { font-size: 15px; }
+  .stxt small { font-size: 12px; color: #c4ccd4; line-height: 1.5; }
+  .pips { font-size: 11px; letter-spacing: .15em; color: var(--weld); }
+  .buy {
+    font-family: var(--display); font-size: 15px; font-variant-numeric: tabular-nums;
+    min-width: 92px; padding: 8px 12px;
+    background: var(--safety); color: #15120a; border: 0; border-radius: 3px; cursor: pointer;
+  }
+  .buy:disabled { background: #2a323b; color: var(--muted); cursor: not-allowed; }
+  .buy:focus-visible { outline: 2px solid var(--weld); outline-offset: 2px; }
+  .slipwrap { background: #f1ede2; color: #1f1c16; border-radius: 3px; padding: 12px 14px; display: grid; gap: 6px; }
+  .sliphead { margin: 0; font-weight: 700; letter-spacing: .3em; font-size: 13px; border-bottom: 2px solid #1f1c16; padding-bottom: 4px; }
+  .slip { width: 100%; border-collapse: collapse; font-size: 13px; color: #1f1c16; }
+  .slip th, .slip td { color: #1f1c16; font-size: 13px; }
+  .slip th { text-align: left; font-weight: 500; padding: 4px 0; }
+  .slip td { text-align: right; padding: 4px 0 4px 12px; font-family: var(--display); font-variant-numeric: tabular-nums; white-space: nowrap; }
+  .slip tr + tr { border-top: 1px dashed #b9b1a0; }
+  .slip tr.total th, .slip tr.total td { font-weight: 700; font-size: 16px; border-top: 2px solid #1f1c16; }
+  .slip tr.bank th, .slip tr.bank td { color: #6b6353; }
+  .hint { margin: 0; font-size: 12px; color: var(--muted); }
+
+  .stats { margin: 0; display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+  .stats div { padding: 10px 12px; background: var(--panel-2); border: 1px solid var(--line); border-radius: 4px; display: grid; gap: 2px; }
+  .stats dt { font-size: 12px; color: var(--muted); }
+  .stats dd { margin: 0; font-family: var(--display); font-size: 22px; font-variant-numeric: tabular-nums; }
+
+  @media (max-width: 420px) {
+    .timer { font-size: 24px; }
+    .card { grid-template-columns: 40px 1fr; }
+    .card .ico { width: 40px; height: 40px; font-size: 22px; }
+    .card kbd { display: none; }
+    .stats dd { font-size: 18px; }
+    .stages { grid-template-columns: 1fr; }
+    .srow { grid-template-columns: 34px 1fr; }
+    .srow .ico { width: 34px; height: 34px; font-size: 18px; }
+    .srow .buy { grid-column: 1 / -1; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .banner, .xpfill { transition: none; }
+    .card.lucky, .card.awaken, .awbadge { animation: none; }
+  }
+</style>
+
+<div id="app">
+  <canvas id="game" aria-label="ゲーム画面"></canvas>
+
+  <div class="hud" id="hud" hidden>
+    <div class="xpbar"><div class="xpfill" id="xpfill"></div></div>
+    <div class="hudrow">
+      <div class="hudleft">
+        <span id="lvText">Lv.1</span>
+        <span class="kills" id="killText">撃破 0</span>
+        <span class="kills" id="stageText"></span>
+        <span class="pay" id="payText"></span>
+      </div>
+      <div class="clockbox">
+        <span class="timer" id="timerText">00:00</span>
+        <span class="shift" id="shiftText">工場時刻 22:00</span>
+        <span class="buff" id="buffText"></span>
+      </div>
+      <div class="hudright">
+        <button class="iconbtn" id="bgmBtn" type="button" aria-label="BGMのオン・オフ" aria-pressed="true">曲</button>
+        <button class="iconbtn" id="muteBtn" type="button" aria-label="効果音のオン・オフ">音</button>
+        <button class="iconbtn" id="pauseBtn" type="button" aria-label="一時停止">||</button>
+      </div>
+    </div>
+  </div>
+  <div class="gear" id="gear" hidden></div>
+  <div class="banner" id="banner"></div>
+
+  <!-- タイトル -->
+  <div class="overlay" id="ovTitle">
+    <div class="panel">
+      <div class="stripe"></div>
+      <p class="eyebrow">NIGHT SHIFT 22:00 → 06:00</p>
+      <h1>夜勤サバイバー</h1>
+      <p class="lead">深夜の工場に不良品が湧き出した。道具は勝手に動く。あなたは逃げ回りながら落ちたネジを拾い、改善を重ねて、朝6時の定時まで生き延びる。</p>
+      <dl class="controls">
+        <dt>移動</dt><dd>WASD・矢印キー／画面をドラッグ</dd>
+        <dt>攻撃</dt><dd>自動で撃つ</dd>
+        <dt>成長</dt><dd>ネジを集めてレベルアップ、改善を1つ選ぶ</dd>
+        <dt>ステージ</dt><dd>下のカードか数字キー 1〜4 で選ぶ</dd>
+        <dt>休憩</dt><dd>P・Esc キー（BGMの音量もここで変えられます）</dd>
+        <dt>音</dt><dd>BGMは14曲から選べる。画面右上の「曲」でBGM、「音」で効果音をオン・オフ</dd>
+      </dl>
+      <div class="stages" id="stages" role="radiogroup" aria-label="ステージを選ぶ"></div>
+      <p class="roster" id="roster"></p>
+      <div class="bgmpick">
+        <span class="label">BGM（押すと試聴できます）</span>
+        <button type="button" class="bgmtoggle" id="bgmToggleTitle" aria-expanded="false" aria-controls="bgmPickTitle"><span class="cur"></span><span class="more"></span></button>
+        <div class="seg" id="bgmPickTitle" role="radiogroup" aria-label="BGMを選ぶ" hidden></div>
+      </div>
+      <div class="bgmpick">
+        <span class="label">レベルアップ時のボイス（押すと試聴できます）</span>
+        <div class="seg voice" id="voicePickTitle" role="radiogroup" aria-label="ボイスを選ぶ"></div>
+      </div>
+      <p class="best" id="moneyTitle"></p>
+      <div class="actions">
+        <button class="btn" id="startBtn" type="button">作業開始</button>
+        <button class="btn ghost" id="shopBtn" type="button">設備投資・福利厚生</button>
+        <button class="btn ghost" id="rulesBtn" type="button">ルールと給料</button>
+        <button class="btn ghost" id="trialBtn" type="button">覚醒の試運転</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- レベルアップ -->
+  <div class="overlay" id="ovLevel" hidden>
+    <div class="panel">
+      <div class="stripe"></div>
+      <p class="eyebrow" id="lvEyebrow">LEVEL UP</p>
+      <h2>改善提案をひとつ採用</h2>
+      <p class="awline" id="lvAwake" hidden></p>
+      <div class="cards" id="cards"></div>
+      <p class="hint">数字キー 1〜4 でも選べます</p>
+    </div>
+  </div>
+
+  <!-- 休憩 -->
+  <div class="overlay" id="ovPause" hidden>
+    <div class="panel">
+      <div class="stripe"></div>
+      <p class="eyebrow">PAUSE</p>
+      <h2>休憩中</h2>
+      <p class="lead">ラインは止まっています。準備ができたら再開してください。</p>
+      <div class="vol">
+        <label for="bgmVol">BGMの音量</label>
+        <input type="range" id="bgmVol" min="0" max="100" step="5">
+        <output id="bgmVolOut" for="bgmVol"></output>
+      </div>
+      <p class="best" id="awakeProgress"></p>
+      <div class="slipwrap">
+        <p class="sliphead">今夜の給料（途中経過）</p>
+        <table class="slip" id="slipPause"></table>
+      </div>
+      <div class="bgmpick">
+        <span class="label">BGM</span>
+        <button type="button" class="bgmtoggle" id="bgmTogglePause" aria-expanded="false" aria-controls="bgmPickPause"><span class="cur"></span><span class="more"></span></button>
+        <div class="seg" id="bgmPickPause" role="radiogroup" aria-label="BGMを選ぶ" hidden></div>
+      </div>
+      <div class="bgmpick">
+        <span class="label">レベルアップ時のボイス</span>
+        <div class="seg voice" id="voicePickPause" role="radiogroup" aria-label="ボイスを選ぶ"></div>
+      </div>
+      <div class="actions">
+        <button class="btn" id="resumeBtn" type="button">再開する</button>
+        <button class="btn ghost" id="pauseRules" type="button">ルール</button>
+        <button class="btn ghost" id="quitBtn" type="button">タイトルへ</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 設備投資 -->
+  <div class="overlay" id="ovShop" hidden>
+    <div class="panel">
+      <div class="stripe"></div>
+      <p class="eyebrow">INVESTMENT &amp; WELFARE</p>
+      <div class="shophead">
+        <h2>設備投資・福利厚生</h2>
+        <p class="money" id="shopMoney"></p>
+      </div>
+      <p class="lead">夜勤で稼いだ給料で、次の夜勤を楽にします。買った強化と資格はずっと続きます。</p>
+      <h3 class="shopsec">持ち込み工具（最初から装備）</h3>
+      <div class="shoplist" id="shopTools"></div>
+      <h3 class="shopsec">自己投資（資格・研修でスキル上限アップ → 覚醒）</h3>
+      <div class="shoplist" id="shopSelf"></div>
+      <h3 class="shopsec">福利厚生（ずっと効く強化）</h3>
+      <div class="shoplist" id="shopPerks"></div>
+      <div class="actions"><button class="btn" id="shopClose" type="button">タイトルへ戻る</button></div>
+    </div>
+  </div>
+
+  <!-- ルール -->
+  <div class="overlay" id="ovRules" hidden>
+    <div class="panel">
+      <div class="stripe"></div>
+      <p class="eyebrow">RULES</p>
+      <h2>ルールと給料のしくみ</h2>
+      <section class="rsec">
+        <h3 class="shopsec">目的</h3>
+        <p class="rtext">工場時刻 22:00 から 06:00 の定時まで生き延びるとクリア（実際の時間で10分）。HPが0になると「ライン停止」で終わりです。倒れても、働いた分の給料はもらえます。</p>
+      </section>
+      <section class="rsec">
+        <h3 class="shopsec">遊び方</h3>
+        <ul class="rlist">
+          <li>操作は移動だけ。武器は自動で攻撃します。</li>
+          <li>敵が落とすネジを拾うとレベルアップ。「改善提案」を1つ選びます（武器4種・強化6種、各Lv5まで）。</li>
+          <li>金色の「ラッキー！」カードは、3段階まとめてレベルアップ。</li>
+          <li>武器と強化は最初 Lv5 まで。「設備投資・福利厚生」の自己投資（講習・研修）で Lv10 まで上げられます。</li>
+          <li>覚醒：検定1級を取った武器が Lv10、相棒の強化が Lv5 になると、その場ですぐ「覚醒」カードが出ます（休憩画面で進み具合を確認できます）（リベット銃＋潤滑油／回転スパナ＋熟練の手袋／溶接アーク＋健康診断／高圧放電＋マグネット）。</li>
+          <li>取れる改善がなくなると「表彰状」カード（威力+2%・最大HP+5）が何度でも出ます。</li>
+          <li>3ステージすべてを定時退勤すると「管理職モード」が解放されます（全工場の敵とボスが出る最上級。夜勤手当×3）。</li>
+          <li>上級と管理職モードには超大ボス「リコール大魔王」が出ます。弾を撃ち、手下を呼びます。倒すと特別報奨金（¥5,000×夜勤手当）。</li>
+          <li>上級と管理職モードでは、まれに「⚠ クレーム発生」イベントが起き、倒せない敵「クレーム電話」が苦情（弾）を投げてきます。近くに出るオレンジの箱3つのどれかに「対策書」が入っていて、見つけると消えます（クレーム対応手当つき）。</li>
+          <li>HPが満タンのときに「缶コーヒー」を選ぶと、飲まずに我慢して ¥150 を貯金します（給料の拾得金に入ります）。</li>
+          <li>初級だけ、HPが35%を切っているときのレベルアップで4枚目に「救急箱（HP全回復）」が加わります。救急箱は1回の夜勤で1回しか使えません。</li>
+          <li>1分ごとに敵の「嵐」、経過 02:00・05:00・08:00 にボスが出ます。ボスを倒すとHP全回復と特別ボーナス箱（金色）。管理職モードだけは、ボスを倒しても回復はHPの50%で、金色の箱に回復は入っていません。</li>
+        </ul>
+      </section>
+      <section class="rsec">
+        <h3 class="shopsec">アイテムBOX</h3>
+        <p class="rtext">フィールドに赤い工具箱が置かれます。触れると開いて、次のどれかが出ます。画面の外にある箱は、画面の端の矢印で場所がわかります。</p>
+        <div class="itemgrid" id="rulesItems"></div>
+        <p class="rtext">初級だけ、HPが30%を切ると近くに白い救急箱（HP全回復）が届きます（1回の夜勤で1回まで）。回復アイテムはおにぎり（HP10%・よく出る）と夜食の弁当（HP30%）。敵がまれに落とす小銭（¥）も給料に入ります。</p>
+      </section>
+      <section class="rsec">
+        <h3 class="shopsec">給料（スコア）の内訳</h3>
+        <table class="rtable" id="rulesPay"></table>
+        <p class="rtext" id="rulesExample"></p>
+      </section>
+      <p class="rtext" id="voiceCredit" hidden></p>
+      <div class="actions"><button class="btn" id="rulesClose" type="button">閉じる</button></div>
+    </div>
+  </div>
+
+  <!-- 結果 -->
+  <div class="overlay" id="ovOver" hidden>
+    <div class="panel">
+      <div class="stripe"></div>
+      <p class="eyebrow" id="overEyebrow">LINE STOP</p>
+      <h2 id="overTitle">ライン停止</h2>
+      <p class="lead" id="overLead"></p>
+      <dl class="stats">
+        <div><dt>生存時間</dt><dd id="stTime">00:00</dd></div>
+        <div><dt>到達レベル</dt><dd id="stLv">1</dd></div>
+        <div><dt>撃破数</dt><dd id="stKills">0</dd></div>
+      </dl>
+      <div class="slipwrap">
+        <p class="sliphead">給与明細</p>
+        <table class="slip" id="slip"></table>
+      </div>
+      <p class="best" id="bestOver"></p>
+      <div class="actions">
+        <button class="btn" id="retryBtn" type="button">もう一度</button>
+        <button class="btn ghost" id="titleBtn" type="button">タイトルへ</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+(() => {
+  'use strict';
+  const $ = (id) => document.getElementById(id);
+  const cvs = $('game');
+  const ctx = cvs.getContext('2d');
+  const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  // ---------- 画面サイズ ----------
+  let W = 0, H = 0, DPR = 1;
+  function resize() {
+    const r = cvs.getBoundingClientRect();
+    DPR = Math.min(2, window.devicePixelRatio || 1);
+    W = r.width; H = r.height;
+    cvs.width = Math.round(W * DPR);
+    cvs.height = Math.round(H * DPR);
+  }
+  addEventListener('resize', resize);
+  resize();
+
+  // ---------- 定数 ----------
+  const SHIFT = 600;              // 10分で朝6時（定時）
+  const BOSS_TIMES = [120, 300, 480];
+  const TILE = 64, CELL = 48, MAXR = 80;   // MAXR は一番大きい敵（超大ボス）の半径
+  const COL = {
+    floor: '#161b21', line: '#1e252d', safety: '#f2c230', sodium: '#ff8a3d',
+    weld: '#7fe3ff', hazard: '#e5484d', good: '#5fd08a', ink: '#e9edf1',
+  };
+
+  // face: 顔のつけ方（lid=眠そうなまぶた, brows=怒り眉, mouth='o', cheeks=ほっぺ, ey=目の高さ, size=目の大きさ, ink=眉や口の色）
+  const ETYPES = {
+    // ネジ工場
+    bug:    { name: 'バリ虫', r: 11, hp: 14, spd: 58, dmg: 7, xp: 1, color: '#c56b3c', face: { brows: true } },
+    chip:   { name: '切粉', r: 8, hp: 7, spd: 108, dmg: 5, xp: 1, color: '#b9c2cc', face: { mouth: 'o' } },
+    rust:   { name: '錆塊', r: 19, hp: 70, spd: 36, dmg: 14, xp: 4, color: '#8a4a2a', face: { lid: true, cheeks: true } },
+    boss:   { name: '品質監査官', r: 40, hp: 1800, spd: 50, dmg: 26, xp: 40, color: '#b8323a', boss: true },
+    // 電子機器工場（SMT実装）
+    tomb:   { name: 'チップ立ち', r: 11, hp: 14, spd: 60, dmg: 7, xp: 1, color: '#2b2d33', face: { mouth: 'o', size: 0.27, ink: '#e9edf1' } },
+    solder: { name: 'はんだボール', r: 7, hp: 7, spd: 115, dmg: 5, xp: 1, color: '#cfd6dc', face: { cheeks: true } },
+    ic:     { name: '足浮きIC', r: 19, hp: 70, spd: 38, dmg: 14, xp: 4, color: '#2a2d34', face: { brows: true, size: 0.24, ink: '#e9edf1' } },
+    reflow: { name: 'リフロー炉の番人', r: 42, hp: 1800, spd: 50, dmg: 26, xp: 40, color: '#9aa4ae', boss: true },
+    // 組立ライン
+    choco:  { name: 'チョコ停', r: 11, hp: 14, spd: 62, dmg: 7, xp: 1, color: '#6b3f2a', face: { cheeks: true } },
+    tag:    { name: '不良札', r: 8, hp: 7, spd: 122, dmg: 5, xp: 1, color: '#e5484d', face: { brows: true, ey: -0.35, size: 0.28 } },
+    lot:    { name: '不良ロット', r: 20, hp: 70, spd: 38, dmg: 14, xp: 4, color: '#b08a5a', face: { lid: true, ey: 0.35, size: 0.22 } },
+    takt:   { name: 'タクトタイム大王', r: 44, hp: 1800, spd: 52, dmg: 26, xp: 40, color: '#f4f1e8', boss: true },
+    // イベント敵：倒せない。オレンジの箱の中の「対策書」を見つけると消える
+    claim:  { name: 'クレーム電話', r: 22, hp: 1, spd: 72, dmg: 18, xp: 0, color: '#d7263d', face: { brows: true, ey: 0.18, size: 0.24 } },
+    // 超大ボス（上級・管理職モードだけ）
+    recall: { name: 'リコール大魔王', r: 78, hp: 9000, spd: 40, dmg: 40, xp: 120, color: '#3b2350', boss: true, sup: true },
+  };
+
+  // ステージ。hp〜xp は初級を1とした倍率
+  const STAGES = {
+    screw: {
+      name: 'ネジ工場', level: '初級', lv: 1, sub: '切削・プレス',
+      desc: 'バリや切粉が湧く町工場。まずはここから。',
+      roles: { basic: 'bug', fast: 'chip', tank: 'rust', boss: 'boss' },
+      hp: 1, spd: 1, spawn: 1, dmg: 1, xp: 1, pay: 1,
+      swarm: '切粉の嵐！', bossIn: '品質監査官が巡回に来た！', bossOut: '品質監査 合格！ HP全回復',
+      bgm: { tempo: 1, tr: 0 },
+    },
+    smt: {
+      name: '電子機器工場', level: '中級', lv: 2, sub: 'SMT実装ライン',
+      desc: '基板の上を、はんだボールが高速で転がってくる。敵が硬く、数も多い。',
+      roles: { basic: 'tomb', fast: 'solder', tank: 'ic', boss: 'reflow' },
+      hp: 1.35, spd: 1.1, spawn: 1.3, dmg: 1.2, xp: 1.2, pay: 1.5,
+      swarm: 'はんだボールの雨！', bossIn: 'リフロー炉の番人が目を覚ました！', bossOut: '温度プロファイル安定！ HP全回復',
+      bgm: { tempo: 1.08, tr: 2 },
+    },
+    line: {
+      name: '組立ライン', level: '上級', lv: 3, sub: 'コンベア組立',
+      desc: 'ベルトコンベアに押し流されながら戦う。タクトタイム大王は時間とともに速くなる。',
+      roles: { basic: 'choco', fast: 'tag', tank: 'lot', boss: 'takt' },
+      hp: 1.8, spd: 1.18, spawn: 1.6, dmg: 1.4, xp: 1.4, pay: 2, belts: true,
+      swarm: '不良札が舞い上がった！', bossIn: 'タクトタイム大王が迫ってくる！', bossOut: 'タクト達成！ HP全回復',
+      bgm: { tempo: 1.16, tr: -2 },
+      superAt: [540],
+    },
+    mgr: {
+      name: '管理職モード', level: '最上級', lv: 4, sub: '全ライン統括',
+      desc: '3つの工場の不良品がまとめて押し寄せ、ボス3体が順番に巡回。リコール大魔王も2回現れる。',
+      roles: { basic: ['bug', 'tomb', 'choco'], fast: ['chip', 'solder', 'tag'], tank: ['rust', 'ic', 'lot'], boss: ['boss', 'reflow', 'takt'] },
+      hp: 3.2, spd: 1.32, spawn: 2.3, dmg: 1.9, xp: 1.6, pay: 3, belts: true,
+      bossHeal: 0.5,   // ボス撃破の回復はHPの50%だけ（金色の箱は回復なし）
+      swarm: '全ラインから不良品が押し寄せる！', bossIn: '巡回ボスがやって来た！', bossOut: '巡回ボス撃退！ HP50%回復',
+      bgm: { tempo: 1.22, tr: 1 },
+      superAt: [300, 540],
+      lock: true,
+    },
+  };
+  let stageId = 'screw';
+  try { const saved = localStorage.getItem('yakin-stage'); if (saved && STAGES[saved]) stageId = saved; } catch (e) {}
+  // 役割が配列のステージ（管理職モード）は毎回ランダムに選ぶ
+  const pickRole = (r) => (Array.isArray(r) ? r[(Math.random() * r.length) | 0] : r);
+  const roleNames = (r) => (Array.isArray(r) ? r : [r]).map((k) => ETYPES[k].name).join('・');
+  let stage = STAGES[stageId];
+
+  // 組立ラインのベルトコンベア（6マスに1本、向きは交互）
+  const BELT_SPEED = 80, BELT_EVERY = 6;
+  function beltAt(y) {
+    const j = Math.floor(y / TILE);
+    if (((j % BELT_EVERY) + BELT_EVERY) % BELT_EVERY !== 0) return 0;
+    return ((Math.floor(j / BELT_EVERY) % 2) + 2) % 2 === 0 ? 1 : -1;
+  }
+
+  // 武器ごとのレベル別性能（添字 = レベル - 1）
+  // 武器ごとのレベル別性能（添字 = レベル - 1）。Lv6〜10 は自己投資（講習）で解禁
+  const WR = { count: [1, 2, 2, 3, 3, 4, 4, 5, 5, 6], dmg: [10, 10, 14, 14, 15, 17, 19, 21, 23, 26], pierce: [1, 1, 1, 2, 2, 2, 3, 3, 3, 4], cd: [0.8, 0.8, 0.8, 0.8, 0.56, 0.54, 0.52, 0.5, 0.48, 0.45] };
+  const WS = { count: [1, 2, 2, 3, 4, 4, 5, 5, 5, 6], radius: [70, 70, 88, 88, 96, 100, 104, 108, 112, 118], dmg: [9, 9, 14, 14, 17, 19, 21, 23, 25, 28], spin: [3, 3, 3.2, 3.2, 4.2, 4.3, 4.4, 4.5, 4.6, 4.8] };
+  const WW = { radius: [60, 72, 72, 86, 86, 92, 98, 104, 110, 118], dps: [14, 14, 20, 20, 30, 33, 36, 40, 44, 50] };
+  const WK = { count: [1, 2, 2, 3, 5, 5, 6, 6, 7, 8], dmg: [30, 30, 42, 42, 44, 48, 52, 56, 60, 66], cd: [2.6, 2.6, 2.6, 2.0, 2.0, 1.9, 1.8, 1.7, 1.6, 1.5] };
+  const WD = { count: [1, 2, 2, 2, 3, 3, 3, 4, 4, 5], dmg: [18, 18, 24, 28, 28, 33, 38, 38, 44, 50], cd: [1.6, 1.6, 1.5, 1.4, 1.4, 1.35, 1.25, 1.25, 1.15, 1.05] };
+  const WF = { count: [1, 1, 2, 2, 2, 3, 3, 3, 4, 4], dmg: [40, 55, 55, 65, 75, 75, 90, 100, 110, 135], cd: [4.5, 4.5, 4.3, 4.0, 4.0, 3.8, 3.5, 3.5, 3.1, 3.0] };
+
+  const UPG = {
+    rivet:   { w: true, icon: '鋲', name: 'リベット銃', desc: ['近くの不良品へリベットを撃つ', '発射数 +1', '威力 +40%', '発射数 +1・貫通 +1', '連射速度 +30%', '威力アップ', '発射数 +1', '貫通 +1・威力アップ', '発射数 +1', '発射数・威力・連射アップ'] },
+    spanner: { w: true, icon: '回', name: '回転スパナ', desc: ['身のまわりをスパナが回る', 'スパナ +1', '回転半径と威力アップ', 'スパナ +1', 'スパナ +1・回転速度アップ', '威力・半径アップ', 'スパナ +1', '威力・半径アップ', '威力・回転速度アップ', 'スパナ +1・威力アップ'] },
+    weld:    { w: true, icon: '溶', name: '溶接アーク', desc: ['周囲の敵にじわじわダメージ', '範囲 +20%', '威力 +40%', '範囲 +20%', '威力 +50%', '範囲・威力アップ', '範囲・威力アップ', '範囲・威力アップ', '範囲・威力アップ', '範囲・威力大アップ'] },
+    spark:   { w: true, icon: '電', name: '高圧放電', desc: ['画面内の敵にランダムで落雷', '落雷 +1', '威力 +40%', '落雷 +1・間隔短縮', '落雷 +2', '威力アップ・間隔短縮', '落雷 +1', '威力アップ・間隔短縮', '落雷 +1', '落雷 +1・威力アップ'] },
+    drill:   { w: true, icon: '穿', name: '自動ドリル', desc: ['向いている方向へ、敵を貫くドリルを飛ばす', 'ドリル +1', '威力アップ', '威力アップ・間隔短縮', 'ドリル +1', '威力アップ', '威力アップ・間隔短縮', 'ドリル +1', '威力アップ・間隔短縮', 'ドリル +1・威力アップ'] },
+    fork:    { w: true, icon: '運', name: 'フォークリフト', desc: ['数秒ごとにフォークリフトが画面を横切り、敵をはね飛ばす', '威力アップ', '台数 +1', '威力アップ・間隔短縮', '威力アップ', '台数 +1', '威力アップ・間隔短縮', '威力アップ', '台数 +1・間隔短縮', '威力大アップ'] },
+    boots:   { icon: '靴', name: '安全靴', desc: '移動速度 +10%' },
+    heart:   { icon: '心', name: '健康診断', desc: '最大HP +20、HPを20回復' },
+    magnet:  { icon: '磁', name: 'マグネット', desc: 'ネジの回収範囲 +35%' },
+    oil:     { icon: '油', name: '潤滑油', desc: '攻撃の間隔 -8%' },
+    gloves:  { icon: '手', name: '熟練の手袋', desc: 'すべての攻撃の威力 +12%' },
+    armor:   { icon: '盾', name: 'ヘルメット', desc: '受けるダメージ -1' },
+    belt:    { icon: '帯', name: '安全帯', desc: '受けるダメージ -4%' },
+    note:    { icon: '記', name: '改善ノート', desc: '手に入る経験値 +8%' },
+  };
+
+  // 覚醒：自己投資で「検定1級」を取り、ゲーム中に武器Lv10＋相棒の強化Lv5がそろうとカードが出る
+  const AWAKE = {
+    rivet:   { icon: '嵐', name: '全自動リベッター「嵐」', desc: '全方向に16連射。当たると火花の小爆発', partner: 'oil' },
+    spanner: { icon: '輪', name: '大車輪レンチ', desc: '巨大スパナ6本が伸び縮みしながら回転。触れた敵を大きく吹き飛ばす', partner: 'gloves' },
+    weld:    { icon: '炎', name: 'プラズマ溶断', desc: '範囲が大きく広がり、3秒ごとに青白い大爆発', partner: 'heart' },
+    spark:   { icon: '雷', name: '雷神の配電盤', desc: '稲妻が敵から敵へ連鎖して画面中を走る', partner: 'magnet' },
+  };
+  const AWARD = { icon: '賞', name: '表彰状', desc: '威力 +2%・最大HP +5（何度でも取れる）' };
+  const capOf = (k) => (UPG[k].w ? (ml('cap_' + k) >= 1 ? 10 : 5) : (ml('cap_perk') >= 1 ? 10 : 5));
+  // 強化の Lv6〜10 は効き目を半分にする
+  const pl = (k) => Math.min(lv[k], 5) + Math.max(0, lv[k] - 5) * 0.5;
+  const canAwaken = (k) => !!AWAKE[k] && !awake[k] && ml('cap_' + k) >= 2 && lv[k] >= 10 && lv[AWAKE[k].partner] >= 5;
+  const MAXLV = 5;
+  const COFFEE = { icon: '缶', name: '缶コーヒー', desc: 'HPを30回復' };
+  const COFFEE_SAVE = 150;   // HP満タンのときは我慢して貯金する額（円）
+  const MEDKIT = { icon: '救', name: '救急箱', desc: 'HPを全回復（初級のみ・1回の夜勤で1回だけ）' };
+
+  // アイテムBOXの中身。w は出やすさ
+  const ITEMS = {
+    magnet: { icon: '磁', name: '強力マグネット', desc: '落ちているネジを全部回収', w: 3 },
+    onigiri: { icon: '握', name: 'おにぎり', desc: 'HPを10%回復', w: 3.2 },
+    bento:  { icon: '弁', name: '夜食の弁当', desc: 'HPを30%回復', w: 1.2 },
+    medkit: { icon: '救', name: '救急箱', desc: 'HPを全回復（初級のみ・1回だけ）', w: 0.6 },
+    money:  { icon: '¥', name: '大入り袋', desc: '💰 給料に ¥300〜¥800（夜勤手当の倍率つき）', w: 2.2 },
+    estop:  { icon: '止', name: '非常停止ボタン', desc: '6秒間、敵が全員止まる', w: 1.4 },
+    clean:  { icon: '掃', name: '5S一斉清掃', desc: '画面内の敵に大ダメージ', w: 1.4 },
+    drink:  { icon: '活', name: '栄養ドリンク', desc: '10秒間、移動と攻撃が速くなる', w: 1.4 },
+  };
+
+  // ---------- 保存（この端末のみ） ----------
+  const bestKey = (id) => (id === 'screw' ? 'yakin-best' : 'yakin-best-' + id);
+  function loadBest(id = stageId) { try { return Number(localStorage.getItem(bestKey(id))) || 0; } catch (e) { return 0; } }
+  function saveBest(v, id = stageId) { try { localStorage.setItem(bestKey(id), String(v)); } catch (e) {} cloudPush(); }
+  function isCleared(id) { try { return localStorage.getItem('yakin-clear-' + id) === '1'; } catch (e) { return false; } }
+  function saveCleared(id) { try { localStorage.setItem('yakin-clear-' + id, '1'); } catch (e) {} cloudPush(); }
+  const mgrOpen = () => isCleared('screw') && isCleared('smt') && isCleared('line');
+  const isLocked = (id) => !!STAGES[id].lock && !mgrOpen();
+
+  // ---------- 効果音 ----------
+  let actx = null, muted = false;
+  const sfxLast = {};
+  function initAudio() {
+    if (actx) return;
+    try { actx = new (window.AudioContext || window.webkitAudioContext)(); } catch (e) { actx = null; }
+  }
+  function tone(freq, dur, type, vol, slide) {
+    if (!actx || muted) return;
+    const t = actx.currentTime, o = actx.createOscillator(), g = actx.createGain();
+    o.type = type; o.frequency.setValueAtTime(freq, t);
+    if (slide) o.frequency.exponentialRampToValueAtTime(Math.max(30, freq + slide), t + dur);
+    g.gain.setValueAtTime(vol, t);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+    o.connect(g).connect(actx.destination);
+    o.start(t); o.stop(t + dur + 0.02);
+  }
+  const SFX = {
+    shot:  [70,  () => tone(880, 0.05, 'square', 0.02, -400)],
+    pop:   [40,  () => tone(220, 0.08, 'triangle', 0.05, -120)],
+    gem:   [45,  () => tone(1320 + Math.random() * 200, 0.05, 'sine', 0.03, 300)],
+    clang: [90,  () => tone(620, 0.06, 'square', 0.02, -200)],
+    zap:   [120, () => tone(1600, 0.18, 'sawtooth', 0.03, -1400)],
+    hurt:  [150, () => tone(160, 0.18, 'sawtooth', 0.06, -90)],
+    level: [300, () => { tone(660, 0.1, 'square', 0.04); setTimeout(() => tone(990, 0.16, 'square', 0.04), 90); }],
+    lucky: [300, () => { [784, 988, 1175, 1568].forEach((f, i) => setTimeout(() => tone(f, 0.14, 'square', 0.045), i * 80)); }],
+    drill: [250, () => tone(260, 0.14, 'sawtooth', 0.018, 260)],
+    fork:  [700, () => { tone(392, 0.12, 'square', 0.03); setTimeout(() => tone(392, 0.12, 'square', 0.03), 160); }],
+    plasma: [500, () => { tone(90, 0.7, 'sawtooth', 0.07, -50); tone(1400, 0.35, 'sine', 0.04, -1100); }],
+    awaken: [1500, () => {
+      tone(60, 1.4, 'sine', 0.16, 20);
+      [392, 523, 659, 784, 1047, 1319, 1568].forEach((f, i) => setTimeout(() => tone(f, 0.3, 'square', 0.04), i * 90));
+    }],
+    siren: [3000, () => { for (let i = 0; i < 6; i++) setTimeout(() => tone(i % 2 ? 880 : 620, 0.28, 'square', 0.035), i * 300); }],
+    eshot: [300, () => tone(520, 0.12, 'sawtooth', 0.025, -300)],
+    box:   [150, () => { [660, 880, 1320].forEach((f, i) => setTimeout(() => tone(f, 0.1, 'triangle', 0.05), i * 60)); }],
+    coin:  [60,  () => { tone(1568, 0.05, 'square', 0.03); setTimeout(() => tone(2093, 0.09, 'square', 0.03), 50); }],
+    bossdown: [1000, () => {
+      tone(70, 1.3, 'sine', 0.16, -30); tone(220, 0.5, 'sawtooth', 0.06, -170);
+      [523, 659, 784, 1047, 1319].forEach((f, i) => setTimeout(() => tone(f, 0.24, 'square', 0.045), 260 + i * 110));
+    }],
+    buy:   [120, () => { tone(1320, 0.06, 'square', 0.035); setTimeout(() => tone(1760, 0.12, 'square', 0.035), 60); }],
+    boss:  [800, () => tone(90, 0.8, 'sawtooth', 0.07, 40)],
+  };
+  function sfx(name) {
+    const s = SFX[name]; if (!s) return;
+    const now = performance.now();
+    if (sfxLast[name] && now - sfxLast[name] < s[0]) return;
+    sfxLast[name] = now; s[1]();
+  }
+
+  // ---------- BGM ----------
+  // 3曲ともオリジナル曲。音源ファイルは使わず、ブラウザの中でその場で演奏する。
+  //   夜想：静かなピアノとコーラス（ニ短調・4拍子）
+  //   疾走：ドラムと刻むシンセベース、弦のスタッカート、金管風リードのハイブリッド・オーケストラ（ニ短調・4拍子）
+  //   幻想：ハープとフルート、チェレスタによる色彩豊かな和音のワルツ（ニ長調・3拍子）
+  // どの曲も8小節の和音を4周し、周回（区間）ごとに楽器が増える。ステージに応じてテンポと調が変わる。
+  // 別で用意したBGMファイル（mp3・m4a・ogg など）を足すときは、vansaba/bgm/ に入れてここに1行書く。
+  // 例: mytheme: { name: '自作曲', note: 'ひとことメモ', file: 'bgm/mytheme.mp3' },
+  // ファイルの曲はループ再生され、ステージごとのテンポ・調の変化はつかない。
+  const BGM_FILES = {
+  };
+  const BGM_STYLES = {
+    yoru:    { name: '夜想', note: '静かなピアノとコーラス' },
+    shissou: { name: '疾走', note: 'ドラムと弦で駆けるハイブリッド' },
+    gensou:  { name: '幻想', note: 'ハープとフルートのワルツ' },
+    // 持ち込み曲（Weight of the Machine）。1回目は頭から流し、その後は 0:56.9〜2:19.7（82.8秒）を継ぎ目なくループ。読めないときは自動演奏のプレス音
+    tekko:   { name: '鉄工所', note: '重く響く機械の曲（持ち込み曲 Weight of the Machine）', file: 'bgm/weight_of_the_machine.mp3', loop: [56.93533, 139.68989], gain: 0.9 },
+    // 持ち込み曲。1回目は頭から流し、その後は 1:13.5〜2:25.5（72秒）を継ぎ目なくループ。読めないときは自動演奏の「シネマ」
+    cinema:  { name: 'Voria te no me ro', note: '壮大なコーラスとオーケストラ（持ち込み曲）', file: 'bgm/voria_te_no_me_ro.mp3', loop: [73.46794, 145.46798], gain: 0.9 },
+    // 持ち込み曲。1回目は頭から流し、その後は 0:53.7〜2:10.5（76.8秒）を継ぎ目なくループ。読めないときは自動演奏の「ファンタジー戦記」
+    fantasy: { name: 'Breaking the Eternal Chain', note: '鎖を断ち切る戦闘曲（持ち込み曲）', file: 'bgm/breaking_the_eternal_chain.mp3', loop: [53.68454, 130.4788], gain: 0.9 },
+    // 持ち込み曲。1回目は頭から流し、その後は 1:05.4〜2:09.4（64秒）を継ぎ目なくループ。読めないときは自動演奏の「ケルトの丘」
+    celt:    { name: 'Dawn over the Silent Pass', note: '静かな峠の夜明け（持ち込み曲）', file: 'bgm/dawn_over_the_silent_pass.mp3', loop: [65.38739, 129.36025], gain: 0.9 },
+    // 持ち込み曲。1回目は頭から流し、その後は 1:00.7〜2:12.7（72秒）を継ぎ目なくループ
+    rally:   { name: 'Spear Through the Heart', note: '疾走感あるハイブリッドの戦闘曲（持ち込み曲）', file: 'bgm/spear_through_the_heart.mp3', loop: [60.65052, 132.65054], gain: 0.9 },
+    // 持ち込み曲。1回目は頭から流し、その後は 1:15.8〜2:19.8（64秒・32小節）を継ぎ目なくループ
+    jazz:    { name: 'Masquerade in Blue', note: 'おしゃれなアシッドジャズ（持ち込み曲）', file: 'bgm/masquerade_in_blue.mp3', loop: [75.78993, 139.79039], gain: 0.9 },
+    // 持ち込み曲。1回目は頭から流し、その後は 1:11.5〜2:15.5（64秒）を継ぎ目なくループ。読めないときは自動演奏の「やすらぎ」
+    calm:    { name: 'The Brass Pendulum', note: '真鍮の振り子（持ち込み曲）', file: 'bgm/the_brass_pendulum.mp3', loop: [71.51746, 135.51746], gain: 0.9 },
+    // 持ち込み曲。1回目は頭から流し、その後は 1:11.6〜2:15.6（64秒）を継ぎ目なくループ。読めないときは自動演奏の「決戦のファンファーレ」
+    jrpg:    { name: 'Crest of the Fallen Monarch', note: '堕ちた王の紋章・壮大な戦闘曲（持ち込み曲）', file: 'bgm/crest_of_the_fallen_monarch.mp3', loop: [71.61034, 135.61034], gain: 0.9 },
+    // 持ち込み曲。1回目は頭から流し、その後は 0:55.0〜2:31.0（96秒）を継ぎ目なくループ
+    hero:    { name: 'Crown of the Fallen Titan', note: '壮大なオーケストラの戦闘曲（持ち込み曲）', file: 'bgm/crown_of_the_fallen_titan.mp3', loop: [54.98485, 151.00785], gain: 0.9 },
+    // 持ち込み曲。1回目は頭から流し、その後は 1:07.1〜2:23.9（76.8秒）を継ぎ目なくループ。読めないときは自動演奏の「決戦前夜」
+    march:   { name: 'Against the Coming Night', note: '夜に立ち向かう壮大な戦闘曲（持ち込み曲）', file: 'bgm/against_the_coming_night.mp3', loop: [67.05923, 143.87458], gain: 0.9 },
+    // 持ち込み曲。1回目は頭から流し、その後は 1:24.1〜2:28.1（64秒）を継ぎ目なくループ
+    spire:   { name: 'Beyond the Silver Spire', note: '銀の尖塔の彼方へ（持ち込み曲）', file: 'bgm/beyond_the_silver_spire.mp3', loop: [84.14912, 148.14918], gain: 0.9 },
+    ...BGM_FILES,
+  };
+  const BGM = (() => {
+    let BEAT = 60 / 76, BAR = BEAT * 4, TR = 0, tempo = 1;
+    const mtof = (m) => 440 * Math.pow(2, (m + TR - 69) / 12);
+
+    let out = null, delayNode = null, noiseBuf = null;
+    let busPiano, busPad, busVoice, busPulse, busDrum, busSynth;
+    let playing = false, timer = 0, nextBar = 0, bar = 0;
+    let on = true, vol = 0.5, ducked = false, style = 'yoru';
+    try {
+      const saved = JSON.parse(localStorage.getItem('yakin-bgm') || 'null');
+      if (saved) {
+        on = saved.on !== false;
+        vol = typeof saved.vol === 'number' ? saved.vol : vol;
+        if (saved.style === 'night') saved.style = 'march';   // 以前の版の枠名から移す
+        if (BGM_STYLES[saved.style]) style = saved.style;
+      }
+    } catch (e) {}
+    const save = () => { try { localStorage.setItem('yakin-bgm', JSON.stringify({ on, vol, style })); } catch (e) {} };
+    const level = () => (on ? vol * 0.55 : 0) * (ducked ? 0.35 : 1);
+
+    // ---- 音づくりの土台 ----
+    function impulse(sec) {
+      const len = Math.floor(actx.sampleRate * sec), buf = actx.createBuffer(2, len, actx.sampleRate);
+      for (let c = 0; c < 2; c++) {
+        const d = buf.getChannelData(c);
+        for (let i = 0; i < len; i++) d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / len, 2.6);
+      }
+      return buf;
+    }
+    function gainNode(v) { const g = actx.createGain(); g.gain.value = v; return g; }
+    function build() {
+      out = gainNode(0);
+      const comp = actx.createDynamicsCompressor();
+      out.connect(comp).connect(actx.destination);
+      const reverb = actx.createConvolver(); reverb.buffer = impulse(3.4);
+      reverb.connect(gainNode(0.6)).connect(out);
+      const delay = actx.createDelay(2); delayNode = delay;
+      const fb = gainNode(0.3), dlp = actx.createBiquadFilter(); dlp.type = 'lowpass'; dlp.frequency.value = 1800;
+      delay.connect(dlp).connect(fb).connect(delay);
+      dlp.connect(gainNode(0.22)).connect(out);
+      const bus = (dry, rev, dly) => {
+        const g = gainNode(1);
+        g.connect(gainNode(dry)).connect(out);
+        if (rev) g.connect(gainNode(rev)).connect(reverb);
+        if (dly) g.connect(gainNode(dly)).connect(delay);
+        return g;
+      };
+      busPiano = bus(0.8, 0.45, 0.5);
+      busPad = bus(0.6, 0.7, 0);
+      busVoice = bus(0.55, 0.9, 0.25);
+      busDrum = bus(0.9, 0.12, 0);
+      busSynth = bus(0.8, 0.2, 0.15);
+      busPulse = gainNode(0); busPulse.connect(out);
+      noiseBuf = actx.createBuffer(1, actx.sampleRate, actx.sampleRate);
+      const nd = noiseBuf.getChannelData(0);
+      for (let i = 0; i < nd.length; i++) nd[i] = Math.random() * 2 - 1;
+    }
+    function env(g, t, peak, attack, decayTo, decayTime, end) {
+      g.gain.setValueAtTime(0.0001, t);
+      g.gain.linearRampToValueAtTime(peak, t + attack);
+      if (decayTime) g.gain.exponentialRampToValueAtTime(Math.max(0.0001, decayTo), t + attack + decayTime);
+      g.gain.exponentialRampToValueAtTime(0.0001, end);
+    }
+    function osc(type, f, det, dest, t, stop) {
+      const o = actx.createOscillator(); o.type = type; o.frequency.value = f; if (det) o.detune.value = det;
+      o.connect(dest); o.start(t); o.stop(stop); return o;
+    }
+    function noise(dest, t, stop) {
+      const n = actx.createBufferSource(); n.buffer = noiseBuf; n.loop = true;
+      n.connect(dest); n.start(t); n.stop(stop); return n;
+    }
+    function filter(type, f, q) { const b = actx.createBiquadFilter(); b.type = type; b.frequency.value = f; if (q) b.Q.value = q; return b; }
+
+    // ---- 楽器 ----
+    function piano(m, t, dur, vel, bus = busPiano, bright = 7) {
+      const f = mtof(m);
+      const lp = filter('lowpass', Math.min(7000, f * bright));
+      lp.frequency.setValueAtTime(Math.min(7000, f * bright), t);
+      lp.frequency.exponentialRampToValueAtTime(Math.max(300, f * 1.5), t + dur);
+      const g = actx.createGain();
+      env(g, t, vel, 0.006, vel * 0.35, 0.3, t + dur + 1.2);
+      osc('triangle', f, 0, lp, t, t + dur + 1.3);
+      const g2 = gainNode(0.25); g2.connect(lp);
+      osc('sine', f * 2.003, 0, g2, t, t + dur + 1.3);
+      lp.connect(g).connect(bus);
+    }
+    function pad(m, t, dur, amp = 0.03, cutoff = 750) {
+      const lp = filter('lowpass', cutoff, 0.4), g = actx.createGain();
+      g.gain.setValueAtTime(0.0001, t);
+      g.gain.linearRampToValueAtTime(amp, t + Math.min(1.2, dur * 0.4));
+      g.gain.setValueAtTime(amp, t + dur);
+      g.gain.linearRampToValueAtTime(0.0001, t + dur + 1.2);
+      lp.connect(g).connect(busPad);
+      for (const det of [-7, 7]) osc('sawtooth', mtof(m), det, lp, t, t + dur + 1.3);
+    }
+    function voice(m, t, dur) {
+      // 「アー」と聞こえるように、いくつかの帯域（フォルマント）だけを通す
+      const f = mtof(m), g = actx.createGain();
+      g.gain.setValueAtTime(0.0001, t);
+      g.gain.linearRampToValueAtTime(0.11, t + 0.35);
+      g.gain.setValueAtTime(0.11, t + Math.max(0.36, dur - 0.1));
+      g.gain.linearRampToValueAtTime(0.0001, t + dur + 0.7);
+      g.connect(busVoice);
+      const mix = gainNode(1);
+      for (const [fq, q, amt] of [[800, 5, 1], [1150, 6, 0.6], [2900, 8, 0.15]]) {
+        mix.connect(filter('bandpass', fq, q)).connect(gainNode(amt)).connect(g);
+      }
+      const lfo = actx.createOscillator(); lfo.frequency.value = 5.2;
+      const depth = actx.createGain();
+      depth.gain.setValueAtTime(0, t); depth.gain.linearRampToValueAtTime(f * 0.007, t + 0.6);
+      lfo.connect(depth);
+      for (const det of [-6, 6]) depth.connect(osc('sawtooth', f, det, mix, t, t + dur + 0.8).frequency);
+      lfo.start(t); lfo.stop(t + dur + 0.8);
+    }
+    function pulse(t) {
+      const o = actx.createOscillator(), g = actx.createGain();
+      o.type = 'sine';
+      o.frequency.setValueAtTime(95, t); o.frequency.exponentialRampToValueAtTime(42, t + 0.3);
+      g.gain.setValueAtTime(0.5, t); g.gain.exponentialRampToValueAtTime(0.0001, t + 0.4);
+      o.connect(g).connect(busPulse); o.start(t); o.stop(t + 0.45);
+    }
+    // ドラム
+    function kick(t, amp = 0.5) {
+      const o = actx.createOscillator(), g = actx.createGain();
+      o.type = 'sine';
+      o.frequency.setValueAtTime(150, t); o.frequency.exponentialRampToValueAtTime(45, t + 0.12);
+      g.gain.setValueAtTime(amp, t); g.gain.exponentialRampToValueAtTime(0.0001, t + 0.35);
+      o.connect(g).connect(busDrum); o.start(t); o.stop(t + 0.4);
+    }
+    function snare(t, amp = 0.22) {
+      const g = actx.createGain(); env(g, t, amp, 0.002, amp * 0.3, 0.05, t + 0.2);
+      const bp = filter('bandpass', 1900, 0.8); bp.connect(g).connect(busDrum);
+      noise(bp, t, t + 0.22);
+      const tg = actx.createGain(); env(tg, t, amp * 0.6, 0.002, 0.0001, 0.08, t + 0.1);
+      tg.connect(busDrum);
+      osc('triangle', 190, 0, tg, t, t + 0.12);
+    }
+    function hat(t, amp = 0.05, len = 0.04) {
+      const g = actx.createGain(); env(g, t, amp, 0.001, 0.0001, len, t + len + 0.01);
+      const hp = filter('highpass', 8000); hp.connect(g).connect(busDrum);
+      noise(hp, t, t + len + 0.02);
+    }
+    function crash(t) {
+      const g = actx.createGain(); env(g, t, 0.07, 0.003, 0.0001, 1.4, t + 1.45);
+      const hp = filter('highpass', 5000); hp.connect(g).connect(busDrum);
+      noise(hp, t, t + 1.5);
+    }
+    function taiko(t, amp = 0.4) {
+      const o = actx.createOscillator(), g = actx.createGain();
+      o.type = 'sine';
+      o.frequency.setValueAtTime(110, t); o.frequency.exponentialRampToValueAtTime(60, t + 0.25);
+      g.gain.setValueAtTime(amp, t); g.gain.exponentialRampToValueAtTime(0.0001, t + 0.6);
+      o.connect(g).connect(busDrum); o.start(t); o.stop(t + 0.65);
+    }
+    // 疾走用
+    function synthBass(m, t, dur) {
+      const f = mtof(m), lp = filter('lowpass', 1800, 6), g = actx.createGain();
+      lp.frequency.setValueAtTime(2200, t); lp.frequency.exponentialRampToValueAtTime(260, t + dur * 0.9);
+      env(g, t, 0.13, 0.004, 0.08, dur * 0.5, t + dur + 0.02);
+      lp.connect(g).connect(busSynth);
+      osc('sawtooth', f, -5, lp, t, t + dur + 0.05);
+      osc('square', f / 2, 0, lp, t, t + dur + 0.05);
+    }
+    function stacc(m, t, amp = 0.045) {
+      const lp = filter('lowpass', 2600, 0.7), g = actx.createGain();
+      env(g, t, amp, 0.008, amp * 0.3, 0.07, t + 0.2);
+      lp.connect(g).connect(busSynth);
+      for (const det of [-9, 9]) osc('sawtooth', mtof(m), det, lp, t, t + 0.22);
+    }
+    function brass(m, t, dur, amp = 0.07) {
+      const f = mtof(m), lp = filter('lowpass', 700, 2), g = actx.createGain();
+      lp.frequency.setValueAtTime(700, t); lp.frequency.linearRampToValueAtTime(2600, t + 0.08);
+      lp.frequency.exponentialRampToValueAtTime(1400, t + Math.max(0.1, dur));
+      g.gain.setValueAtTime(0.0001, t);
+      g.gain.linearRampToValueAtTime(amp, t + 0.04);
+      g.gain.setValueAtTime(amp * 0.8, t + Math.max(0.05, dur - 0.05));
+      g.gain.linearRampToValueAtTime(0.0001, t + dur + 0.25);
+      lp.connect(g).connect(busVoice);
+      const lfo = actx.createOscillator(); lfo.frequency.value = 5.5;
+      const depth = gainNode(0); depth.gain.setValueAtTime(0, t); depth.gain.linearRampToValueAtTime(f * 0.006, t + 0.4);
+      lfo.connect(depth); lfo.start(t); lfo.stop(t + dur + 0.3);
+      for (const det of [-8, 0, 8]) depth.connect(osc('sawtooth', f, det, lp, t, t + dur + 0.3).frequency);
+    }
+    // 幻想用
+    function harp(m, t, amp = 0.1) { piano(m, t, 0.9, amp, busPiano, 10); }
+    function celesta(m, t, amp = 0.05) {
+      const f = mtof(m), g = actx.createGain();
+      env(g, t, amp, 0.003, amp * 0.25, 0.15, t + 1.6);
+      g.connect(busVoice);
+      osc('sine', f, 0, g, t, t + 1.7);
+      const g2 = gainNode(0.3); g2.connect(g);
+      osc('sine', f * 4.01, 0, g2, t, t + 0.5);
+    }
+    function flute(m, t, dur, amp = 0.085) {
+      const f = mtof(m), g = actx.createGain(), lp = filter('lowpass', 3200);
+      g.gain.setValueAtTime(0.0001, t);
+      g.gain.linearRampToValueAtTime(amp, t + 0.09);
+      g.gain.setValueAtTime(amp * 0.85, t + Math.max(0.1, dur - 0.05));
+      g.gain.linearRampToValueAtTime(0.0001, t + dur + 0.35);
+      lp.connect(g).connect(busVoice);
+      const lfo = actx.createOscillator(); lfo.frequency.value = 5.3;
+      const depth = gainNode(0); depth.gain.setValueAtTime(0, t); depth.gain.linearRampToValueAtTime(f * 0.005, t + 0.5);
+      lfo.connect(depth); lfo.start(t); lfo.stop(t + dur + 0.4);
+      depth.connect(osc('sine', f, 0, lp, t, t + dur + 0.4).frequency);
+      const g3 = gainNode(0.18); g3.connect(lp);
+      depth.connect(osc('triangle', f * 2, 0, g3, t, t + dur + 0.4).frequency);
+      const bg = gainNode(0.25); bg.connect(lp);      // 息の音
+      const bp = filter('bandpass', Math.min(8000, f * 2), 3); bp.connect(bg);
+      const nb = gainNode(0); nb.gain.setValueAtTime(0.35, t); nb.gain.exponentialRampToValueAtTime(0.05, t + 0.2);
+      nb.connect(bp); noise(nb, t, t + dur + 0.4);
+    }
+
+    // 追加の楽器
+    function epiano(m, t, dur, vel = 0.07) {      // エレクトリックピアノ
+      const f = mtof(m), g = actx.createGain();
+      env(g, t, vel, 0.004, vel * 0.4, 0.4, t + dur + 0.6);
+      g.connect(busPiano);
+      osc('sine', f, 0, g, t, t + dur + 0.7);
+      const tine = actx.createGain(); env(tine, t, 0.3, 0.002, 0.0001, 0.25, t + 0.3); tine.connect(g);
+      osc('sine', f * 4, 0, tine, t, t + 0.35);
+    }
+    function pluckBass(m, t, dur, amp = 0.12) {   // はじくベース
+      const f = mtof(m), lp = filter('lowpass', 900, 4), g = actx.createGain();
+      lp.frequency.setValueAtTime(1600, t); lp.frequency.exponentialRampToValueAtTime(300, t + 0.2);
+      env(g, t, amp, 0.004, amp * 0.5, 0.12, t + dur + 0.05);
+      lp.connect(g).connect(busSynth);
+      osc('triangle', f, 0, lp, t, t + dur + 0.1);
+      osc('square', f, 0, lp, t, t + dur + 0.1);
+    }
+    const VOWELS = {
+      a: [[800, 5, 1], [1150, 6, 0.6], [2900, 8, 0.15]],
+      o: [[450, 5, 1], [800, 6, 0.5], [2830, 8, 0.1]],
+      u: [[325, 5, 1], [700, 6, 0.4], [2530, 8, 0.1]],
+      e: [[400, 5, 1], [1600, 6, 0.5], [2700, 8, 0.15]],
+    };
+    function voiceV(m, t, dur, vowel = 'a', amp = 0.1) {   // 母音を選べる声（コーラス・声ネタ）
+      const f = mtof(m), g = actx.createGain(), atk = Math.min(0.3, dur * 0.3);
+      g.gain.setValueAtTime(0.0001, t);
+      g.gain.linearRampToValueAtTime(amp, t + atk);
+      g.gain.setValueAtTime(amp, t + Math.max(atk + 0.01, dur - 0.05));
+      g.gain.linearRampToValueAtTime(0.0001, t + dur + 0.25);
+      g.connect(busVoice);
+      const mix = gainNode(1);
+      for (const [fq, q, a2] of VOWELS[vowel] || VOWELS.a) mix.connect(filter('bandpass', fq, q)).connect(gainNode(a2)).connect(g);
+      const lfo = actx.createOscillator(); lfo.frequency.value = 5.4;
+      const depth = gainNode(0); depth.gain.setValueAtTime(0, t); depth.gain.linearRampToValueAtTime(f * 0.006, t + 0.5);
+      lfo.connect(depth); lfo.start(t); lfo.stop(t + dur + 0.3);
+      for (const det of [-6, 6]) depth.connect(osc('sawtooth', f, det, mix, t, t + dur + 0.3).frequency);
+    }
+    function timpani(m, t, amp = 0.35) {
+      const f = mtof(m), g = actx.createGain();
+      env(g, t, amp, 0.004, amp * 0.3, 0.2, t + 1.1);
+      g.connect(busDrum);
+      const o = actx.createOscillator(); o.type = 'sine';
+      o.frequency.setValueAtTime(f * 1.08, t); o.frequency.exponentialRampToValueAtTime(f, t + 0.08);
+      o.connect(g); o.start(t); o.stop(t + 1.2);
+      const g2 = gainNode(0.3); g2.connect(g);
+      osc('triangle', f * 1.5, 0, g2, t, t + 0.4);
+    }
+    // 鉄工所用：プレス機の「ガシャーン！」
+    //  ガ  … 低い衝撃と、全帯域の短い打撃ノイズ（少し歪ませる）
+    //  シャーン … 金属板が鳴るような高いノイズの響き（ずらした周波数を何本も重ねる）
+    //  最後に、跳ねた部品が「カラカラ」と散らばる小さな音
+    let crunchCurve = null;
+    function press(t, amp = 0.3, bright = 1) {
+      const o = actx.createOscillator(), g = actx.createGain();
+      o.type = 'sine';
+      o.frequency.setValueAtTime(110, t); o.frequency.exponentialRampToValueAtTime(38, t + 0.18);
+      g.gain.setValueAtTime(amp * 1.3, t); g.gain.exponentialRampToValueAtTime(0.0001, t + 0.45);
+      o.connect(g).connect(busDrum); o.start(t); o.stop(t + 0.5);
+      if (!crunchCurve) {
+        crunchCurve = new Float32Array(1024);
+        for (let k = 0; k < 1024; k++) { const x = k / 511.5 - 1; crunchCurve[k] = Math.tanh(x * 4); }
+      }
+      const hitG = actx.createGain(); env(hitG, t, amp * 1.1, 0.001, amp * 0.2, 0.06, t + 0.2);
+      const ws = actx.createWaveShaper(); ws.curve = crunchCurve;
+      const hbp = filter('bandpass', 1500, 0.5);
+      hbp.connect(ws).connect(hitG).connect(busDrum);
+      noise(hbp, t, t + 0.22);
+      const tail = actx.createGain(); env(tail, t, amp * 0.9 * bright, 0.004, amp * 0.25 * bright, 0.35, t + 1.5);
+      tail.connect(busDrum);
+      const src = gainNode(1);
+      for (const [f, q, a2] of [[1850, 9, 1], [2720, 11, 0.9], [3930, 12, 0.8], [5250, 14, 0.6], [7100, 10, 0.5], [9400, 6, 0.35]]) {
+        src.connect(filter('bandpass', f * (0.97 + Math.random() * 0.06), q)).connect(gainNode(a2)).connect(tail);
+      }
+      noise(src, t, t + 1.55);
+      const sh = actx.createGain(); env(sh, t, amp * 0.35 * bright, 0.002, 0.0001, 0.5, t + 0.6);
+      const hp = filter('highpass', 6000); hp.connect(sh).connect(busDrum);
+      noise(hp, t, t + 0.62);
+      for (let k = 0; k < 5; k++) {            // カラカラ
+        const tt = t + 0.12 + k * 0.07 + Math.random() * 0.05, a3 = amp * 0.22 * (1 - k * 0.15);
+        const cg = actx.createGain(); env(cg, tt, a3, 0.001, 0.0001, 0.05, tt + 0.07);
+        const cbp = filter('bandpass', 2500 + Math.random() * 3500, 6); cbp.connect(cg).connect(busDrum);
+        noise(cbp, tt, tt + 0.08);
+      }
+    }
+    function airHiss(t, dur, amp = 0.025) {          // プレスが上がるときの「シュー」
+      const g = actx.createGain(); env(g, t, amp, 0.05, amp * 0.4, dur * 0.6, t + dur);
+      const hp = filter('highpass', 3200); hp.connect(g).connect(busDrum);
+      noise(hp, t, t + dur + 0.05);
+    }
+    function riser(t, dur) {                     // 盛り上げの「シュワー」
+      const bp = filter('bandpass', 400, 2), g = actx.createGain();
+      bp.frequency.setValueAtTime(300, t); bp.frequency.exponentialRampToValueAtTime(6000, t + dur);
+      g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(0.08, t + dur);
+      g.gain.linearRampToValueAtTime(0.0001, t + dur + 0.05);
+      bp.connect(g).connect(busPad);
+      noise(bp, t, t + dur + 0.1);
+    }
+    function roll(t, dur, amp = 0.12) {          // スネアロール
+      const n = Math.max(1, Math.floor(dur / (BEAT / 8)));
+      for (let k = 0; k < n; k++) snare(t + k * BEAT / 8, amp * (0.4 + 0.6 * k / n));
+    }
+    function drone(m, t, dur) { pad(m, t, dur, 0.022, 520); }
+    function whistle(m, t, dur, amp = 0.075, orn = false) {   // ティン・ホイッスル（長い音は装飾音つき）
+      if (orn) { flute(m + 2, t, 0.05, amp * 0.8); flute(m, t + 0.05, Math.max(0.05, dur - 0.05), amp); }
+      else flute(m, t, dur, amp);
+    }
+    const mel = (M, t, fn) => { for (const [bt, m, len, x] of M) fn(m, t + bt * BEAT, len * BEAT, x); };
+
+    // ---- 曲 ----
+    const SONGS = {
+      // 鉄工所：プレス機が2秒ごとに「ガシャーン！」と鳴るだけ。進むと空気の抜ける音と、遠くのもう1台が加わる
+      tekko: {
+        bpm: 60, beats: 4,
+        play(i, t, sec) {
+          press(t, 0.34);
+          press(t + BEAT * 2, 0.3);
+          if (sec >= 1) { airHiss(t + BEAT * 0.9, 0.7); airHiss(t + BEAT * 2.9, 0.7); }
+          if (sec === 2) press(t + BEAT * 1.25, 0.09, 0.7);   // 遠くのもう1台
+          if (sec === 3 && i % 2) press(t + BEAT * 3.25, 0.07, 0.7);
+        },
+      },
+      yoru: {
+        bpm: 76, beats: 4,
+        // [ベース音, アルペジオに使う6音]（MIDIノート番号）
+        chords: [
+          [38, [50, 57, 62, 64, 65, 69]],   // Dm(add9)
+          [34, [46, 53, 57, 62, 65, 69]],   // B♭maj7
+          [43, [50, 53, 58, 62, 65, 70]],   // Gm7
+          [45, [52, 57, 62, 64, 67, 69]],   // A7sus4
+          [38, [50, 57, 62, 65, 69, 74]],   // Dm
+          [41, [48, 57, 60, 64, 67, 69]],   // Fmaj7
+          [40, [48, 55, 62, 64, 67, 72]],   // C/E
+          [45, [52, 57, 61, 64, 67, 69]],   // A7
+        ],
+        // [拍, 音, 長さ(拍)]
+        melody: [
+          [[0, 69, 3], [3, 72, 1]],
+          [[0, 74, 2], [2, 72, 1], [3, 70, 1]],
+          [[0, 69, 4]],
+          [[0, 67, 2], [2, 64, 2]],
+          [[0, 65, 2], [2, 69, 2]],
+          [[0, 72, 3], [3, 74, 1]],
+          [[0, 76, 2], [2, 74, 1], [3, 72, 1]],
+          [[0, 73, 4]],
+        ],
+        play(i, t, sec) {
+          const [bass, notes] = this.chords[i % 8];
+          const hum = () => (Math.random() - 0.5) * 0.016;
+          piano(bass, t, BAR * 0.9, 0.2);
+          const arp = [[0, 1, 2, 3, 4, 3, 2, 1], [0, 1, 2, 3, 5, 4, 3, 1]][i % 2];
+          for (let k = 0; k < 8; k++) {
+            if (sec === 3 && k % 2) continue;
+            piano(notes[arp[k]], t + k * BEAT / 2 + hum(), BEAT * 1.2, k % 2 ? 0.1 : 0.15);
+          }
+          if (sec >= 1) for (const n of notes.slice(1, 5)) pad(n, t, BAR);
+          if (sec >= 2) for (const [bt, m, len] of this.melody[i % 8]) voice(m, t + bt * BEAT, len * BEAT);
+        },
+      },
+
+      shissou: {
+        bpm: 148, beats: 4,
+        // [ベースの根音, 弦の3音]
+        chords: [
+          [38, [62, 65, 69]],   // Dm
+          [34, [62, 65, 70]],   // B♭
+          [41, [60, 65, 69]],   // F
+          [36, [60, 64, 67]],   // C
+          [38, [62, 65, 69]],   // Dm
+          [34, [62, 65, 70]],   // B♭
+          [43, [62, 67, 70]],   // Gm
+          [45, [61, 64, 69]],   // A
+        ],
+        melody: [
+          [[0, 74, 1.5], [1.5, 72, 0.5], [2, 74, 1], [3, 77, 1]],
+          [[0, 77, 1.5], [1.5, 76, 0.5], [2, 74, 2]],
+          [[0, 72, 1], [1, 69, 1], [2, 72, 1], [3, 77, 1]],
+          [[0, 76, 3], [3, 72, 1]],
+          [[0, 74, 1.5], [1.5, 72, 0.5], [2, 74, 1], [3, 81, 1]],
+          [[0, 79, 1.5], [1.5, 77, 0.5], [2, 74, 2]],
+          [[0, 77, 1], [1, 79, 1], [2, 81, 1], [3, 82, 1]],
+          [[0, 81, 3], [3, 73, 1]],
+        ],
+        // 16分音符で刻むベース（根音からの半音数）
+        bassPat: [0, 0, 12, 0, 0, 12, 0, 7, 0, 0, 12, 0, 0, 12, 7, 10],
+        strPat: [0, 1, 2, 1, 0, 1, 2, 1],
+        play(i, t, sec) {
+          const [root, tri] = this.chords[i % 8];
+          const s16 = BEAT / 4;
+          // 区間 2 は落としどころ：ハーフタイムのドラムと伸ばすベース
+          if (sec === 2) {
+            synthBass(root, t, BAR * 0.95);
+            kick(t); snare(t + BEAT * 2, 0.2);
+            for (let k = 0; k < 8; k++) hat(t + k * BEAT / 2, 0.03);
+            for (const n of tri) pad(n, t, BAR, 0.028, 1400);
+            taiko(t + BEAT * 3.5, 0.25);
+          } else {
+            for (let k = 0; k < 16; k++) synthBass(root + this.bassPat[k], t + k * s16, s16 * 0.85);
+            for (let k = 0; k < 4; k++) kick(t + k * BEAT, 0.45);
+            for (let k = 0; k < 16; k++) hat(t + k * s16, k % 4 === 2 ? 0.06 : 0.025);
+            if (sec >= 1) { snare(t + BEAT); snare(t + BEAT * 3); }
+            for (let k = 0; k < 8; k++) stacc(tri[this.strPat[k]] + (k === 7 ? 12 : 0), t + k * BEAT / 2);
+          }
+          if (sec >= 1) {
+            const up = sec === 3 ? 12 : 0;
+            for (const [bt, m, len] of this.melody[i % 8]) brass(m + up, t + bt * BEAT, len * BEAT * 0.95, sec === 3 ? 0.055 : 0.07);
+          }
+          if (sec === 3 && i % 2 === 0) crash(t);
+          if (i % 8 === 7) for (let k = 0; k < 4; k++) taiko(t + BEAT * 2 + k * s16 * 2, 0.18 + k * 0.05);   // 周回の区切りのフィル
+        },
+      },
+
+      gensou: {
+        bpm: 100, beats: 3,
+        chords: [
+          [38, [50, 57, 61, 64, 66, 69]],   // Dmaj9
+          [47, [47, 54, 57, 61, 62, 66]],   // Bm9
+          [43, [43, 50, 54, 57, 61, 66]],   // Gmaj9(#11)
+          [45, [45, 52, 55, 59, 62, 66]],   // A13sus4
+          [42, [42, 49, 52, 57, 61, 64]],   // F#m7
+          [47, [47, 54, 57, 62, 66, 69]],   // Bm7
+          [40, [40, 47, 50, 55, 59, 66]],   // Em9
+          [45, [45, 52, 55, 58, 61, 64]],   // A7(♭9)
+        ],
+        melody: [
+          [[0, 78, 2], [2, 76, 1]],
+          [[0, 74, 1], [1, 73, 1], [2, 74, 1]],
+          [[0, 73, 2], [2, 69, 1]],
+          [[0, 71, 3]],
+          [[0, 73, 1], [1, 76, 1], [2, 81, 1]],
+          [[0, 78, 2], [2, 74, 1]],
+          [[0, 79, 1.5], [1.5, 78, 0.5], [2, 76, 1]],
+          [[0, 73, 2], [2, 76, 1]],
+        ],
+        play(i, t, sec) {
+          const [bass, notes] = this.chords[i % 8];
+          piano(bass, t, BAR, 0.16, busPiano, 4);                  // ワルツの1拍目
+          if (sec >= 1) { harp(notes[2], t + BEAT, 0.05); harp(notes[3], t + BEAT, 0.05); harp(notes[2], t + BEAT * 2, 0.045); harp(notes[3], t + BEAT * 2, 0.045); }
+          const up = i % 2 ? [5, 4, 3, 2, 1, 0] : [0, 1, 2, 3, 4, 5];
+          for (let k = 0; k < 6; k++) harp(notes[up[k]] + 12, t + k * BEAT / 2 + (Math.random() - 0.5) * 0.01, k === 0 ? 0.1 : 0.075);
+          if (sec >= 1) for (const n of notes.slice(2, 6)) pad(n, t, BAR, 0.022, 1300);
+          if (sec >= 1 && i % 2 === 1) celesta(notes[5] + 24, t + BEAT * 2.5);
+          if (sec >= 2) {
+            const up8 = sec === 3 ? 12 : 0;
+            for (const [bt, m, len] of this.melody[i % 8]) flute(m + up8, t + bt * BEAT, len * BEAT * 0.95);
+          }
+          if (sec === 3) for (let k = 0; k < 3; k++) if (Math.random() < 0.5) celesta(notes[(k * 2 + i) % 6] + 24, t + k * BEAT + BEAT / 2, 0.035);
+        },
+      },
+
+      // シネマ：ピアノの刻みと太鼓から始まり、弦・金管・コーラスが重なる
+      cinema: {
+        bpm: 84, beats: 4,
+        chords: [[38, [50, 57, 62, 65, 69, 74]], [34, [46, 53, 58, 62, 65, 70]], [41, [48, 53, 57, 60, 65, 69]], [36, [48, 52, 55, 60, 64, 67]],
+                 [43, [50, 55, 58, 62, 67, 70]], [34, [46, 53, 58, 62, 65, 70]], [45, [50, 57, 62, 65, 69, 74]], [45, [52, 57, 61, 64, 69, 73]]],
+        melody: [[[0, 69, 4]], [[0, 70, 2], [2, 72, 2]], [[0, 72, 4]], [[0, 67, 4]], [[0, 70, 3], [3, 69, 1]], [[0, 74, 4]], [[0, 72, 2], [2, 69, 2]], [[0, 73, 4]]],
+        play(i, t, sec) {
+          const [bass, n] = this.chords[i % 8];
+          pad(bass, t, BAR, 0.035, 400); pad(bass + 12, t, BAR, 0.022, 600);
+          const arp = [1, 2, 3, 2, 1, 2, 3, 4];
+          for (let k = 0; k < 8; k++) piano(n[arp[k]] + 12, t + k * BEAT / 2, BEAT * 0.8, 0.07, busPiano, 5);
+          taiko(t, 0.35);
+          if (sec >= 1) { for (const m of n.slice(2)) pad(m, t, BAR, 0.018, 1600); taiko(t + BEAT * 2, 0.25); timpani(bass + 12, t + BEAT * 3.5, 0.2); }
+          if (sec >= 2) { mel(this.melody[i % 8], t, (m, tt, d) => brass(m, tt, d, 0.06)); voiceV(n[2], t, BAR * 0.95, 'a', 0.045); voiceV(n[4], t, BAR * 0.95, 'a', 0.045); }
+          if (sec === 3 && i % 2 === 0) crash(t);
+          if (i % 8 === 7) riser(t + BEAT * 2, BEAT * 2);
+        },
+      },
+
+      // ファンタジー戦記：弦の16分の刻み、ティンパニ、金管のメロディ
+      fantasy: {
+        bpm: 150, beats: 4,
+        chords: [[38, [62, 65, 69]], [36, [60, 64, 67]], [34, [62, 65, 70]], [45, [61, 64, 69]], [38, [62, 65, 69]], [41, [60, 65, 69]], [43, [62, 67, 71]], [45, [61, 64, 67]]],
+        melody: [
+          [[0, 74, 1], [1, 77, 1], [2, 81, 1.5], [3.5, 79, 0.5]], [[0, 79, 2], [2, 76, 1], [3, 72, 1]],
+          [[0, 74, 1.5], [1.5, 77, 0.5], [2, 74, 1], [3, 70, 1]], [[0, 69, 3], [3, 73, 1]],
+          [[0, 74, 1], [1, 77, 1], [2, 81, 1], [3, 86, 1]], [[0, 84, 2], [2, 81, 1], [3, 77, 1]],
+          [[0, 79, 1], [1, 81, 1], [2, 83, 1], [3, 79, 1]], [[0, 81, 4]],
+        ],
+        play(i, t, sec) {
+          const [root, tri] = this.chords[i % 8], s16 = BEAT / 4;
+          const pat = [0, 12, 7, 12, 0, 12, 7, 12, 0, 12, 7, 12, 0, 12, 10, 12];
+          for (let k = 0; k < 16; k++) stacc(root + 24 + pat[k], t + k * s16, 0.032);
+          pluckBass(root, t, BEAT * 0.9, 0.1); pluckBass(root, t + BEAT * 2, BEAT * 0.9, 0.1);
+          timpani(root + 12, t, 0.3); timpani(root + 19, t + BEAT * 2, 0.22);
+          if (sec >= 1) { snare(t + BEAT, 0.12); snare(t + BEAT * 3, 0.12); mel(this.melody[i % 8], t, (m, tt, d) => brass(m, tt, d * 0.95, sec === 3 ? 0.055 : 0.065)); }
+          if (sec >= 2) for (const m of tri) { brass(m, t + BEAT * 1.5, BEAT * 0.3, 0.022); brass(m, t + BEAT * 3.5, BEAT * 0.3, 0.022); }
+          if (sec === 3) { crash(t); mel(this.melody[i % 8], t, (m, tt, d) => brass(m - 12, tt, d * 0.95, 0.03)); }
+        },
+      },
+
+      // ケルトの丘：6/8拍子。ドローンの上で笛がジグを吹く
+      celt: {
+        bpm: 210, beats: 6,   // 1拍＝8分音符
+        chords: [[38, [50, 54, 57, 62, 66, 69]], [38, [50, 54, 57, 62, 66, 69]], [36, [48, 52, 55, 60, 64, 67]], [38, [50, 54, 57, 62, 66, 69]],
+                 [43, [43, 50, 55, 59, 62, 67]], [38, [50, 54, 57, 62, 66, 69]], [40, [47, 52, 55, 59, 64, 67]], [45, [45, 52, 57, 61, 64, 69]]],
+        melody: [
+          [[0, 74, 1], [1, 78, 1], [2, 81, 1], [3, 81, 1], [4, 78, 1], [5, 81, 1]],
+          [[0, 83, 1], [1, 81, 1], [2, 78, 1], [3, 76, 1], [4, 74, 1], [5, 76, 1]],
+          [[0, 79, 1], [1, 76, 1], [2, 72, 1], [3, 79, 1], [4, 76, 1], [5, 72, 1]],
+          [[0, 74, 1], [1, 76, 1], [2, 78, 1], [3, 81, 3]],
+          [[0, 83, 1], [1, 79, 1], [2, 83, 1], [3, 86, 1], [4, 83, 1], [5, 79, 1]],
+          [[0, 81, 1], [1, 78, 1], [2, 74, 1], [3, 81, 1], [4, 78, 1], [5, 74, 1]],
+          [[0, 76, 1], [1, 78, 1], [2, 79, 1], [3, 83, 1], [4, 81, 1], [5, 79, 1]],
+          [[0, 76, 1], [1, 73, 1], [2, 69, 1], [3, 76, 3]],
+        ],
+        play(i, t, sec) {
+          const [bass, n] = this.chords[i % 8];
+          drone(38, t, BAR); drone(45, t, BAR);
+          taiko(t, 0.3); taiko(t + BEAT * 3, 0.2);
+          if (sec >= 1) { hat(t + BEAT * 2, 0.03); hat(t + BEAT * 5, 0.03); }
+          for (let k = 0; k < 6; k++) harp(n[k], t + k * BEAT, k === 0 ? 0.09 : 0.06);
+          if (sec >= 1) mel(this.melody[i % 8], t, (m, tt, d) => whistle(m, tt, d * 0.9, 0.07, d > BEAT * 1.5));
+          if (sec >= 2) piano(bass, t, BAR, 0.12, busPiano, 4);
+          if (sec === 3) mel(this.melody[i % 8], t, (m, tt, d) => brass(m - 12, tt, d * 0.9, 0.022));
+        },
+      },
+
+      // 反撃の狼煙：重いドラム、16分のシンセベース、ピアノの高音の刻み、コーラス
+      rally: {
+        bpm: 156, beats: 4,
+        chords: [[38, [62, 65, 69]], [36, [60, 65, 69]], [34, [62, 65, 70]], [45, [61, 64, 69]], [43, [62, 67, 70]], [34, [62, 65, 70]], [36, [60, 64, 67]], [45, [61, 64, 69]]],
+        melody: [
+          [[0, 74, 2], [2, 76, 1], [3, 77, 1]], [[0, 76, 2], [2, 72, 2]], [[0, 74, 1.5], [1.5, 70, 0.5], [2, 74, 1], [3, 77, 1]], [[0, 76, 4]],
+          [[0, 79, 2], [2, 77, 1], [3, 74, 1]], [[0, 77, 2], [2, 82, 2]], [[0, 81, 1.5], [1.5, 79, 0.5], [2, 76, 2]], [[0, 73, 2], [2, 76, 2]],
+        ],
+        bassPat: [0, 0, 0, 12, 0, 0, 10, 0, 0, 0, 0, 12, 0, 7, 10, 12],
+        play(i, t, sec) {
+          const [root, tri] = this.chords[i % 8], s16 = BEAT / 4;
+          for (let k = 0; k < 16; k++) synthBass(root + this.bassPat[k], t + k * s16, s16 * 0.8);
+          for (const b of [0, 0.75, 1.5, 2.5, 3]) kick(t + b * BEAT, 0.45);
+          snare(t + BEAT); snare(t + BEAT * 3); taiko(t + BEAT, 0.2); taiko(t + BEAT * 3, 0.2);
+          const hs = sec === 3 ? s16 : BEAT / 2;
+          for (let k = 0; k < BAR / hs - 0.01; k++) hat(t + k * hs, 0.03);
+          for (let k = 0; k < 8; k++) piano(tri[k % 3] + 12 + (k % 4 === 3 ? 12 : 0), t + k * BEAT / 2, BEAT * 0.3, 0.055, busPiano, 9);
+          if (sec >= 1) for (const m of tri) voiceV(m - 12, t, BAR * 0.95, i % 2 ? 'o' : 'a', 0.04);
+          if (sec >= 2) mel(this.melody[i % 8], t, (m, tt, d) => brass(m, tt, d * 0.95, 0.065));
+          if (sec === 3 && i % 2 === 0) crash(t);
+          if (i % 8 === 7) roll(t + BEAT * 3, BEAT, 0.12);
+        },
+      },
+
+      // 真夜中のアシッドジャズ：跳ねるリズム、エレピ、ベース、声ネタ
+      jazz: {
+        bpm: 116, beats: 4,
+        chords: [[38, [60, 64, 65, 69]], [43, [59, 62, 65, 69]], [36, [59, 62, 64, 67]], [41, [57, 60, 64, 67]],
+                 [34, [57, 60, 62, 65]], [40, [58, 62, 64, 67]], [45, [55, 59, 61, 64]], [38, [60, 64, 65, 69]]],
+        bassLine: [[0, 0], [0.75, 0], [1.5, 12], [2, 7], [2.75, 10], [3.5, 12]],
+        melody: [
+          [[0.5, 69, 0.5, 'o'], [1, 72, 0.5, 'o'], [1.5, 74, 1, 'a']], [[2, 72, 0.5, 'e'], [2.5, 69, 1, 'o']],
+          [[0.5, 76, 0.5, 'a'], [1, 74, 0.5, 'a'], [1.5, 72, 1.5, 'o']], [],
+          [[0.5, 69, 0.5, 'o'], [1, 72, 0.5, 'o'], [1.5, 77, 1, 'a']], [[2, 76, 0.5, 'e'], [2.5, 74, 1, 'o']],
+          [[0.5, 73, 0.5, 'a'], [1, 76, 0.5, 'e'], [1.5, 79, 1.5, 'a']], [[2, 81, 1, 'o'], [3, 76, 1, 'a']],
+        ],
+        lead: [[[0, 81, 1.5], [1.5, 79, 0.5], [2, 77, 2]], [[0.5, 76, 1], [1.5, 74, 2.5]], [[0, 76, 1], [1, 79, 1], [2, 84, 2]], [[0, 83, 4]]],
+        play(i, t, sec) {
+          const [root, v] = this.chords[i % 8];
+          const sw = (b) => (b % 1 === 0.5 ? b + 0.16 : b);   // 裏の8分を少し遅らせて跳ねさせる
+          for (const [b, o] of this.bassLine) pluckBass(root + o, t + sw(b) * BEAT, BEAT * 0.4, 0.11);
+          for (const b of sec >= 2 ? [0.5, 1.5, 3] : [1.5, 3]) for (const m of v) epiano(m, t + sw(b) * BEAT, BEAT * 0.6, 0.032);
+          kick(t, 0.4); kick(t + sw(2.5) * BEAT, 0.35);
+          snare(t + BEAT, 0.13); snare(t + BEAT * 3, 0.13);
+          for (let k = 0; k < 8; k++) hat(t + sw(k / 2) * BEAT, k % 2 ? 0.02 : 0.03);
+          hat(t + sw(3.5) * BEAT, 0.035, 0.12);
+          if (sec >= 1) for (const [bt, m, len, vw] of this.melody[i % 8]) voiceV(m, t + sw(bt) * BEAT, len * BEAT * 0.9, vw, 0.09);
+          if (sec >= 2 && i % 2 === 0) for (const [bt, m, len] of this.lead[(i >> 1) % 4]) epiano(m, t + sw(bt) * BEAT, len * BEAT, 0.06);
+        },
+      },
+
+      // やすらぎ：やさしいピアノだけのシンプルな曲
+      calm: {
+        bpm: 88, beats: 4,
+        chords: [[38, [50, 57, 62, 66, 69, 74]], [37, [49, 57, 61, 64, 69, 73]], [35, [47, 54, 59, 62, 66, 71]], [31, [43, 50, 55, 59, 62, 67]],
+                 [38, [50, 57, 62, 66, 69, 74]], [31, [43, 50, 55, 59, 62, 67]], [33, [45, 52, 57, 61, 64, 69]], [38, [50, 57, 62, 66, 69, 74]]],
+        melody: [
+          [[0, 78, 2], [2, 76, 1], [3, 74, 1]], [[0, 73, 2], [2, 76, 2]], [[0, 74, 2], [2, 73, 1], [3, 71, 1]], [[0, 71, 4]],
+          [[0, 74, 1], [1, 76, 1], [2, 78, 2]], [[0, 79, 2], [2, 78, 1], [3, 76, 1]], [[0, 76, 2], [2, 78, 1], [3, 76, 1]], [[0, 74, 4]],
+        ],
+        play(i, t, sec) {
+          const [bass, n] = this.chords[i % 8];
+          piano(bass + 12, t, BAR * 0.9, 0.11, busPiano, 4);
+          const arp = [1, 2, 3, 4, 5, 4, 3, 2];
+          for (let k = 0; k < 8; k++) piano(n[arp[k]], t + k * BEAT / 2, BEAT * 1.1, 0.055, busPiano, 5);
+          if (sec >= 1) for (const m of n.slice(2, 5)) pad(m, t, BAR, 0.014, 1100);
+          if (sec >= 2) mel(this.melody[i % 8], t, (m, tt, d) => piano(m, tt, d, 0.1, busPiano, 6));
+          if (sec === 3 && i % 2) celesta(n[5] + 12, t + BEAT * 2.5, 0.035);
+        },
+      },
+
+      // 決戦のファンファーレ：オクターブで跳ねるベース、裏拍の弦、金管のメロディ
+      jrpg: {
+        bpm: 164, beats: 4,
+        chords: [[38, [62, 65, 69]], [34, [62, 65, 70]], [36, [60, 64, 67]], [38, [62, 65, 69]], [43, [62, 67, 70]], [34, [62, 65, 70]], [36, [60, 64, 67]], [45, [61, 64, 69]]],
+        melody: [
+          [[0, 74, 0.5], [0.5, 76, 0.5], [1, 77, 1], [2, 81, 1.5], [3.5, 79, 0.5]], [[0, 77, 1], [1, 74, 1], [2, 70, 2]],
+          [[0, 72, 0.5], [0.5, 74, 0.5], [1, 76, 1], [2, 79, 1.5], [3.5, 77, 0.5]], [[0, 76, 1], [1, 74, 3]],
+          [[0, 79, 1], [1, 82, 1], [2, 86, 2]], [[0, 84, 1], [1, 82, 1], [2, 77, 2]],
+          [[0, 79, 1], [1, 81, 1], [2, 84, 1], [3, 82, 1]], [[0, 81, 3], [3, 73, 1]],
+        ],
+        play(i, t, sec) {
+          const [root, tri] = this.chords[i % 8];
+          for (let k = 0; k < 8; k++) pluckBass(root + (k % 2 ? 12 : 0), t + k * BEAT / 2, BEAT * 0.45, 0.11);
+          kick(t, 0.4); kick(t + BEAT * 2, 0.4); snare(t + BEAT, 0.16); snare(t + BEAT * 3, 0.16);
+          for (let k = 0; k < 8; k++) hat(t + k * BEAT / 2, 0.03);
+          for (let k = 0; k < 8; k++) stacc(tri[[0, 1, 2, 1][k % 4]] + 12, t + k * BEAT / 2 + BEAT / 4, 0.028);
+          if (sec >= 1) mel(this.melody[i % 8], t, (m, tt, d) => brass(m, tt, d * 0.92, 0.06));
+          if (sec >= 2) for (const m of tri) pad(m + 12, t, BAR, 0.013, 2200);
+          if (sec === 3) { crash(t); mel(this.melody[i % 8], t, (m, tt, d) => brass(m + 12, tt, d * 0.92, 0.022)); }
+          if (i % 8 === 7) for (let k = 0; k < 4; k++) snare(t + BEAT * 3 + k * BEAT / 4, 0.1 + k * 0.03);
+        },
+      },
+
+      // 勇者の進軍：小節頭の弦の駆け上がり、金管の和音、ティンパニ
+      hero: {
+        bpm: 146, beats: 4,
+        chords: [[38, [62, 65, 69]], [43, [62, 67, 70]], [36, [60, 64, 67]], [41, [60, 65, 69]], [34, [62, 65, 70]], [43, [62, 67, 70]], [45, [61, 64, 69]], [45, [61, 64, 69]]],
+        melody: [
+          [[0, 74, 1.5], [1.5, 74, 0.5], [2, 77, 1], [3, 81, 1]], [[0, 79, 1.5], [1.5, 77, 0.5], [2, 74, 2]],
+          [[0, 76, 1], [1, 79, 1], [2, 84, 1.5], [3.5, 82, 0.5]], [[0, 81, 4]],
+          [[0, 82, 1.5], [1.5, 81, 0.5], [2, 79, 1], [3, 77, 1]], [[0, 79, 1.5], [1.5, 77, 0.5], [2, 74, 2]],
+          [[0, 73, 1], [1, 76, 1], [2, 79, 1], [3, 81, 1]], [[0, 85, 2], [2, 81, 2]],
+        ],
+        scale: [0, 2, 3, 5, 7, 9, 10, 12],
+        play(i, t, sec) {
+          const [root, tri] = this.chords[i % 8], s16 = BEAT / 4;
+          for (let k = 0; k < 8; k++) stacc(root + 24 + this.scale[k], t + k * s16, 0.03);
+          for (let k = 0; k < 4; k++) stacc(root + 12, t + BEAT * 2 + k * BEAT / 2, 0.03);
+          pluckBass(root, t, BEAT, 0.1); pluckBass(root, t + BEAT * 2, BEAT, 0.1);
+          timpani(root + 12, t, 0.3); timpani(root + 12, t + BEAT * 1.5, 0.18);
+          for (const m of tri) { brass(m, t, BEAT * 0.35, 0.026); brass(m, t + BEAT * 1.5, BEAT * 0.35, 0.022); }
+          if (sec >= 1) { snare(t + BEAT, 0.1); snare(t + BEAT * 3, 0.1); mel(this.melody[i % 8], t, (m, tt, d) => brass(m, tt, d * 0.9, 0.065)); }
+          if (sec >= 2 && i % 2 === 0) crash(t);
+          if (sec === 3) mel(this.melody[i % 8], t, (m, tt, d) => flute(m + 12, tt, d * 0.9, 0.04));
+        },
+      },
+
+      // 決戦前夜：行進のスネア、低音金管の付点リズム、重厚な金管のコラール
+      march: {
+        bpm: 126, beats: 4,
+        chords: [[38, [62, 65, 69]], [38, [62, 65, 69]], [34, [62, 65, 70]], [34, [62, 65, 70]], [43, [62, 67, 70]], [45, [61, 64, 69]], [38, [62, 65, 69]], [45, [61, 64, 69]]],
+        melody: [
+          [[0, 74, 3], [3, 76, 1]], [[0, 77, 2], [2, 76, 1], [3, 74, 1]], [[0, 77, 3], [3, 79, 1]], [[0, 81, 4]],
+          [[0, 82, 2], [2, 81, 1], [3, 79, 1]], [[0, 81, 2], [2, 76, 2]], [[0, 77, 1.5], [1.5, 76, 0.5], [2, 74, 2]], [[0, 73, 4]],
+        ],
+        ost: [[0, 12, 0.6], [0.75, 12, 0.2], [1, 19, 0.9], [2, 12, 0.6], [2.75, 12, 0.2], [3, 17, 0.9]],
+        snarePat: [2, 0, 1, 1, 2, 0, 1, 1, 2, 0, 1, 1, 2, 1, 1, 1],
+        play(i, t, sec) {
+          const [root, tri] = this.chords[i % 8], s16 = BEAT / 4;
+          for (const [b, o, d] of this.ost) brass(root + o, t + b * BEAT, d * BEAT, 0.04);
+          for (let k = 0; k < 16; k++) if (this.snarePat[k]) snare(t + k * s16, this.snarePat[k] === 2 ? 0.11 : 0.05);
+          kick(t, 0.3); kick(t + BEAT * 2, 0.3);
+          timpani(root + 12, t, 0.3); timpani(root + 12, t + BEAT * 2, 0.22);
+          if (sec >= 1) for (const m of tri) pad(m + 12, t, BAR, 0.016, 2000);
+          if (sec >= 2) { mel(this.melody[i % 8], t, (m, tt, d) => brass(m, tt, d * 0.95, 0.07)); mel(this.melody[i % 8], t, (m, tt, d) => brass(m - 12, tt, d * 0.95, 0.035)); }
+          if (sec === 3) crash(t);
+          if (i % 8 === 7) roll(t + BEAT * 2, BEAT * 2, 0.12);
+        },
+      },
+    };
+
+    // ファイルの曲：読み込んで音声バッファにし、ループ位置で継ぎ目なく繰り返す。
+    // 読み込めないとき（ファイルを直接開いた場合など）は、同じ枠の自動演奏か <audio> で代わりに鳴らす
+    let audioEl = null, fileSrc = null, fileStyle = null, fileToken = 0;
+    const fileBufs = {}, fileFailed = {};
+    const isFile = () => !!BGM_STYLES[style].file && !(fileFailed[style] && SONGS[style]);
+    function loadFile(S) {
+      if (!fileBufs[S.file]) {
+        fileBufs[S.file] = fetch(S.file)
+          .then((r) => { if (!r.ok) throw new Error('load'); return r.arrayBuffer(); })
+          .then((b) => actx.decodeAudioData(b))
+          .then((buf) => {
+            if (S.loop) {   // 継ぎ目の0.08秒を、ループ開始点の直前の音とクロスフェード
+              const sr = buf.sampleRate, st = Math.round(S.loop[0] * sr), en = Math.round(S.loop[1] * sr), X = Math.round(0.08 * sr);
+              for (let c = 0; c < buf.numberOfChannels; c++) {
+                const d = buf.getChannelData(c);
+                for (let k = 0; k < X; k++) { const w = k / X, i = en - X + k, j = st - X + k; if (j >= 0 && i < d.length) d[i] = d[i] * (1 - w) + d[j] * w; }
+              }
+            }
+            return buf;
+          })
+          .catch(() => null);
+      }
+      return fileBufs[S.file];
+    }
+    function stopFile(fadeSec) {
+      if (fileSrc) { try { fileSrc.stop(actx.currentTime + (fadeSec || 0)); } catch (e) {} fileSrc = null; }
+      fileStyle = null;
+    }
+    function fileSync(fadeSec) {
+      const S = BGM_STYLES[style];
+      if (!S.file || !playing) { stopFile(fadeSec); if (audioEl) audioEl.pause(); return; }
+      if (fileStyle === style) return;
+      stopFile(0);
+      fileStyle = style;
+      const token = ++fileToken;
+      loadFile(S).then((buf) => {
+        if (token !== fileToken || !playing) return;
+        if (!buf) {
+          fileFailed[style] = true;
+          fileStyle = null;
+          if (SONGS[style]) { nextBar = Math.max(actx.currentTime + 0.1, nextBar); tick(); return; }   // 自動演奏に戻す
+          if (!audioEl) { audioEl = new Audio(); audioEl.loop = true; }
+          audioEl.src = S.file; audioEl.volume = Math.min(1, level() * 2);
+          audioEl.play().catch(() => {});
+          return;
+        }
+        const g = gainNode(S.gain || 1); g.connect(out);
+        fileSrc = actx.createBufferSource();
+        fileSrc.buffer = buf; fileSrc.loop = true;
+        if (S.loop) { fileSrc.loopStart = S.loop[0]; fileSrc.loopEnd = S.loop[1]; }
+        fileSrc.connect(g);
+        fileSrc.start();
+      });
+    }
+
+    function setTempo() {
+      const S = SONGS[style] || SONGS.yoru;
+      BEAT = 60 / (S.bpm * tempo);
+      BAR = BEAT * S.beats;
+      if (delayNode) delayNode.delayTime.value = Math.min(1.5, BEAT * 0.75);
+    }
+    function tick() {
+      if (!playing || !actx || isFile()) return;
+      const now = actx.currentTime;
+      if (nextBar < now) nextBar = now + 0.1;     // タブが裏にいて遅れた分は捨てる
+      while (nextBar < now + 0.5) {
+        const S = SONGS[style];
+        S.play(bar, nextBar, Math.floor(bar / 8) % 4);
+        for (let k = 0; k < S.beats; k++) pulse(nextBar + k * BEAT);
+        nextBar += BAR; bar++;
+      }
+    }
+    function fade(v, sec) {
+      if (audioEl && !audioEl.paused) audioEl.volume = Math.min(1, v * 2);
+      if (!out) return;
+      const t = actx.currentTime;
+      out.gain.cancelScheduledValues(t);
+      out.gain.setValueAtTime(out.gain.value, t);
+      out.gain.linearRampToValueAtTime(v, t + sec);
+    }
+
+    return {
+      get on() { return on; },
+      get vol() { return vol; },
+      get style() { return style; },
+      get playing() { return playing; },
+      start(opt) {
+        if (!actx) return;
+        if (!out) build();
+        if (opt) { tempo = opt.tempo; TR = opt.tr; }
+        setTempo();
+        ducked = false;
+        busPulse.gain.value = 0;
+        if (!playing) { playing = true; bar = 0; nextBar = actx.currentTime + 0.15; }
+        fade(level(), 2);
+        fileSync();
+        if (!timer) timer = setInterval(tick, 100);
+        tick();
+      },
+      stop() {
+        playing = false;
+        fade(0, 1.5);
+        fileSync(1.6);
+      },
+      setStyle(id) {
+        if (!BGM_STYLES[id]) return;
+        style = id; save();
+        setTempo();
+        bar = 0;                                      // 次の小節から新しい曲の頭へ
+        if (actx && playing) nextBar = Math.max(actx.currentTime + 0.1, nextBar);
+        fileSync();
+      },
+      duck(v) { ducked = v; fade(level(), 0.6); },
+      boss(v) {
+        if (!busPulse) return;
+        const t = actx.currentTime;
+        busPulse.gain.cancelScheduledValues(t);
+        busPulse.gain.setValueAtTime(busPulse.gain.value, t);
+        busPulse.gain.linearRampToValueAtTime(v ? 0.8 : 0, t + 2.5);
+      },
+      toggle() { on = !on; save(); fade(level(), 0.6); return on; },
+      setVol(v) { vol = v; save(); fade(level(), 0.2); },
+    };
+  })();
+
+  // ---------- レベルアップ時のボイス ----------
+  // 端末に入っている日本語の読み上げ音声を使う。男性・女性らしい声があれば優先し、声の高さで演じ分ける
+  // prefer は上から順に探す。ニューラル音声（Natural／Online／Premium など）ほど自然に聞こえるので優先する
+  const NATURAL = /(Natural|Online|Neural|Premium|Enhanced|拡張|高品質)/i;
+  const VOICES = {
+    off:    { name: 'なし' },
+    male:   { name: '男性', male: true, pitch: 0.95, rate: 1.05, prefer: [/Keita.*(Natural|Online)/i, /Daichi|Naoki/i, /Otoya.*(Premium|Enhanced|拡張)/i, /Otoya|Keita|Ichiro|Takumi|Hattori/i, /male|男性/i] },
+    female: { name: '女性', pitch: 1.05, rate: 1.05, prefer: [/Nanami.*(Natural|Online)/i, /Aoi|Mayu|Shiori/i, /Kyoko.*(Premium|Enhanced|拡張)/i, /Google.*日本/i, /Kyoko|Haruka|Ayumi|Mizuki|Sayaka|O-ren|Nanami/i, /female|女性/i] },
+    boy:    { name: '少年', pitch: 1.35, rate: 1.12, prefer: [/Nanami.*(Natural|Online)/i, /Aoi|Mayu|Shiori/i, /Kyoko.*(Premium|Enhanced|拡張)/i, /Google.*日本/i, /Kyoko|Haruka|Ayumi|Nanami/i] },
+  };
+  // 録音・生成したボイスファイル（mp3など）を使うときは vansaba/voice/ に入れてここに書く。書いてあればこちらを優先して鳴らす
+  // 例: male: { level: ['voice/male_level1.mp3', 'voice/male_level2.mp3'], lucky: ['voice/male_lucky.mp3'], awaken: ['voice/male_awaken.mp3'] },
+  const VOICE_FILES = {
+  };
+  // vansaba/tools/make_voices_gemini.py などで作った voice/voices.json があれば読み込む
+  let voiceCredit = '';
+  try {
+    fetch('voice/voices.json').then((r) => (r.ok ? r.json() : null)).then((j) => {
+      if (!j) return;
+      for (const k of ['male', 'female', 'boy']) if (j[k]) VOICE_FILES[k] = j[k];
+      voiceCredit = j.credit || '';
+    }).catch(() => {});
+  } catch (e) {}
+  const LINES = {
+    male:   { level: ['よし、レベルアップだ！', 'まだまだいけるぞ！', '改善完了！'], lucky: ['おっ、ラッキー！', 'ツイてるぞ！'], awaken: ['覚醒！ 全力でいくぞ！'] },
+    female: { level: ['レベルアップ！', 'いい調子です！', '改善、完了です！'], lucky: ['ラッキー！', 'やったね！'], awaken: ['覚醒！ 見せてあげる！'] },
+    boy:    { level: ['やったー！ レベルアップ！', '強くなったぞ！', 'まだまだー！'], lucky: ['ラッキー！ やったぁ！', 'ツイてるー！'], awaken: ['かくせい！ いっけぇー！'] },
+  };
+  let voiceId = 'off', lastSay = 0;
+  try { const v = localStorage.getItem('yakin-voice'); if (VOICES[v]) voiceId = v; } catch (e) {}
+  function pickVoice(V) {
+    try {
+      const all = speechSynthesis.getVoices().filter((v) => /^ja/i.test(v.lang));
+      for (const re of V.prefer) { const v = all.find((x) => re.test(x.name)); if (v) return v; }
+      return all.find((x) => NATURAL.test(x.name)) || all[0] || null;
+    } catch (e) { return null; }
+  }
+  // 男性の声が端末にないときは、ほかの声を低くして代用する
+  const pitchFor = (V, v) => (V.male && v && !V.prefer.slice(0, 4).some((re) => re.test(v.name)) ? 0.7 : V.pitch);
+  const voiceFileCache = {};
+  function playVoiceFile(path) {
+    if (!voiceFileCache[path]) { const a = new Audio(path); a.preload = 'auto'; voiceFileCache[path] = a; }
+    const a = voiceFileCache[path];
+    try { a.currentTime = 0; } catch (e) {}
+    a.volume = 1;
+    return a.play().then(() => true).catch(() => false);
+  }
+  function say(kind, force) {
+    if (voiceId === 'off' || muted) return;
+    if (!('speechSynthesis' in window) && !VOICE_FILES[voiceId]) return;
+    const now = performance.now();
+    if (!force && now - lastSay < 1500) return;   // 連続レベルアップでしゃべりすぎない
+    lastSay = now;
+    const files = VOICE_FILES[voiceId] && VOICE_FILES[voiceId][kind];
+    const speak = () => {
+      try {
+        const V = VOICES[voiceId], list = LINES[voiceId][kind];
+        const u = new SpeechSynthesisUtterance(list[(Math.random() * list.length) | 0]);
+        u.lang = 'ja-JP';
+        const v = pickVoice(V); if (v) u.voice = v;
+        u.pitch = pitchFor(V, v); u.rate = V.rate; u.volume = 1;
+        speechSynthesis.cancel();
+        speechSynthesis.speak(u);
+      } catch (e) {}
+    };
+    if (files && files.length) playVoiceFile(files[(Math.random() * files.length) | 0]).then((ok) => { if (!ok) speak(); });
+    else speak();
+  }
+  try { if ('speechSynthesis' in window) { speechSynthesis.getVoices(); speechSynthesis.addEventListener('voiceschanged', () => {}); } } catch (e) {}
+
+  // ---------- 状態 ----------
+  let state = 'title';
+  let anim = 0;   // 見た目のアニメーション用の時計（一時停止中も進む）
+  let P, lv = {}, enemies, bullets, gems, texts, parts, bolts;
+  let superIdx = 0, ebullets = [], warnT = 0;   // 超大ボスまわり
+  let claim = null, claimT = 40;               // クレーム対応イベント
+  let time, kills, spawnT, rivetT, sparkT, weldT, spanA, pending, nextSwarm, bossIdx, shake, weldPulse;
+  // アイテムBOX・拾得金・ギミック・ボス撃破演出
+  let boxes = [], pops = [], found = 0, freezeT = 0, buffT = 0, boxT = 0, medCool = 0, medUsed = false, fx = null, flash = 0;
+  // 全回復の救急箱は初級だけ、1回の夜勤で1回まで
+  const medOk = () => stageId === 'screw' && !medUsed;
+  // 新しい武器・覚醒・表彰状
+  let forks = [], drillT = 0, forkT = 0, awake = {}, awards = 0, stormT = 0, plasmaT = 0, plasma = null, chainT = 0, blue = 0, awakenFx = null;
+  const near2 = [];
+
+  // ---------- 給料・貯金・設備投資（この端末に保存） ----------
+  const WAGE = 1200;          // 基本の時給（円）
+  const KILL_PAY = 5;         // 撃破手当（1体あたり・円）
+  const CLEAR_PAY = 3000;     // 定時退勤手当（円）
+  const meta = { money: 0, earned: 0, up: {} };
+  try {
+    const m = JSON.parse(localStorage.getItem('yakin-save') || 'null');
+    if (m) { meta.money = Math.max(0, m.money | 0); meta.earned = Math.max(0, m.earned | 0); meta.up = m.up || {}; }
+  } catch (e) {}
+  const saveMeta = () => { try { localStorage.setItem('yakin-save', JSON.stringify(meta)); } catch (e) {} cloudPush(); };
+  const ml = (id) => meta.up[id] || 0;
+  const yen = (n) => '¥' + Math.round(n).toLocaleString('ja-JP');
+
+  // start: true は「持ち込み工具」（最初から装備）。base は1段階目の値段
+  const SHOP = [
+    { id: 'rivet',   start: true, icon: '鋲', name: 'リベット銃の改造', desc: 'リベット銃を高いレベルで持ち込む', max: 2, base: 1500 },
+    { id: 'spanner', start: true, icon: '回', name: '回転スパナを持ち込む', desc: '最初から回転スパナを装備', max: 3, base: 2500 },
+    { id: 'weld',    start: true, icon: '溶', name: '溶接機を持ち込む', desc: '最初から溶接アークを装備', max: 3, base: 2500 },
+    { id: 'spark',   start: true, icon: '電', name: '放電装置を持ち込む', desc: '最初から高圧放電を装備', max: 3, base: 3000 },
+    { id: 'cap_rivet',   cap: true, icon: '鋲', name: 'リベット打ち技能', max: 2, costs: [4000, 1000000], steps: ['講習：リベット銃の上限 Lv5 → Lv10', '検定1級：リベット銃Lv10＋潤滑油Lv5で「全自動リベッター「嵐」」に覚醒'] },
+    { id: 'cap_spanner', cap: true, icon: '回', name: '機械組立技能', max: 2, costs: [4000, 1000000], steps: ['講習：回転スパナの上限 Lv5 → Lv10', '検定1級：回転スパナLv10＋熟練の手袋Lv5で「大車輪レンチ」に覚醒'] },
+    { id: 'cap_weld',    cap: true, icon: '溶', name: '溶接技能者', max: 2, costs: [4000, 1000000], steps: ['講習：溶接アークの上限 Lv5 → Lv10', '検定1級：溶接アークLv10＋健康診断Lv5で「プラズマ溶断」に覚醒'] },
+    { id: 'cap_spark',   cap: true, icon: '電', name: '電気工事士', max: 2, costs: [4000, 1000000], steps: ['講習：高圧放電の上限 Lv5 → Lv10', '検定1級：高圧放電Lv10＋マグネットLv5で「雷神の配電盤」に覚醒'] },
+    { id: 'cap_drill',   cap: true, icon: '穿', name: '穴あけ技能', max: 1, costs: [4000], steps: ['講習：自動ドリルの上限 Lv5 → Lv10'] },
+    { id: 'cap_fork',    cap: true, icon: '運', name: 'フォークリフト運転技能', max: 1, costs: [4000], steps: ['講習：フォークリフトの上限 Lv5 → Lv10'] },
+    { id: 'cap_perk',    cap: true, icon: '研', name: 'スキルアップ研修', max: 1, costs: [8000], steps: ['強化8種（安全靴・安全帯など）の上限 Lv5 → Lv10（Lv6以降は効き目半分）'] },
+    { id: 'body',    icon: '体', name: '体力づくり', desc: '最大HP +10', max: 5, base: 800 },
+    { id: 'arm',     icon: '力', name: '筋トレ', desc: 'すべての攻撃の威力 +5%', max: 5, base: 1000 },
+    { id: 'dandori', icon: '段', name: '段取り上手', desc: '攻撃の間隔 -3%', max: 5, base: 1000 },
+    { id: 'legs',    icon: '足', name: '足腰を鍛える', desc: '移動速度 +4%', max: 5, base: 800 },
+    { id: 'mag',     icon: '磁', name: '磁石付き軍手', desc: 'ネジの回収範囲 +10%', max: 5, base: 600 },
+    { id: 'keiken',  icon: '経', name: '現場経験', desc: '手に入る経験値 +8%', max: 5, base: 1000 },
+    { id: 'luck',    icon: '福', name: '幸運のお守り', desc: 'ラッキーボーナスの確率 +2%', max: 5, base: 1200 },
+    { id: 'raise',   icon: '昇', name: '昇給交渉', desc: '時給 +10%', max: 5, base: 1500 },
+  ];
+  const shopCost = (it, l) => (it.costs ? it.costs[Math.min(l, it.costs.length - 1)] : Math.round(it.base * Math.pow(l + 1, 1.6) / 100) * 100);
+
+  function payFor(t, k, win) {
+    const hours = t * 0.8 / 60;                        // 工場時刻での勤務時間
+    const wage = WAGE * (1 + 0.1 * ml('raise'));
+    const base = Math.floor(hours * wage);
+    const killPay = k * KILL_PAY;
+    const bonus = win ? CLEAR_PAY : 0;
+    const total = Math.floor((base + killPay + bonus) * stage.pay) + found;
+    return { hours, wage, base, killPay, bonus, found, total };
+  }
+
+  const stat = {
+    get speed() { return 150 * (1 + 0.1 * pl('boots') + 0.04 * ml('legs')) * (buffT > 0 ? 1.4 : 1); },
+    get maxHp() { return 100 + 20 * pl('heart') + 10 * ml('body') + 5 * awards; },
+    get magnet() { return 70 * (1 + 0.35 * pl('magnet') + 0.1 * ml('mag')); },
+    get cd() { return Math.max(0.4, 1 - 0.08 * pl('oil') - 0.03 * ml('dandori')) * (buffT > 0 ? 0.7 : 1); },
+    get dmg() { return 1 + 0.12 * pl('gloves') + 0.05 * ml('arm') + 0.02 * awards; },
+    get armor() { return pl('armor'); },
+    get guard() { return Math.max(0.5, 1 - 0.04 * pl('belt')); },
+    get xp() { return 1 + 0.08 * ml('keiken') + 0.08 * pl('note'); },
+    get luck() { return 0.04 + 0.02 * ml('luck'); },   // 基本4%、お守り1段階ごとに+2%
+  };
+
+  function reset() {
+    for (const k in UPG) lv[k] = 0;
+    // 設備投資で買った「持ち込み工具」
+    lv.rivet = 1 + ml('rivet');
+    lv.spanner = ml('spanner'); lv.weld = ml('weld'); lv.spark = ml('spark');
+    P = { x: 0, y: 0, r: 13, hp: 100, iframe: 0, face: 0, dir: 1, moving: false, walk: 0, level: 1, xp: 0, xpNext: xpFor(1) };
+    P.hp = stat.maxHp;
+    enemies = []; bullets = []; gems = []; texts = []; parts = []; bolts = [];
+    time = 0; kills = 0; spawnT = 0.6; rivetT = 0.2; sparkT = 1; weldT = 0; spanA = 0;
+    pending = 0; nextSwarm = 60; bossIdx = 0; superIdx = 0; ebullets = []; warnT = 0; shake = 0; weldPulse = 0;
+    boxes = []; pops = []; found = 0; freezeT = 0; buffT = 0; boxT = 12; medCool = 0; medUsed = false; fx = null; flash = 0;
+    claim = null; claimT = 40; forks = []; drillT = 0.5; forkT = 1; awake = {}; awards = 0; stormT = 0; plasmaT = 1; plasma = null; chainT = 0.5; blue = 0; awakenFx = null;
+    renderGear();
+  }
+  function xpFor(l) { return Math.floor(7 + (l - 1) * 5.5 + Math.pow(l - 1, 1.7) * 1.1); }   // Lv10で約1.5倍、Lv40で約1.8倍（以前比）
+
+  // ---------- 空間グリッド（当たり判定の高速化） ----------
+  const grid = new Map();
+  const near = [];
+  function gkey(cx, cy) { return cx * 65536 + cy; }
+  function buildGrid() {
+    grid.clear();
+    for (const e of enemies) {
+      if (e.dead) continue;
+      const k = gkey(Math.floor(e.x / CELL), Math.floor(e.y / CELL));
+      let a = grid.get(k);
+      if (!a) { a = []; grid.set(k, a); }
+      a.push(e);
+    }
+  }
+  function query(x, y, r, out) {
+    out.length = 0;
+    const x0 = Math.floor((x - r) / CELL), x1 = Math.floor((x + r) / CELL);
+    const y0 = Math.floor((y - r) / CELL), y1 = Math.floor((y + r) / CELL);
+    for (let cx = x0; cx <= x1; cx++) for (let cy = y0; cy <= y1; cy++) {
+      const a = grid.get(gkey(cx, cy));
+      if (a) for (const e of a) if (!e.dead) out.push(e);
+    }
+    return out;
+  }
+
+  // ---------- 生成 ----------
+  const rand = (a, b) => a + Math.random() * (b - a);
+  function spawnRing() { return Math.hypot(W, H) / 2 + 40; }
+  function spawnEnemy(type, ang) {
+    const T = ETYPES[type];
+    const a = ang ?? Math.random() * Math.PI * 2, R = spawnRing();
+    const hs = (T.boss ? 1 + time / 400 : 1 + time / 110) * stage.hp;
+    const e = {
+      type, x: P.x + Math.cos(a) * R, y: P.y + Math.sin(a) * R,
+      r: T.r, hp: T.hp * hs, max: T.hp * hs, spd: T.spd * stage.spd * rand(0.9, 1.1), dmg: Math.round(T.dmg * stage.dmg), xp: T.xp,
+      color: T.color, face: T.face || {}, boss: !!T.boss, sup: !!T.sup, rot: Math.random() * 6, vx: 0, vy: 0, flash: 0, dead: false, spanHit: -9, ph: Math.random() * 6.28,
+    };
+    enemies.push(e);
+    return e;
+  }
+  function pickType() {
+    const R = stage.roles, r = Math.random();
+    if (time > 150 && r < 0.12) return pickRole(R.tank);
+    if (time > 40 && r < 0.4) return pickRole(R.fast);
+    return pickRole(R.basic);
+  }
+  function dropGem(x, y, v) {
+    if (gems.length > 400) { const g = gems[(Math.random() * gems.length) | 0]; if (!g.coin) { g.v += v; return; } }
+    gems.push({ x, y, v, pull: false, sp: 120, got: false });
+  }
+  // 💰 小銭（拾うと給料に加算）
+  function dropCoin(x, y, yenV) { gems.push({ x, y, v: yenV, coin: true, pull: false, sp: 120, got: false }); }
+  function spawnBox(forced, dist) {
+    const a = Math.random() * Math.PI * 2, R = dist ?? rand(260, 480);
+    boxes.push({ x: P.x + Math.cos(a) * R, y: P.y + Math.sin(a) * R, ph: Math.random() * 6, forced: forced || null, gold: false });
+  }
+  function pop(x, y, text, color) { if (pops.length < 30) pops.push({ x, y, text, color: color || '#ffe27a', life: 1.3 }); }
+  function pickItem() {
+    const low = P.hp < stat.maxHp * 0.35;
+    const table = Object.keys(ITEMS).map((k) => [k, k !== 'medkit' ? ITEMS[k].w : !medOk() || boxes.some((b) => b.forced === 'medkit') ? 0 : low ? 6 : ITEMS[k].w]);
+    let r = Math.random() * table.reduce((a, [, w]) => a + w, 0);
+    for (const [k, w] of table) { if ((r -= w) <= 0) return k; }
+    return 'onigiri';
+  }
+  const onScreen = (o) => Math.abs(o.x - P.x) < W / 2 + 40 && Math.abs(o.y - P.y) < H / 2 + 40;
+  function applyItem(k, mult = 1, quiet = false) {
+    const I = ITEMS[k];
+    if (k === 'magnet') for (const g of gems) { g.pull = true; g.sp = Math.max(g.sp, 500); }
+    else if (k === 'onigiri') P.hp = Math.min(stat.maxHp, P.hp + stat.maxHp * 0.1);
+    else if (k === 'bento') P.hp = Math.min(stat.maxHp, P.hp + stat.maxHp * 0.3);
+    else if (k === 'medkit') { P.hp = stat.maxHp; medUsed = true; }
+    else if (k === 'money') {
+      const v = Math.round(rand(300, 800) * stage.pay * mult / 10) * 10;
+      found += v; pop(P.x, P.y - 52, '💰 +' + yen(v));
+    } else if (k === 'estop') freezeT = 6;
+    else if (k === 'clean') {
+      flash = Math.max(flash, 0.45);
+      for (const e of enemies) if (!e.dead && onScreen(e)) hurt(e, e.boss ? 150 : 250);
+    } else if (k === 'drink') buffT = 10;
+    if (!quiet) { pop(P.x, P.y - 34, I.name, '#ffffff'); banner(I.name + '：' + I.desc); }
+  }
+  function startClaim() {
+    claim = spawnEnemy('claim');
+    claim.invuln = true; claim.shotT = 2.5;
+    const ans = (Math.random() * 3) | 0, base = Math.random() * Math.PI * 2;
+    for (let k = 0; k < 3; k++) {
+      const a = base + k * Math.PI * 2 / 3, R = rand(380, 620);
+      boxes.push({ x: P.x + Math.cos(a) * R, y: P.y + Math.sin(a) * R, ph: Math.random() * 6, claim: true, answer: k === ans, gold: false, forced: null });
+    }
+    banner('⚠ クレーム発生！ オレンジの箱から「対策書」を探せ');
+    sfx('siren');
+  }
+  function resolveClaim() {
+    if (claim) {
+      burst(claim.x, claim.y, '#ffffff', 30);
+      claim.dead = true;
+      claim = null;
+    }
+    ebullets = [];
+    boxes = boxes.filter((b) => !b.claim);
+    const v = Math.round(800 * stage.pay);
+    found += v;
+    pop(P.x, P.y - 60, '📄 対策完了 +' + yen(v));
+    flash = Math.max(flash, 0.35);
+    sfx('lucky');
+    banner('📄 対策書で解決！ クレーム対応手当 ' + yen(v));
+  }
+  function openBox(b) {
+    b.open = true;
+    sfx('box');
+    burst(b.x, b.y, b.gold ? COL.safety : b.claim ? '#ff8a3d' : '#e5484d', 16);
+    if (b.claim) {
+      if (b.answer) { resolveClaim(); return; }
+      applyItem(pickItem(), 1, true);
+      banner('ハズレ… 対策書はほかのオレンジの箱に入っている');
+      return;
+    }
+    if (b.gold) {
+      applyItem('money', 4, true); applyItem('magnet', 1, true);
+      if (stage.bossHeal == null) P.hp = stat.maxHp;
+      banner('💰 特別ボーナス箱！ 大入り袋×4・全回収' + (stage.bossHeal == null ? '・HP全回復' : ''));
+    } else applyItem(b.forced || pickItem());
+  }
+  function burst(x, y, color, n) {
+    if (reduceMotion) n = Math.ceil(n / 3);
+    for (let i = 0; i < n && parts.length < 300; i++) {
+      const a = Math.random() * Math.PI * 2, s = rand(40, 160);
+      parts.push({ x, y, vx: Math.cos(a) * s, vy: Math.sin(a) * s, life: rand(0.25, 0.5), color, size: rand(2, 4) });
+    }
+  }
+
+  // ---------- ダメージ ----------
+  function hurt(e, base, kx = 0, ky = 0) {
+    if (e.dead || e.invuln) return;
+    const d = base * stat.dmg;
+    e.hp -= d; e.flash = 0.08;
+    const kb = e.boss ? 0.08 : 1;
+    e.vx += kx * kb; e.vy += ky * kb;
+    if (texts.length < 80) texts.push({ x: e.x + rand(-5, 5), y: e.y - e.r, v: Math.round(d), life: 0.6 });
+    if (e.hp <= 0) {
+      e.dead = true; kills++;
+      dropGem(e.x, e.y, e.xp);
+      burst(e.x, e.y, e.color, e.boss ? 40 : 6);
+      sfx('pop');
+      if (e.boss) bossDown(e);
+      else if (Math.random() < 0.012) dropCoin(e.x, e.y, Math.round(100 * stage.pay));
+    }
+  }
+
+  // ボス撃破：スローモーション・白フラッシュ・衝撃波・「撃退」の判子・ボーナス箱
+  function bossDown(e) {
+    fx = { t: 0, x: e.x, y: e.y, name: ETYPES[e.type].name, sup: !!e.sup };
+    if (e.sup) {
+      const bonus = Math.round(5000 * stage.pay);
+      found += bonus;
+      pop(P.x, P.y - 70, '💰 特別報奨金 +' + yen(bonus));
+      ebullets = [];
+      setTimeout(() => banner('リコール大魔王 完全撃退！ 特別報奨金 ' + yen(bonus)), 2300);
+    }
+    flash = 1;
+    if (!reduceMotion) shake = 16;
+    sfx('bossdown');
+    for (let i = 0; i < 14; i++) dropGem(e.x + rand(-70, 70), e.y + rand(-70, 70), 5);
+    for (let i = 0; i < 5; i++) dropCoin(e.x + rand(-60, 60), e.y + rand(-60, 60), Math.round(200 * stage.pay));
+    boxes.push({ x: e.x, y: e.y + 12, ph: 0, gold: true, forced: null });
+    const colors = ['#f2c230', '#ff8a3d', '#7fe3ff', '#ffffff', e.color];
+    for (let i = 0; i < (reduceMotion ? 30 : 110); i++) {
+      const a = Math.random() * Math.PI * 2, sp = rand(80, 520);
+      parts.push({ x: e.x, y: e.y, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp, life: rand(0.6, 1.4), color: colors[i % colors.length], size: rand(3, 7) });
+    }
+    // 衝撃波で画面内のザコを一掃（撃破手当もつく）
+    for (const o of enemies) {
+      if (o.boss || o.dead || !onScreen(o)) continue;
+      const d = Math.hypot(o.x - e.x, o.y - e.y) || 1;
+      hurt(o, o.hp / stat.dmg + 1, (o.x - e.x) / d * 600, (o.y - e.y) / d * 600);
+    }
+    P.hp = Math.min(stat.maxHp, P.hp + stat.maxHp * (stage.bossHeal ?? 1));
+    if (!enemies.some((o) => o.boss && !o.dead)) BGM.boss(false);
+    banner(stage.bossOut);
+  }
+
+  function spanParams() {
+    if (awake.spanner) return { n: 6, R: 115 + Math.sin(anim * 1.6) * 50, dmg: 45, spin: 3.6, hit: 30, kb: 560, scale: 2.1 };
+    const L = lv.spanner - 1;
+    return { n: WS.count[L], R: WS.radius[L], dmg: WS.dmg[L], spin: WS.spin[L], hit: 16, kb: 240, scale: 1 };
+  }
+  function weldParams() {
+    if (awake.weld) return { R: 200, dps: 80 };
+    const L = lv.weld - 1;
+    return { R: WW.radius[L], dps: WW.dps[L] };
+  }
+  // ぎざぎざの稲妻の線
+  function jag(x1, y1, x2, y2) {
+    const pts = [];
+    for (let s = 0; s <= 6; s++) {
+      const t = s / 6, j = s && s < 6 ? 12 : 0;
+      pts.push([x1 + (x2 - x1) * t + rand(-j, j), y1 + (y2 - y1) * t + rand(-j, j)]);
+    }
+    return pts;
+  }
+
+  function gainXp(v) {
+    P.xp += v * stage.xp * stat.xp; sfx('gem');
+    while (P.xp >= P.xpNext) {
+      P.xp -= P.xpNext; P.level++; P.xpNext = xpFor(P.level); pending++;
+    }
+  }
+
+  // ---------- 入力 ----------
+  const keys = {};
+  addEventListener('keydown', (e) => {
+    keys[e.code] = true;
+    if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Space'].includes(e.code) && state === 'play') e.preventDefault();
+    if (state === 'play' && (e.code === 'KeyP' || e.code === 'Escape')) pause();
+    else if (state === 'pause' && (e.code === 'KeyP' || e.code === 'Escape')) resume();
+    else if (state === 'shop' && e.code === 'Escape') closeShop();
+    else if (state === 'rules' && e.code === 'Escape') closeRules();
+    else if (state === 'level') {
+      const n = { Digit1: 0, Digit2: 1, Digit3: 2, Digit4: 3, Numpad1: 0, Numpad2: 1, Numpad3: 2, Numpad4: 3 }[e.code];
+      if (n !== undefined && choices[n]) choose(choices[n], luckyFlags[n]);
+    } else if (state === 'title' && e.code === 'Enter' && !(document.activeElement && document.activeElement.tagName === 'BUTTON')) { e.preventDefault(); start(); }
+    else if (state === 'title') {
+      const n = { Digit1: 0, Digit2: 1, Digit3: 2, Digit4: 3, Numpad1: 0, Numpad2: 1, Numpad3: 2, Numpad4: 3 }[e.code];
+      if (n !== undefined) selectStage(Object.keys(STAGES)[n]);
+    }
+  });
+  addEventListener('keyup', (e) => { keys[e.code] = false; });
+  addEventListener('blur', () => { for (const k in keys) keys[k] = false; if (state === 'play') pause(); });
+  document.addEventListener('visibilitychange', () => { if (document.hidden && state === 'play') pause(); });
+
+  let joy = null;
+  cvs.addEventListener('pointerdown', (e) => {
+    if (state !== 'play') return;
+    joy = { id: e.pointerId, ox: e.clientX, oy: e.clientY, x: e.clientX, y: e.clientY };
+    try { cvs.setPointerCapture(e.pointerId); } catch (err) {}
+  });
+  cvs.addEventListener('pointermove', (e) => { if (joy && e.pointerId === joy.id) { joy.x = e.clientX; joy.y = e.clientY; } });
+  const endJoy = (e) => { if (joy && e.pointerId === joy.id) joy = null; };
+  cvs.addEventListener('pointerup', endJoy);
+  cvs.addEventListener('pointercancel', endJoy);
+
+  function inputVec() {
+    let x = 0, y = 0;
+    if (keys.KeyA || keys.ArrowLeft) x -= 1;
+    if (keys.KeyD || keys.ArrowRight) x += 1;
+    if (keys.KeyW || keys.ArrowUp) y -= 1;
+    if (keys.KeyS || keys.ArrowDown) y += 1;
+    if (joy) {
+      const dx = joy.x - joy.ox, dy = joy.y - joy.oy, d = Math.hypot(dx, dy);
+      if (d > 6) { const m = Math.min(1, d / 44); x += dx / d * m; y += dy / d * m; }
+    }
+    const l = Math.hypot(x, y);
+    if (l > 1) { x /= l; y /= l; }
+    return [x, y];
+  }
+
+  // ---------- 更新 ----------
+  function update(dt) {
+    time += dt;
+
+    // 移動
+    const [ix, iy] = inputVec();
+    P.x += ix * stat.speed * dt; P.y += iy * stat.speed * dt;
+    P.moving = !!(ix || iy);
+    if (P.moving) { P.face = Math.atan2(iy, ix); P.walk += dt; }
+    if (ix) P.dir = ix < 0 ? -1 : 1;
+    if (stage.belts) P.x += beltAt(P.y) * BELT_SPEED * dt;
+    if (P.iframe > 0) P.iframe -= dt;
+
+    // 出現
+    spawnT -= dt;
+    const interval = Math.max(0.12, 0.85 - time * 0.0025) / stage.spawn;
+    const batch = 1 + Math.floor(time / 90);
+    while (spawnT <= 0) {
+      spawnT += interval;
+      for (let i = 0; i < batch && enemies.length < 360; i++) spawnEnemy(pickType());
+    }
+    if (time >= nextSwarm) {
+      nextSwarm += 60;
+      const n = Math.min(40, 16 + Math.floor(time / 20));
+      for (let i = 0; i < n; i++) spawnEnemy(pickRole(stage.roles.fast), (i / n) * Math.PI * 2);
+      banner(stage.swarm);
+    }
+    if (bossIdx < BOSS_TIMES.length && time >= BOSS_TIMES[bossIdx]) {
+      const list = Array.isArray(stage.roles.boss) ? stage.roles.boss : [stage.roles.boss];
+      spawnEnemy(list[bossIdx % list.length]);
+      bossIdx++;
+      BGM.boss(true);
+      banner(stage.bossIn);
+      sfx('boss');
+    }
+    // 超大ボス
+    if (stage.superAt && superIdx < stage.superAt.length && time >= stage.superAt[superIdx]) {
+      superIdx++;
+      const e = spawnEnemy('recall');
+      e.shotT = 3; e.sumT = 6;
+      warnT = 4;
+      BGM.boss(true);
+      banner('⚠ 警報：リコール大魔王が現れた！ 弾に注意');
+      sfx('siren');
+    }
+
+    // 敵の移動
+    const far = spawnRing() + 400;
+    const damp = Math.exp(-9 * dt);
+    for (const e of enemies) {
+      const dx = P.x - e.x, dy = P.y - e.y, d = Math.hypot(dx, dy) || 1;
+      if (d > far && !e.boss) {
+        const a = Math.random() * Math.PI * 2, R = spawnRing();
+        e.x = P.x + Math.cos(a) * R; e.y = P.y + Math.sin(a) * R; continue;
+      }
+      if (freezeT > 0) {   // 非常停止中は動かない
+        e.x += e.vx * dt; e.y += e.vy * dt; e.vx *= damp; e.vy *= damp;
+        if (e.flash > 0) e.flash -= dt;
+        continue;
+      }
+      if (stage.belts && !e.boss) e.x += beltAt(e.y) * BELT_SPEED * dt;
+      if (e.type === 'takt') e.spd += dt * 1.2;   // 時間とともに速くなる
+      if (e.type === 'claim') {   // クレーム電話：苦情（弾）を3発ずつ投げてくる
+        e.shotT -= dt;
+        if (e.shotT <= 0) {
+          e.shotT = 1.8;
+          const aim = Math.atan2(P.y - e.y, P.x - e.x);
+          for (const k of [-0.22, 0, 0.22]) ebullets.push({ x: e.x, y: e.y, vx: Math.cos(aim + k) * 200, vy: Math.sin(aim + k) * 200, life: 3.5 });
+          sfx('eshot');
+        }
+      }
+      if (e.sup) {
+        e.shotT -= dt; e.sumT -= dt;
+        if (e.shotT <= 0) {   // 全方向の弾＋狙い撃ち3発
+          e.shotT = 2.4;
+          const off = Math.random() * Math.PI;
+          for (let i = 0; i < 14; i++) {
+            const a = off + i * Math.PI * 2 / 14;
+            ebullets.push({ x: e.x, y: e.y, vx: Math.cos(a) * 160, vy: Math.sin(a) * 160, life: 4 });
+          }
+          const aim = Math.atan2(P.y - e.y, P.x - e.x);
+          for (const k of [-0.18, 0, 0.18]) ebullets.push({ x: e.x, y: e.y, vx: Math.cos(aim + k) * 230, vy: Math.sin(aim + k) * 230, life: 4 });
+          sfx('eshot');
+        }
+        if (e.sumT <= 0) {    // 手下を呼ぶ
+          e.sumT = 9;
+          for (let i = 0; i < 10; i++) {
+            const m = spawnEnemy(pickRole(stage.roles.fast));
+            const a = i * Math.PI / 5;
+            m.x = e.x + Math.cos(a) * (e.r + 30); m.y = e.y + Math.sin(a) * (e.r + 30);
+          }
+        }
+      }
+      e.x += (dx / d * e.spd + e.vx) * dt;
+      e.y += (dy / d * e.spd + e.vy) * dt;
+      e.vx *= damp; e.vy *= damp;
+      e.rot += dt * (e.boss ? 0.6 : 1.6);
+      if (e.flash > 0) e.flash -= dt;
+    }
+    buildGrid();
+    // 押し合い
+    for (const e of enemies) {
+      query(e.x, e.y, e.r + MAXR, near);
+      for (const o of near) {
+        if (o === e) continue;
+        const dx = e.x - o.x, dy = e.y - o.y, d2 = dx * dx + dy * dy, m = e.r + o.r;
+        if (d2 < m * m && d2 > 0.01) {
+          const d = Math.sqrt(d2), k = e.boss ? 0.05 : (o.boss ? 1 : 0.5);
+          e.x += dx / d * (m - d) * k; e.y += dy / d * (m - d) * k;
+        }
+      }
+    }
+
+    // リベット銃
+    rivetT -= dt;
+    if (rivetT <= 0) {
+      const L = lv.rivet - 1;
+      let tgt = null, best = 620 * 620;
+      for (const e of enemies) {
+        if (e.dead) continue;
+        const d2 = (e.x - P.x) ** 2 + (e.y - P.y) ** 2;
+        if (d2 < best) { best = d2; tgt = e; }
+      }
+      if (tgt) {
+        rivetT = WR.cd[L] * stat.cd;
+        const base = Math.atan2(tgt.y - P.y, tgt.x - P.x), n = WR.count[L];
+        for (let i = 0; i < n; i++) {
+          const a = base + (i - (n - 1) / 2) * 0.14;
+          bullets.push({ x: P.x, y: P.y, vx: Math.cos(a) * 460, vy: Math.sin(a) * 460, a, r: 5, dmg: WR.dmg[L], pierce: WR.pierce[L], life: 1.3, hit: [] });
+        }
+        sfx('shot');
+      } else rivetT = 0.1;
+    }
+    // 覚醒：全自動リベッター「嵐」— 全方向16連射、当たると小爆発
+    if (awake.rivet) {
+      stormT -= dt;
+      if (stormT <= 0) {
+        stormT = 0.5 * stat.cd;
+        const off = anim * 1.3;
+        for (let i = 0; i < 16; i++) {
+          const a = off + i * Math.PI / 8;
+          bullets.push({ x: P.x, y: P.y, vx: Math.cos(a) * 520, vy: Math.sin(a) * 520, a, r: 6, dmg: 30, pierce: 3, life: 1.1, hit: [], aw: true });
+        }
+        sfx('shot');
+      }
+    }
+    // 自動ドリル
+    if (lv.drill) {
+      drillT -= dt;
+      if (drillT <= 0) {
+        const L = lv.drill - 1, n = WD.count[L];
+        drillT = WD.cd[L] * stat.cd;
+        for (let i = 0; i < n; i++) {
+          const a = P.face + (i - (n - 1) / 2) * 0.3 + rand(-0.08, 0.08);
+          bullets.push({ x: P.x, y: P.y, vx: Math.cos(a) * 300, vy: Math.sin(a) * 300, a, r: 9, dmg: WD.dmg[L], pierce: 999, life: 2.2, hit: [], drill: true });
+        }
+        sfx('drill');
+      }
+    }
+    for (const b of bullets) {
+      b.x += b.vx * dt; b.y += b.vy * dt; b.life -= dt;
+      query(b.x, b.y, b.r + MAXR, near);
+      for (const e of near) {
+        if (e.invuln || b.hit.includes(e)) continue;
+        const m = e.r + b.r;
+        if ((e.x - b.x) ** 2 + (e.y - b.y) ** 2 < m * m) {
+          b.hit.push(e);
+          const sp = Math.hypot(b.vx, b.vy) || 1;
+          hurt(e, b.dmg, b.vx / sp * 140, b.vy / sp * 140);
+          if (b.aw) {   // 火花の小爆発
+            query(b.x, b.y, 42 + MAXR, near2);
+            for (const o of near2) if (o !== e && (o.x - b.x) ** 2 + (o.y - b.y) ** 2 < 42 * 42) hurt(o, b.dmg * 0.4);
+            if (parts.length < 240) burst(b.x, b.y, '#ffb347', 3);
+          }
+          if (--b.pierce <= 0) { b.life = 0; break; }
+        }
+      }
+    }
+    bullets = bullets.filter((b) => b.life > 0);
+
+    // 回転スパナ（覚醒：大車輪レンチ）
+    if (lv.spanner) {
+      const S = spanParams();
+      spanA += S.spin * dt;
+      for (let i = 0; i < S.n; i++) {
+        const a = spanA + i * Math.PI * 2 / S.n, x = P.x + Math.cos(a) * S.R, y = P.y + Math.sin(a) * S.R;
+        query(x, y, S.hit + MAXR, near);
+        for (const e of near) {
+          const m = e.r + S.hit;
+          if ((e.x - x) ** 2 + (e.y - y) ** 2 < m * m && time - e.spanHit > 0.35) {
+            e.spanHit = time;
+            const d = Math.hypot(e.x - P.x, e.y - P.y) || 1;
+            hurt(e, S.dmg, (e.x - P.x) / d * S.kb, (e.y - P.y) / d * S.kb);
+            sfx('clang');
+          }
+        }
+      }
+    }
+
+    // 溶接アーク（覚醒：プラズマ溶断）
+    if (lv.weld) {
+      weldPulse += dt;
+      weldT -= dt;
+      const Wp = weldParams();
+      if (weldT <= 0) {
+        weldT = 0.25 * stat.cd;
+        query(P.x, P.y, Wp.R + MAXR, near);
+        for (const e of near) {
+          const m = Wp.R + e.r * 0.5;
+          if ((e.x - P.x) ** 2 + (e.y - P.y) ** 2 < m * m) hurt(e, Wp.dps * 0.25);
+        }
+      }
+      if (awake.weld) {
+        plasmaT -= dt;
+        if (plasmaT <= 0) {
+          plasmaT = 3 * stat.cd;
+          plasma = { t: 0 };
+          blue = Math.max(blue, 0.45);
+          if (!reduceMotion) shake = Math.max(shake, 8);
+          query(P.x, P.y, 320 + MAXR, near);
+          for (const e of near) {
+            const d = Math.hypot(e.x - P.x, e.y - P.y) || 1;
+            if (d < 320) hurt(e, 160, (e.x - P.x) / d * 320, (e.y - P.y) / d * 320);
+          }
+          sfx('plasma');
+        }
+      }
+    }
+    if (plasma) { plasma.t += dt; if (plasma.t > 0.5) plasma = null; }
+
+    // 高圧放電（覚醒：雷神の配電盤）
+    if (lv.spark) {
+      sparkT -= dt;
+      if (sparkT <= 0) {
+        const L = lv.spark - 1;
+        sparkT = WK.cd[L] * stat.cd;
+        const vis = enemies.filter((e) => !e.dead && Math.abs(e.x - P.x) < W / 2 && Math.abs(e.y - P.y) < H / 2);
+        for (let i = 0; i < WK.count[L] && vis.length; i++) {
+          const e = vis.splice((Math.random() * vis.length) | 0, 1)[0];
+          const x = e.x, y = e.y;
+          hurt(e, WK.dmg[L]);
+          query(x, y, 46 + MAXR, near);
+          for (const o of near) if (o !== e && (o.x - x) ** 2 + (o.y - y) ** 2 < 46 * 46) hurt(o, WK.dmg[L] * 0.5);
+          const pts = [];
+          for (let s = 0; s <= 7; s++) pts.push([x + (s === 7 ? 0 : rand(-14, 14)), y - 280 + s * 40]);
+          bolts.push({ pts, x, y, life: 0.28, r: 46 });
+          burst(x, y, COL.weld, 5);
+        }
+        if (bolts.length) sfx('zap');
+      }
+      if (awake.spark) {
+        chainT -= dt;
+        if (chainT <= 0) {
+          chainT = 1.1 * stat.cd;
+          const vis = enemies.filter((e) => !e.dead && onScreen(e));
+          if (vis.length) {
+            let cur = vis[(Math.random() * vis.length) | 0];
+            const done = new Set([cur]);
+            bolts.push({ pts: jag(cur.x, cur.y - 320, cur.x, cur.y), x: cur.x, y: cur.y, life: 0.35, r: 34 });
+            hurt(cur, 70);
+            for (let j = 0; j < 12; j++) {
+              let nx = null, bd = 230 * 230;
+              for (const o of vis) {
+                if (done.has(o) || o.dead) continue;
+                const d2 = (o.x - cur.x) ** 2 + (o.y - cur.y) ** 2;
+                if (d2 < bd) { bd = d2; nx = o; }
+              }
+              if (!nx) break;
+              bolts.push({ pts: jag(cur.x, cur.y, nx.x, nx.y), x: nx.x, y: nx.y, life: 0.35, r: 22 });
+              hurt(nx, 70);
+              done.add(nx); cur = nx;
+            }
+            flash = Math.max(flash, 0.15);
+            sfx('zap');
+          }
+        }
+      }
+    }
+
+    // フォークリフト
+    if (lv.fork) {
+      forkT -= dt;
+      if (forkT <= 0) {
+        const L = lv.fork - 1;
+        forkT = WF.cd[L] * stat.cd;
+        for (let i = 0; i < WF.count[L]; i++) {
+          const dir = Math.random() < 0.5 ? 1 : -1;
+          forks.push({ x: P.x - dir * (W / 2 + 60), y: P.y + rand(-150, 150), dir, life: (W + 180) / 560, hit: [], dmg: WF.dmg[L] });
+        }
+        sfx('fork');
+      }
+    }
+    for (const f of forks) {
+      f.x += f.dir * 560 * dt; f.life -= dt;
+      query(f.x, f.y, 34 + MAXR, near);
+      for (const e of near) {
+        if (f.hit.includes(e)) continue;
+        if (Math.abs(e.x - f.x) < 30 + e.r && Math.abs(e.y - f.y) < 16 + e.r) { f.hit.push(e); hurt(e, f.dmg, f.dir * 520, rand(-160, 160)); }
+      }
+    }
+    forks = forks.filter((f) => f.life > 0);
+
+    // 敵の弾
+    for (const b of ebullets) {
+      if (freezeT <= 0) { b.x += b.vx * dt; b.y += b.vy * dt; }
+      b.life -= dt;
+      if (P.iframe <= 0 && (b.x - P.x) ** 2 + (b.y - P.y) ** 2 < (P.r + 5) ** 2) {
+        P.hp -= Math.max(1, (12 * stage.dmg - stat.armor) * stat.guard);
+        P.iframe = 0.45; b.life = 0;
+        if (!reduceMotion) shake = Math.min(10, shake + 5);
+        sfx('hurt');
+      }
+    }
+    ebullets = ebullets.filter((b) => b.life > 0);
+    if (warnT > 0) warnT -= dt;
+
+    // プレイヤーへの接触
+    query(P.x, P.y, P.r + MAXR, near);
+    for (const e of near) {
+      const m = e.r + P.r - 2;
+      if (P.iframe <= 0 && (e.x - P.x) ** 2 + (e.y - P.y) ** 2 < m * m) {
+        P.hp -= Math.max(1, (e.dmg - stat.armor) * stat.guard);
+        P.iframe = 0.45;
+        if (!reduceMotion) shake = Math.min(10, shake + 6);
+        sfx('hurt');
+        break;
+      }
+    }
+    enemies = enemies.filter((e) => !e.dead);
+
+    // ネジ回収
+    const mg = stat.magnet;
+    for (const g of gems) {
+      const dx = P.x - g.x, dy = P.y - g.y, d = Math.hypot(dx, dy) || 1;
+      if (!g.pull && d < mg) g.pull = true;
+      if (g.pull) {
+        g.sp += 900 * dt;
+        const s = Math.min(g.sp * dt, d);
+        g.x += dx / d * s; g.y += dy / d * s;
+      }
+      if (d < P.r + 8) {
+        g.got = true;
+        if (g.coin) { found += g.v; sfx('coin'); pop(g.x, g.y - 12, '💰 +' + yen(g.v)); }
+        else gainXp(g.v);
+      }
+    }
+    gems = gems.filter((g) => !g.got);
+
+    // アイテムBOX
+    boxT -= dt; medCool -= dt;
+    // クレーム発生イベント（上級以上。25秒ごとに抽選）
+    claimT -= dt;
+    if (claimT <= 0) {
+      claimT = 25;
+      if (stage.lv >= 3 && time > 75 && !claim && Math.random() < 0.18 + (stage.lv - 3) * 0.04) startClaim();   // 上級18%・管理職22%。初級・中級では起きない
+    }
+    if (freezeT > 0) freezeT -= dt;
+    if (buffT > 0) buffT -= dt;
+    if (boxT <= 0) {
+      boxT = rand(22, 30);
+      if (boxes.length < 3) spawnBox();
+    }
+    if (P.hp < stat.maxHp * 0.3 && medOk() && medCool <= 0 && !boxes.some((b) => b.forced === 'medkit')) {
+      medCool = 40;
+      spawnBox('medkit', rand(170, 240));
+      banner('🚑 救急箱が届いた！ 白い箱を拾うとHP全回復（この夜勤で1回だけ）');
+    }
+    for (const b of boxes) {
+      const d = Math.hypot(b.x - P.x, b.y - P.y);
+      if (d > 1600 && !b.forced && !b.gold && !b.claim) b.gone = true;
+      else if (d < P.r + 18) openBox(b);
+    }
+    boxes = boxes.filter((b) => !b.open && !b.gone);
+    for (const t of pops) { t.y -= 26 * dt; t.life -= dt; }
+    pops = pops.filter((t) => t.life > 0);
+
+    // 演出
+    for (const t of texts) { t.y -= 30 * dt; t.life -= dt; }
+    texts = texts.filter((t) => t.life > 0);
+    for (const p of parts) { p.x += p.vx * dt; p.y += p.vy * dt; p.vx *= 0.9; p.vy *= 0.9; p.life -= dt; }
+    parts = parts.filter((p) => p.life > 0);
+    for (const b of bolts) b.life -= dt;
+    bolts = bolts.filter((b) => b.life > 0);
+    shake = Math.max(0, shake - 30 * dt);
+
+    // 終了判定
+    if (P.hp <= 0) { P.hp = 0; finish(false); return; }
+    if (time >= SHIFT) { finish(true); return; }
+    if (pending > 0) openLevel();
+  }
+
+  // ---------- 描画 ----------
+  function hash(i, j) {
+    let h = Math.imul(i, 374761393) + Math.imul(j, 668265263);
+    h = Math.imul(h ^ (h >>> 13), 1274126177);
+    return (h ^ (h >>> 16)) >>> 0;
+  }
+  const FLOORS = {
+    screw: { base: '#161b21', line: '#1e252d', aisle: 'rgba(242,194,48,.35)', dash: [26, 18], width: 4 },
+    smt:   { base: '#0c231d', line: '#123029', aisle: 'rgba(200,140,70,.4)', dash: [], width: 6 },
+    line:  { base: '#2b5a3d', line: '#326848', aisle: 'rgba(242,194,48,.9)', dash: [], width: 5 },
+    mgr:   { base: '#15121b', line: '#211c2a', aisle: 'rgba(242,194,48,.45)', dash: [], width: 3 },
+  };
+  const COPPER = 'rgba(200,140,70,.45)';
+  function drawFloor(cx, cy) {
+    const F = FLOORS[stageId];
+    ctx.fillStyle = F.base;
+    ctx.fillRect(0, 0, W, H);
+    const ox = W / 2 - cx, oy = H / 2 - cy;
+    const x0 = Math.floor((cx - W / 2) / TILE) - 1, x1 = Math.ceil((cx + W / 2) / TILE) + 1;
+    const y0 = Math.floor((cy - H / 2) / TILE) - 1, y1 = Math.ceil((cy + H / 2) / TILE) + 1;
+    const mod = (a, n) => ((a % n) + n) % n;
+
+    for (let i = x0; i <= x1; i++) for (let j = y0; j <= y1; j++) {
+      const h = hash(i, j), px = i * TILE + ox, py = j * TILE + oy;
+      if (stageId === 'smt') {
+        // 基板：銅配線・パッド・シルク印刷・ビア
+        ctx.strokeStyle = COPPER; ctx.fillStyle = COPPER; ctx.lineWidth = 2;
+        if (h % 9 === 0) {
+          ctx.beginPath(); ctx.moveTo(px + 6, py + 22); ctx.lineTo(px + 40, py + 22); ctx.lineTo(px + 58, py + 40); ctx.stroke();
+          ctx.beginPath(); ctx.arc(px + 6, py + 22, 3, 0, Math.PI * 2); ctx.arc(px + 58, py + 40, 3, 0, Math.PI * 2); ctx.fill();
+        } else if (h % 9 === 1) {
+          ctx.beginPath(); ctx.moveTo(px + 22, py + 4); ctx.lineTo(px + 22, py + 60); ctx.stroke();
+        } else if (h % 37 === 2) {
+          ctx.strokeStyle = 'rgba(230,236,240,.22)'; ctx.lineWidth = 1;
+          ctx.strokeRect(px + 12.5, py + 24.5, 28, 12);
+          ctx.fillRect(px + 14, py + 26, 7, 9); ctx.fillRect(px + 32, py + 26, 7, 9);
+          ctx.fillStyle = 'rgba(230,236,240,.3)'; ctx.font = '10px monospace'; ctx.textAlign = 'left'; ctx.textBaseline = 'alphabetic';
+          ctx.fillText('RCULD'[h % 5] + (h % 97 + 1), px + 13, py + 20);
+        } else if (h % 41 === 3) {
+          ctx.beginPath(); ctx.arc(px + 32, py + 32, 4.5, 0, Math.PI * 2); ctx.stroke();
+        }
+      } else if (h % 29 === 0) {
+        ctx.fillStyle = 'rgba(0,0,0,.28)';
+        ctx.beginPath(); ctx.ellipse(px + 32, py + 32, 18 + (h % 14), 10 + (h % 8), (h % 6) * 0.5, 0, Math.PI * 2); ctx.fill();
+      } else if (stageId === 'screw' && h % 47 === 3) {
+        ctx.fillStyle = '#1c232b'; ctx.fillRect(px + 12, py + 12, 40, 40);
+        ctx.fillStyle = '#2a333d';
+        for (const [bx, by] of [[16, 16], [48, 16], [16, 48], [48, 48]]) { ctx.beginPath(); ctx.arc(px + bx, py + by, 2, 0, Math.PI * 2); ctx.fill(); }
+      } else if (stageId === 'line' && (h >>> 9) % 97 === 5) {
+        ctx.fillStyle = 'rgba(242,194,48,.28)'; ctx.font = '14px DotGothic16, monospace'; ctx.textAlign = 'left'; ctx.textBaseline = 'alphabetic';
+        ctx.fillText('安全第一', px + 4, py + 38);
+      }
+    }
+    // 目地
+    ctx.strokeStyle = F.line; ctx.lineWidth = 1;
+    ctx.beginPath();
+    for (let i = x0; i <= x1; i++) { const px = Math.round(i * TILE + ox) + 0.5; ctx.moveTo(px, 0); ctx.lineTo(px, H); }
+    for (let j = y0; j <= y1; j++) { const py = Math.round(j * TILE + oy) + 0.5; ctx.moveTo(0, py); ctx.lineTo(W, py); }
+    ctx.stroke();
+    // 通路ライン（8マスごと）。基板では太い電源配線、組立ラインでは縦の歩行帯だけ
+    ctx.strokeStyle = F.aisle; ctx.lineWidth = F.width;
+    ctx.setLineDash(F.dash);
+    ctx.beginPath();
+    for (let i = x0; i <= x1; i++) if (mod(i, 8) === 0) {
+      const px = i * TILE + ox;
+      if (stageId === 'line') {   // 組立ライン：黄色のラインテープ2本で歩行帯
+        ctx.moveTo(px - 28, 0); ctx.lineTo(px - 28, H); ctx.moveTo(px + 28, 0); ctx.lineTo(px + 28, H);
+      } else { ctx.moveTo(px, 0); ctx.lineTo(px, H); }
+    }
+    if (!stage.belts) for (let j = y0; j <= y1; j++) if (mod(j, 8) === 0) { const py = j * TILE + oy; ctx.moveTo(0, py); ctx.lineTo(W, py); }
+    ctx.stroke();
+    ctx.setLineDash([]);
+    // 16マスごとの目印：ネジ工場は立入禁止ゾーン、基板はフィデューシャルマーク
+    for (let i = x0; i <= x1; i++) for (let j = y0; j <= y1; j++) {
+      if (mod(i, 16) !== 4 || mod(j, 16) !== 4) continue;
+      const px = i * TILE + ox, py = j * TILE + oy;
+      if (stageId === 'screw') {
+        ctx.save();
+        ctx.beginPath(); ctx.rect(px, py, TILE * 2, TILE * 2); ctx.rect(px + 10, py + 10, TILE * 2 - 20, TILE * 2 - 20);
+        ctx.clip('evenodd');
+        ctx.fillStyle = 'rgba(242,194,48,.28)';
+        for (let s = -TILE * 2; s < TILE * 2; s += 16) {
+          ctx.beginPath(); ctx.moveTo(px + s, py + TILE * 2); ctx.lineTo(px + s + 8, py + TILE * 2); ctx.lineTo(px + s + 8 + TILE * 2, py); ctx.lineTo(px + s + TILE * 2, py); ctx.fill();
+        }
+        ctx.restore();
+      } else if (stageId === 'mgr') {   // 管理職モード：金の社章
+        ctx.strokeStyle = 'rgba(242,194,48,.35)'; ctx.lineWidth = 3;
+        ctx.beginPath(); ctx.arc(px + TILE, py + TILE, 22, 0, Math.PI * 2); ctx.stroke();
+        ctx.fillStyle = 'rgba(242,194,48,.35)'; ctx.font = '22px DotGothic16, monospace'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+        ctx.fillText('管', px + TILE, py + TILE + 1);
+      } else if (stageId === 'smt') {
+        ctx.fillStyle = 'rgba(214,160,90,.55)';
+        ctx.beginPath(); ctx.arc(px + TILE, py + TILE, 8, 0, Math.PI * 2); ctx.fill();
+        ctx.strokeStyle = 'rgba(214,160,90,.3)'; ctx.lineWidth = 2;
+        ctx.beginPath(); ctx.arc(px + TILE, py + TILE, 16, 0, Math.PI * 2); ctx.stroke();
+      }
+    }
+    // ベルトコンベア
+    if (stage.belts) {
+      for (let j = y0; j <= y1; j++) {
+        const dir = beltAt(j * TILE + 1);
+        if (!dir) continue;
+        const py = j * TILE + oy;
+        ctx.fillStyle = '#262a31'; ctx.fillRect(0, py + 4, W, TILE - 8);
+        ctx.fillStyle = '#3b414a'; ctx.fillRect(0, py, W, 4); ctx.fillRect(0, py + TILE - 4, W, 4);
+        ctx.fillStyle = 'rgba(242,194,48,.9)'; ctx.fillRect(0, py - 9, W, 5); ctx.fillRect(0, py + TILE + 4, W, 5);   // コンベア脇のラインテープ
+        const phase = mod(ox + anim * BELT_SPEED * dir, 32);
+        ctx.strokeStyle = 'rgba(242,194,48,.35)'; ctx.lineWidth = 3; ctx.lineCap = 'round';
+        ctx.beginPath();
+        for (let x = phase - 32; x < W + 32; x += 32) {
+          ctx.moveTo(x, py + 20); ctx.lineTo(x + 9 * dir, py + 32); ctx.lineTo(x, py + 44);
+        }
+        ctx.stroke();
+      }
+    }
+  }
+
+  function poly(x, y, n, r, rot) {
+    ctx.beginPath();
+    for (let i = 0; i < n; i++) {
+      const a = rot + i * Math.PI * 2 / n;
+      ctx.lineTo(x + Math.cos(a) * r, y + Math.sin(a) * r);
+    }
+    ctx.closePath();
+  }
+
+  // ---------- キャラ画像への差し替え ----------
+  // ChatGPT などで描いたキャラ画像を使うときは、ここにファイル名を書く（例: 'sprites/player.png'）。
+  // null のままなら、下の描画コードで描いたキャラが表示される。
+  const SPRITE_FILES = {
+    player: null,                                           // 全ステージ共通の主人公
+    player_screw: null, player_smt: null, player_line: null, player_mgr: null,   // ステージごとの主人公（こちらが優先）
+    bug: null, chip: null, rust: null, boss: null,          // ネジ工場
+    tomb: null, solder: null, ic: null, reflow: null,      // 電子機器工場
+    choco: null, tag: null, lot: null, takt: null,         // 組立ライン
+    recall: null,                                           // 超大ボス
+    claim: null,                                            // イベント敵
+  };
+  const SPR = {};
+  function loadSprite(k, src) {
+    const img = new Image();
+    img.onload = () => { SPR[k] = img; };
+    img.src = src;
+  }
+  for (const k in SPRITE_FILES) if (SPRITE_FILES[k]) loadSprite(k, SPRITE_FILES[k]);
+  // vansaba/tools/make_sprites.py などで作った sprites/sprites.json があれば、書かれている画像を読み込む
+  try {
+    fetch('sprites/sprites.json').then((r) => (r.ok ? r.json() : null)).then((j) => {
+      if (j) for (const k in j) if (k in SPRITE_FILES && typeof j[k] === 'string') loadSprite(k, j[k]);
+    }).catch(() => {});
+  } catch (e) {}
+  function drawSprite(img, x, y, size, flip) {
+    ctx.save(); ctx.translate(x, y);
+    if (flip) ctx.scale(-1, 1);
+    ctx.drawImage(img, -size / 2, -size / 2, size, size);
+    ctx.restore();
+  }
+
+  function shadow(x, y, rx) {
+    ctx.fillStyle = 'rgba(0,0,0,.32)';
+    ctx.beginPath(); ctx.ellipse(x, y, rx, rx * 0.36, 0, 0, Math.PI * 2); ctx.fill();
+  }
+
+  // 大きな黒目＋ハイライトのまる目。mood: normal / hurt（＞＜）/ blink（閉じ目）
+  function drawEyes(x, y, gap, r, look, mood, lid) {
+    const lx = Math.cos(look) * r * 0.28, ly = Math.sin(look) * r * 0.22;
+    for (const s of [-1, 1]) {
+      const ex = x + s * gap, ey = y;
+      if (mood === 'hurt') {
+        ctx.strokeStyle = '#1c1618'; ctx.lineWidth = Math.max(1.3, r * 0.42); ctx.lineCap = 'round';
+        ctx.beginPath();
+        ctx.moveTo(ex + s * r * 0.6, ey - r * 0.6); ctx.lineTo(ex - s * r * 0.5, ey); ctx.lineTo(ex + s * r * 0.6, ey + r * 0.6);
+        ctx.stroke();
+        continue;
+      }
+      if (mood === 'blink') {
+        ctx.strokeStyle = '#1c1618'; ctx.lineWidth = Math.max(1.2, r * 0.35); ctx.lineCap = 'round';
+        ctx.beginPath(); ctx.arc(ex, ey - r * 0.2, r * 0.7, Math.PI * 0.15, Math.PI * 0.85); ctx.stroke();
+        continue;
+      }
+      ctx.fillStyle = '#ffffff';
+      ctx.beginPath(); ctx.ellipse(ex, ey, r * 0.85, r * 1.1, 0, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = '#1c1618';
+      ctx.beginPath(); ctx.ellipse(ex + lx, ey + ly, r * 0.58, r * 0.76, 0, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = '#ffffff';
+      ctx.beginPath(); ctx.arc(ex + lx - r * 0.2, ey + ly - r * 0.32, r * 0.25, 0, Math.PI * 2); ctx.fill();
+      if (lid) {
+        ctx.save();
+        ctx.beginPath(); ctx.ellipse(ex, ey, r * 0.9, r * 1.15, 0, 0, Math.PI * 2); ctx.clip();
+        ctx.fillStyle = lid; ctx.fillRect(ex - r, ey - r * 1.3, r * 2, r * 1.15);
+        ctx.restore();
+      }
+    }
+  }
+  function cheeks(x, y, gap, r) {
+    ctx.fillStyle = 'rgba(255,120,140,.5)';
+    for (const s of [-1, 1]) { ctx.beginPath(); ctx.ellipse(x + s * gap, y, r, r * 0.6, 0, 0, Math.PI * 2); ctx.fill(); }
+  }
+
+  // 体の形（原点が敵の中心。塗り色は呼び出し側で設定済み）
+  const BODY = {
+    bug(r) {
+      // バリ虫：トゲトゲのまるいバリ
+      ctx.beginPath();
+      for (let i = 0; i < 16; i++) {
+        const a = anim * 0.4 + i * Math.PI / 8, rr = i % 2 ? r : r * 1.28;
+        ctx.lineTo(Math.cos(a) * rr, Math.sin(a) * rr);
+      }
+      ctx.closePath(); ctx.fill(); ctx.stroke();
+      ctx.fillStyle = 'rgba(255,255,255,.18)';
+      ctx.beginPath(); ctx.arc(-r * 0.35, -r * 0.4, r * 0.35, 0, Math.PI * 2); ctx.fill();
+    },
+    chip(r, body) {
+      // 切粉：くるんと巻いたアホ毛つきの金属のしずく
+      ctx.strokeStyle = body; ctx.lineWidth = 2.2; ctx.lineCap = 'round';
+      ctx.beginPath(); ctx.arc(r * 0.2, -r * 1.25, r * 0.45, Math.PI * 0.6, Math.PI * 2.2); ctx.stroke();
+      ctx.beginPath(); ctx.arc(0, 0, r, 0, Math.PI * 2); ctx.fill();
+      ctx.strokeStyle = 'rgba(20,10,8,.35)'; ctx.lineWidth = 1.2; ctx.stroke();
+      ctx.fillStyle = 'rgba(255,255,255,.45)';
+      ctx.beginPath(); ctx.ellipse(-r * 0.35, -r * 0.4, r * 0.3, r * 0.18, -0.6, 0, Math.PI * 2); ctx.fill();
+    },
+    rust(r, body, e) {
+      // 錆塊：ずんぐりした眠そうな岩
+      ctx.beginPath(); ctx.ellipse(0, 0, r * 1.05, r * 0.95, 0, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+      ctx.beginPath(); ctx.arc(-r * 0.6, -r * 0.7, r * 0.35, 0, Math.PI * 2); ctx.fill();
+      ctx.beginPath(); ctx.arc(r * 0.55, -r * 0.75, r * 0.3, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = e.flash > 0 ? '#fff' : 'rgba(255,138,61,.45)';
+      ctx.beginPath(); ctx.arc(-r * 0.5, r * 0.45, r * 0.22, 0, Math.PI * 2); ctx.fill();
+      ctx.beginPath(); ctx.arc(r * 0.55, r * 0.3, r * 0.14, 0, Math.PI * 2); ctx.fill();
+    },
+    boss(r, body, e) {
+      // 品質監査官：帽子とクリップボード
+      ctx.beginPath(); ctx.arc(0, 0, r, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+      ctx.fillStyle = '#23324a';
+      ctx.beginPath(); ctx.arc(0, -r * 0.62, r * 0.62, Math.PI, 0); ctx.closePath(); ctx.fill();
+      ctx.fillRect(-r * 0.2, -r * 0.7, r * 0.95, r * 0.14);
+      ctx.fillStyle = '#f2c230';
+      ctx.beginPath(); ctx.arc(0, -r * 0.95, r * 0.1, 0, Math.PI * 2); ctx.fill();
+      const cxp = (P.x < e.x ? -1 : 1) * r * 0.85;
+      ctx.fillStyle = '#8a6a44'; ctx.fillRect(cxp - r * 0.28, r * 0.05, r * 0.56, r * 0.7);
+      ctx.fillStyle = '#f4f1e8'; ctx.fillRect(cxp - r * 0.22, r * 0.14, r * 0.44, r * 0.56);
+      ctx.fillStyle = '#9aa4ae';
+      for (let i = 0; i < 3; i++) ctx.fillRect(cxp - r * 0.16, r * (0.24 + i * 0.14), r * 0.32, 1.5);
+      ctx.fillStyle = '#f4f1e8'; ctx.fillRect(-r * 0.95, r * 0.18, r * 0.42, r * 0.34);
+      ctx.fillStyle = '#b8323a'; ctx.font = Math.round(r * 0.3) + 'px DotGothic16, monospace';
+      ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+      ctx.fillText('監', -r * 0.74, r * 0.36);
+    },
+    tomb(r, body, e) {
+      // チップ立ち：リフローで片側が浮いて立ち上がったチップ部品（マンハッタン現象）
+      const w = r * 1.35, h = r * 2;
+      ctx.rotate(Math.sin(anim * 3 + e.ph) * 0.12);
+      ctx.beginPath(); ctx.roundRect(-w / 2, -h / 2, w, h, 3); ctx.fill(); ctx.stroke();
+      ctx.fillStyle = e.flash > 0 ? '#fff' : '#cfd6dc';
+      ctx.fillRect(-w / 2, -h / 2, w, h * 0.2); ctx.fillRect(-w / 2, h * 0.3, w, h * 0.2);
+    },
+    solder(r) {
+      // はんだボール：ぴかぴかの小さな銀玉
+      ctx.beginPath(); ctx.arc(0, 0, r, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+      ctx.fillStyle = 'rgba(255,255,255,.75)';
+      ctx.beginPath(); ctx.ellipse(-r * 0.35, -r * 0.45, r * 0.32, r * 0.2, -0.5, 0, Math.PI * 2); ctx.fill();
+    },
+    ic(r, body, e) {
+      // 足浮きIC：右上の足が1本だけ浮いている
+      const w = r * 2.1, h = r * 1.6;
+      ctx.fillStyle = e.flash > 0 ? '#fff' : '#cfd6dc';
+      for (let i = 0; i < 4; i++) {
+        const py = -h / 2 + h * (i + 0.5) / 4 - 2;
+        ctx.fillRect(-w / 2 - 5, py, 6, 4);
+        if (i === 0) {
+          ctx.save(); ctx.translate(w / 2 - 1, py + 2); ctx.rotate(-0.7 + Math.sin(anim * 5 + e.ph) * 0.15); ctx.fillRect(0, -2, 8, 4); ctx.restore();
+        } else ctx.fillRect(w / 2 - 1, py, 6, 4);
+      }
+      ctx.fillStyle = body;
+      ctx.beginPath(); ctx.roundRect(-w / 2, -h / 2, w, h, 3); ctx.fill(); ctx.stroke();
+      ctx.fillStyle = 'rgba(255,255,255,.35)';
+      ctx.beginPath(); ctx.arc(-w / 2 + 5, -h / 2 + 5, 2.2, 0, Math.PI * 2); ctx.fill();
+    },
+    reflow(r, body, e) {
+      // リフロー炉の番人：煙突から湯気、窓の中はオレンジに光る
+      const w = r * 2.2, h = r * 1.7;
+      ctx.fillStyle = '#6f7880'; ctx.fillRect(r * 0.45, -h / 2 - r * 0.45, r * 0.3, r * 0.5);
+      ctx.fillStyle = 'rgba(233,237,241,.25)';
+      for (let k = 0; k < 3; k++) {
+        const t = (anim * 0.6 + k / 3) % 1;
+        ctx.beginPath(); ctx.arc(r * 0.6 + Math.sin(t * 6 + k) * 4, -h / 2 - r * 0.5 - t * r * 0.9, r * 0.12 + t * r * 0.15, 0, Math.PI * 2); ctx.fill();
+      }
+      ctx.fillStyle = body;
+      ctx.beginPath(); ctx.roundRect(-w / 2, -h / 2, w, h, r * 0.25); ctx.fill(); ctx.stroke();
+      const g = ctx.createLinearGradient(0, -h * 0.32, 0, h * 0.2);
+      g.addColorStop(0, '#ffb347'); g.addColorStop(1, '#ff5a2a');
+      ctx.fillStyle = e.flash > 0 ? '#fff' : g;
+      ctx.beginPath(); ctx.roundRect(-w * 0.38, -h * 0.32, w * 0.76, h * 0.52, 6); ctx.fill();
+      ctx.fillStyle = '#3a4048'; ctx.fillRect(-w / 2, h * 0.26, w, h * 0.1);
+      ctx.fillStyle = '#1c1618'; ctx.font = Math.round(r * 0.22) + 'px DotGothic16, monospace';
+      ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+      ctx.fillText('245℃', 0, h * 0.43);
+    },
+    choco(r, body, e) {
+      // チョコ停：板チョコ。銀紙が少しめくれている
+      const w = r * 1.9, h = r * 1.5;
+      ctx.beginPath(); ctx.roundRect(-w / 2, -h / 2, w, h, 3); ctx.fill(); ctx.stroke();
+      ctx.strokeStyle = 'rgba(255,255,255,.14)'; ctx.lineWidth = 1;
+      ctx.beginPath(); ctx.moveTo(-w / 6, -h / 2); ctx.lineTo(-w / 6, h / 2); ctx.moveTo(w / 6, -h / 2); ctx.lineTo(w / 6, h / 2); ctx.stroke();
+      ctx.fillStyle = e.flash > 0 ? '#fff' : '#cfd6dc';
+      ctx.beginPath(); ctx.moveTo(w / 2, h * 0.05); ctx.lineTo(w / 2, h / 2); ctx.lineTo(w * 0.05, h / 2); ctx.closePath(); ctx.fill();
+    },
+    tag(r, body, e) {
+      // 不良札：ひらひら揺れる赤い札
+      const w = r * 1.5, h = r * 2.1, c = r * 0.4;
+      ctx.rotate(Math.sin(anim * 6 + e.ph) * 0.25);
+      ctx.strokeStyle = '#e9edf1'; ctx.lineWidth = 1;
+      ctx.beginPath(); ctx.moveTo(0, -h / 2 + r * 0.35); ctx.quadraticCurveTo(r * 0.6, -h / 2 - r * 0.6, r * 0.2, -h / 2 - r); ctx.stroke();
+      ctx.strokeStyle = 'rgba(20,10,8,.45)'; ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      ctx.moveTo(-w / 2, -h / 2 + c); ctx.lineTo(-w / 2 + c, -h / 2); ctx.lineTo(w / 2 - c, -h / 2); ctx.lineTo(w / 2, -h / 2 + c);
+      ctx.lineTo(w / 2, h / 2); ctx.lineTo(-w / 2, h / 2); ctx.closePath(); ctx.fill(); ctx.stroke();
+      ctx.fillStyle = '#1a1c21'; ctx.beginPath(); ctx.arc(0, -h / 2 + r * 0.35, r * 0.14, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = '#ffffff'; ctx.font = Math.round(r * 0.5) + 'px DotGothic16, monospace';
+      ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+      ctx.fillText('不良', 0, h * 0.3);
+    },
+    lot(r, body, e) {
+      // 不良ロット：NGシールの貼られた段ボールの山
+      const tape = e.flash > 0 ? '#fff' : '#d9c49a';
+      ctx.beginPath(); ctx.rect(-r * 0.7, -r * 1.05, r * 1.4, r * 0.85); ctx.fill(); ctx.stroke();
+      ctx.beginPath(); ctx.rect(-r, -r * 0.2, r * 2, r * 1.2); ctx.fill(); ctx.stroke();
+      ctx.fillStyle = tape;
+      ctx.fillRect(-r * 0.09, -r * 1.05, r * 0.18, r * 0.85);
+      ctx.fillRect(-r, -r * 0.2, r * 2, r * 0.16);
+      ctx.fillStyle = '#e5484d'; ctx.fillRect(r * 0.18, -r * 0.9, r * 0.44, r * 0.3);
+      ctx.fillStyle = '#ffffff'; ctx.font = Math.round(r * 0.24) + 'px DotGothic16, monospace';
+      ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+      ctx.fillText('NG', r * 0.4, -r * 0.74);
+    },
+    takt(r, body, e) {
+      // タクトタイム大王：針がぐるぐる回る目覚まし時計
+      ctx.fillStyle = e.flash > 0 ? '#fff' : COL.hazard;
+      ctx.beginPath(); ctx.arc(-r * 0.62, -r * 0.82, r * 0.34, 0, Math.PI * 2); ctx.arc(r * 0.62, -r * 0.82, r * 0.34, 0, Math.PI * 2); ctx.fill();
+      ctx.strokeStyle = '#1c1618'; ctx.lineWidth = 3; ctx.lineCap = 'round';
+      ctx.beginPath(); ctx.moveTo(-r * 0.6, r * 0.8); ctx.lineTo(-r * 0.8, r * 1.1); ctx.moveTo(r * 0.6, r * 0.8); ctx.lineTo(r * 0.8, r * 1.1); ctx.stroke();
+      ctx.fillStyle = body;
+      ctx.beginPath(); ctx.arc(0, 0, r, 0, Math.PI * 2); ctx.fill();
+      ctx.strokeStyle = COL.hazard; ctx.lineWidth = r * 0.16; ctx.stroke();
+      ctx.fillStyle = '#9aa4ae';
+      for (let i = 0; i < 12; i++) {
+        const a = i * Math.PI / 6;
+        ctx.beginPath(); ctx.arc(Math.cos(a) * r * 0.78, Math.sin(a) * r * 0.78, i % 3 ? 1.5 : 2.6, 0, Math.PI * 2); ctx.fill();
+      }
+      ctx.strokeStyle = '#1c1618'; ctx.lineWidth = 3;
+      const a1 = anim * 4 + e.ph, a2 = anim * 0.4;
+      ctx.beginPath();
+      ctx.moveTo(0, r * 0.2); ctx.lineTo(Math.cos(a1) * r * 0.62, r * 0.2 + Math.sin(a1) * r * 0.5);
+      ctx.moveTo(0, r * 0.2); ctx.lineTo(Math.cos(a2) * r * 0.4, r * 0.2 + Math.sin(a2) * r * 0.32);
+      ctx.stroke();
+    },
+  };
+
+  BODY.claim = function (r, body, e) {
+    // クレーム電話：怒っている赤い黒電話。頭の上に⚠、まわりに「倒せない」印の点線
+    ctx.save();
+    ctx.setLineDash([4, 4]); ctx.lineDashOffset = -anim * 20;
+    ctx.strokeStyle = 'rgba(255,255,255,.5)'; ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.arc(0, 0, r * 1.45, 0, Math.PI * 2); ctx.stroke();
+    ctx.restore();
+    ctx.fillStyle = body; ctx.strokeStyle = 'rgba(20,10,8,.45)'; ctx.lineWidth = 1.5;
+    ctx.beginPath(); ctx.moveTo(-r, r * 0.8); ctx.lineTo(-r * 0.75, -r * 0.35); ctx.lineTo(r * 0.75, -r * 0.35); ctx.lineTo(r, r * 0.8); ctx.closePath(); ctx.fill(); ctx.stroke();
+    const shake = Math.sin(anim * 30) * 2;
+    ctx.fillStyle = '#2b1414';
+    ctx.beginPath(); ctx.roundRect(-r * 1.05 + shake, -r * 0.85, r * 2.1, r * 0.34, r * 0.17); ctx.fill();
+    ctx.beginPath(); ctx.arc(-r * 0.85 + shake, -r * 0.6, r * 0.24, 0, Math.PI * 2); ctx.arc(r * 0.85 + shake, -r * 0.6, r * 0.24, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = '#f4f1e8'; ctx.beginPath(); ctx.arc(0, r * 0.45, r * 0.3, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = COL.safety;
+    const wy = -r * 1.55 + Math.sin(anim * 6) * 2;
+    ctx.beginPath(); ctx.moveTo(0, wy - r * 0.35); ctx.lineTo(r * 0.35, wy + r * 0.25); ctx.lineTo(-r * 0.35, wy + r * 0.25); ctx.closePath(); ctx.fill();
+    ctx.fillStyle = '#1c1618'; ctx.fillRect(-1.2, wy - r * 0.18, 2.4, r * 0.24); ctx.fillRect(-1.2, wy + r * 0.1, 2.4, 2.4);
+  };
+  BODY.recall = function (r, body, e) {
+    // リコール大魔王：NG札の冠、額に警告マーク、ぎざぎざのマント
+    ctx.fillStyle = `rgba(229,72,77,${0.12 + Math.sin(anim * 4) * 0.05})`;
+    ctx.beginPath(); ctx.arc(0, 0, r * 1.35, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = body;
+    ctx.beginPath();
+    ctx.arc(0, -r * 0.1, r, Math.PI, 0);
+    for (let i = 0; i <= 8; i++) ctx.lineTo(r - i * r / 4, r * 0.8 - (i % 2 ? r * 0.2 : 0));
+    ctx.closePath(); ctx.fill(); ctx.stroke();
+    for (let k = -2; k <= 2; k++) {
+      ctx.save(); ctx.translate(k * r * 0.32, -r * 1.05 + Math.abs(k) * r * 0.08); ctx.rotate(k * 0.18);
+      ctx.fillStyle = e.flash > 0 ? '#fff' : '#e5484d'; ctx.fillRect(-r * 0.12, -r * 0.16, r * 0.24, r * 0.3);
+      ctx.fillStyle = '#ffffff'; ctx.font = Math.round(r * 0.13) + 'px DotGothic16, monospace';
+      ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText('NG', 0, 0);
+      ctx.restore();
+    }
+    ctx.fillStyle = '#f2c230';
+    ctx.beginPath(); ctx.moveTo(0, -r * 0.78); ctx.lineTo(r * 0.17, -r * 0.48); ctx.lineTo(-r * 0.17, -r * 0.48); ctx.closePath(); ctx.fill();
+    ctx.fillStyle = '#1c1618'; ctx.fillRect(-r * 0.02, -r * 0.7, r * 0.04, r * 0.12); ctx.fillRect(-r * 0.02, -r * 0.55, r * 0.04, r * 0.04);
+  };
+
+  // ボスだけは顔を個別に描く
+  const BOSS_FACE = {
+    recall(e, x, ey, r, look, hurtFace) {
+      drawEyes(x, ey, r * 0.3, r * 0.17, look, hurtFace ? 'hurt' : 'normal');
+      ctx.strokeStyle = '#e5484d'; ctx.lineWidth = 3; ctx.lineCap = 'round';
+      for (const s of [-1, 1]) { ctx.beginPath(); ctx.moveTo(x + s * r * 0.5, ey - r * 0.32); ctx.lineTo(x + s * r * 0.14, ey - r * 0.2); ctx.stroke(); }
+      ctx.fillStyle = '#1c1618';
+      ctx.beginPath(); ctx.ellipse(x, ey + r * 0.34, r * 0.2, r * 0.1, 0, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = '#ffffff';
+      for (const s of [-1, 1]) { ctx.beginPath(); ctx.moveTo(x + s * r * 0.1, ey + r * 0.26); ctx.lineTo(x + s * r * 0.05, ey + r * 0.36); ctx.lineTo(x + s * r * 0.15, ey + r * 0.28); ctx.fill(); }
+    },
+    boss(e, x, ey, r, look, hurtFace) {
+      drawEyes(x, ey - r * 0.05, r * 0.3, r * 0.17, look, hurtFace ? 'hurt' : 'normal');
+      ctx.strokeStyle = '#1c1618'; ctx.lineWidth = 2;
+      for (const s of [-1, 1]) { ctx.beginPath(); ctx.arc(x + s * r * 0.3, ey - r * 0.05, r * 0.26, 0, Math.PI * 2); ctx.stroke(); }
+      ctx.beginPath(); ctx.moveTo(x - r * 0.05, ey - r * 0.05); ctx.lineTo(x + r * 0.05, ey - r * 0.05); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(x - r * 0.12, ey + r * 0.4); ctx.lineTo(x + r * 0.12, ey + r * 0.4); ctx.stroke();
+    },
+    reflow(e, x, ey, r, look, hurtFace) {
+      drawEyes(x, ey - r * 0.12, r * 0.34, r * 0.2, look, hurtFace ? 'hurt' : 'normal');
+      cheeks(x, ey + r * 0.14, r * 0.62, r * 0.1);
+    },
+    takt(e, x, ey, r, look, hurtFace) {
+      drawEyes(x, ey - r * 0.12, r * 0.34, r * 0.2, look, hurtFace ? 'hurt' : 'normal');
+      ctx.strokeStyle = '#1c1618'; ctx.lineWidth = 2; ctx.lineCap = 'round';
+      for (const s of [-1, 1]) {   // せっかちな眉
+        ctx.beginPath(); ctx.moveTo(x + s * r * 0.55, ey - r * 0.42); ctx.lineTo(x + s * r * 0.18, ey - r * 0.32); ctx.stroke();
+      }
+    },
+  };
+
+  function drawEnemy(e) {
+    const x = e.x, y = e.y, r = e.r;
+    const b = reduceMotion ? 0 : Math.sin(anim * 8 + e.ph);
+    const look = Math.atan2(P.y - y, P.x - x);
+    shadow(x, y + r * 0.9, r * 0.85);
+
+    if (SPR[e.type]) {
+      drawSprite(SPR[e.type], x, y - b * 1.5, r * 2.7, P.x < x);
+      if (e.flash > 0) { ctx.globalAlpha = 0.5; ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI * 2); ctx.fill(); ctx.globalAlpha = 1; }
+    } else {
+      const body = e.flash > 0 ? '#ffffff' : e.color;
+      ctx.save();
+      ctx.translate(x, y);
+      ctx.scale(1 + b * 0.06, 1 - b * 0.06);
+      ctx.fillStyle = body;
+      ctx.strokeStyle = 'rgba(20,10,8,.45)'; ctx.lineWidth = 1.5;
+      BODY[e.type](r, body, e);
+      ctx.restore();
+
+      const hurtFace = e.flash > 0;
+      const f = e.face;
+      const ey = y + r * (f.ey ?? -0.08) - b * r * 0.06;
+      if (BOSS_FACE[e.type]) BOSS_FACE[e.type](e, x, ey, r, look, hurtFace);
+      else {
+        drawEyes(x, ey, r * 0.36, r * (f.size ?? 0.3), look, hurtFace ? 'hurt' : 'normal', f.lid && !hurtFace ? e.color : null);
+        const ink = f.ink || '#1c1618';
+        if (f.brows && !hurtFace) {
+          ctx.strokeStyle = ink; ctx.lineWidth = 1.6; ctx.lineCap = 'round';
+          for (const s of [-1, 1]) {
+            ctx.beginPath(); ctx.moveTo(x + s * r * 0.6, ey - r * 0.5); ctx.lineTo(x + s * r * 0.15, ey - r * 0.36); ctx.stroke();
+          }
+        }
+        if (f.mouth === 'o') {
+          ctx.fillStyle = ink;
+          ctx.beginPath(); ctx.ellipse(x, ey + r * 0.5, r * 0.14, r * 0.18, 0, 0, Math.PI * 2); ctx.fill();
+        }
+        if (f.cheeks) cheeks(x, ey + r * 0.38, r * 0.58, r * 0.16);
+      }
+    }
+    if (e.boss && !e.sup) {
+      const w = 70, bx = x - w / 2, by = y - r - 18;
+      ctx.fillStyle = 'rgba(0,0,0,.7)'; ctx.fillRect(bx - 1, by - 1, w + 2, 7);
+      ctx.fillStyle = COL.hazard; ctx.fillRect(bx, by, w * Math.max(0, e.hp / e.max), 5);
+    }
+  }
+
+  // 主人公の服装（ステージごと）
+  const OUTFITS = {
+    screw: { body: '#3a6fa8', hands: '#f4f1e8', shoes: '#3b2f27' },
+    smt:   { body: '#8fc3e8', hands: '#5aa9e6', shoes: '#e8eef2', long: true },
+    line:  { body: '#3f6b55', hands: '#f4f1e8', shoes: '#2b2b2b' },
+    mgr:   { body: '#23324a', hands: '#ffd9b8', shoes: '#111318' },
+  };
+  function drawPlayer() {
+    const hurtNow = P.iframe > 0;
+    const faded = hurtNow && Math.floor(P.iframe * 20) % 2 === 0;
+    const step = P.moving && !reduceMotion ? Math.sin(P.walk * 14) : 0;
+    const d = P.dir;                         // 1 = 右向き / -1 = 左向き
+    const x = P.x, y = P.y - Math.abs(step) * 2;
+    shadow(P.x, P.y + 15, 11);
+    ctx.globalAlpha = faded ? 0.45 : 1;
+
+    const pimg = SPR['player_' + stageId] || SPR.player;
+    if (pimg) {
+      drawSprite(pimg, x, y - 4, 50, d < 0);
+    } else {
+      // ステージごとの服装：初級＝作業着、中級＝静電気防止スモック、上級＝班長（白い作業帽）、管理職＝スーツ
+      const O = OUTFITS[stageId] || OUTFITS.screw;
+      // 靴
+      ctx.fillStyle = O.shoes;
+      ctx.beginPath(); ctx.ellipse(x - 4, P.y + 13 - step * 1.5, 3.4, 2.4, 0, 0, Math.PI * 2); ctx.fill();
+      ctx.beginPath(); ctx.ellipse(x + 4, P.y + 13 + step * 1.5, 3.4, 2.4, 0, 0, Math.PI * 2); ctx.fill();
+      // 服
+      ctx.fillStyle = O.body;
+      ctx.beginPath(); ctx.roundRect(x - 8, y + 1, 16, O.long ? 13 : 12, 5); ctx.fill();
+      if (stageId === 'screw') {
+        ctx.fillStyle = '#e6edf2'; ctx.fillRect(x - 8, y + 8, 16, 2);          // 反射テープ
+      } else if (stageId === 'smt') {
+        ctx.fillStyle = '#ffffff';                                             // 白い襟とボタン
+        ctx.beginPath(); ctx.moveTo(x - 4, y + 1.5); ctx.lineTo(x, y + 5.5); ctx.lineTo(x + 4, y + 1.5); ctx.closePath(); ctx.fill();
+        ctx.fillStyle = '#e9f4fb';
+        for (const by2 of [7.5, 10.5]) { ctx.beginPath(); ctx.arc(x, y + by2, 0.9, 0, Math.PI * 2); ctx.fill(); }
+      } else if (stageId === 'line') {
+        ctx.fillStyle = '#2d4f3f'; ctx.fillRect(x + d * 2 - 2, y + 6, 4, 3);    // 胸ポケット
+        ctx.fillStyle = COL.safety; ctx.fillRect(x - d * 8 - (d > 0 ? 0 : -1) - 0.5, y + 3, 3.5, 4);   // 班長の腕章
+        ctx.fillStyle = '#d7263d'; ctx.fillRect(x - d * 8 - (d > 0 ? 0 : -1) - 0.5, y + 4.5, 3.5, 1);
+      } else if (stageId === 'mgr') {
+        ctx.fillStyle = '#ffffff';                                             // ワイシャツ
+        ctx.beginPath(); ctx.moveTo(x - 4.5, y + 1.2); ctx.lineTo(x, y + 8); ctx.lineTo(x + 4.5, y + 1.2); ctx.closePath(); ctx.fill();
+        ctx.fillStyle = '#c8323d';                                             // 赤いネクタイ
+        ctx.beginPath(); ctx.moveTo(x - 1.3, y + 2); ctx.lineTo(x + 1.3, y + 2); ctx.lineTo(x + 1.8, y + 8.5); ctx.lineTo(x, y + 10); ctx.lineTo(x - 1.8, y + 8.5); ctx.closePath(); ctx.fill();
+        ctx.strokeStyle = '#141d2c'; ctx.lineWidth = 1;                          // 襟
+        ctx.beginPath(); ctx.moveTo(x - 4.5, y + 1.2); ctx.lineTo(x - 1.5, y + 7); ctx.moveTo(x + 4.5, y + 1.2); ctx.lineTo(x + 1.5, y + 7); ctx.stroke();
+      }
+      // 手
+      ctx.fillStyle = O.hands;
+      ctx.beginPath(); ctx.arc(x - 9.5, y + 7 + step * 1.5, 2.8, 0, Math.PI * 2); ctx.fill();
+      ctx.beginPath(); ctx.arc(x + 9.5, y + 7 - step * 1.5, 2.8, 0, Math.PI * 2); ctx.fill();
+      // 顔（大きめの頭で2頭身）
+      const hx = x + d * 1.2, hy = y - 6;
+      ctx.fillStyle = '#ffd9b8';
+      ctx.beginPath(); ctx.arc(hx, hy, 11, 0, Math.PI * 2); ctx.fill();
+      cheeks(hx + d * 1, hy + 4, 6.5, 2.2);
+      const blinking = !hurtNow && (anim % 3.7) < 0.12;
+      drawEyes(hx + d * 1.5, hy + 0.5, 3.8, 2.3, P.face, hurtNow ? 'hurt' : blinking ? 'blink' : 'normal');
+      ctx.strokeStyle = '#7a3b2e'; ctx.lineWidth = 1.2; ctx.lineCap = 'round';
+      ctx.beginPath();
+      if (hurtNow) { ctx.arc(hx + d * 1.5, hy + 7, 1.6, Math.PI * 1.1, Math.PI * 1.9); }
+      else { ctx.arc(hx + d * 1.5, hy + 4.2, 1.8, Math.PI * 0.15, Math.PI * 0.85); }
+      ctx.stroke();
+      // かぶり物・髪
+      if (stageId === 'smt') {
+        // クリーンルームのふんわり帽子（ふちがフリル）
+        ctx.fillStyle = '#eaf5ff';
+        ctx.beginPath(); ctx.arc(hx, hy - 3, 12.8, Math.PI, 0); ctx.closePath(); ctx.fill();
+        for (let k = -3; k <= 3; k++) { ctx.beginPath(); ctx.arc(hx + k * 3.8, hy - 3, 2.2, 0, Math.PI * 2); ctx.fill(); }
+        ctx.fillStyle = '#5aa9e6'; ctx.fillRect(hx - 12.5, hy - 5.5, 25, 1.8);
+      } else if (stageId === 'line') {
+        // 班長の白い作業帽：黒い2本線と金の徽章、前につば
+        ctx.save();
+        ctx.beginPath(); ctx.arc(hx, hy - 2.5, 12, Math.PI, 0); ctx.closePath();
+        ctx.fillStyle = '#f7f7f2'; ctx.fill(); ctx.clip();
+        ctx.fillStyle = '#1c1c1c'; ctx.fillRect(hx - 13, hy - 8.5, 26, 1.6); ctx.fillRect(hx - 13, hy - 5.8, 26, 1.6);
+        ctx.restore();
+        ctx.strokeStyle = 'rgba(0,0,0,.18)'; ctx.lineWidth = 1;
+        ctx.beginPath(); ctx.arc(hx, hy - 2.5, 12, Math.PI, 0); ctx.stroke();
+        ctx.fillStyle = '#e8e8e0';
+        ctx.beginPath(); ctx.ellipse(hx + d * 8, hy - 2.2, 8, 2.4, 0, 0, Math.PI * 2); ctx.fill();
+        ctx.fillStyle = '#d4a017'; ctx.beginPath(); ctx.arc(hx + d * 3, hy - 11, 1.9, 0, Math.PI * 2); ctx.fill();
+      } else if (stageId === 'mgr') {
+        // 七三分けの髪
+        ctx.fillStyle = '#3a2a22';
+        ctx.beginPath(); ctx.arc(hx, hy - 1.5, 11.6, Math.PI * 1.02, Math.PI * 1.98); ctx.closePath(); ctx.fill();
+        ctx.beginPath(); ctx.moveTo(hx - d * 11, hy - 2); ctx.quadraticCurveTo(hx - d * 2, hy - 9, hx + d * 11, hy - 1); ctx.lineTo(hx + d * 11, hy - 6); ctx.closePath(); ctx.fill();
+        ctx.strokeStyle = '#5a463a'; ctx.lineWidth = 1;
+        ctx.beginPath(); ctx.moveTo(hx - d * 4, hy - 12); ctx.lineTo(hx - d * 5, hy - 6); ctx.stroke();
+      } else {
+        // 黄色いヘルメット（緑十字）
+        ctx.fillStyle = COL.safety;
+        ctx.beginPath(); ctx.arc(hx, hy - 2.5, 12, Math.PI, 0); ctx.closePath(); ctx.fill();
+        ctx.beginPath(); ctx.ellipse(hx + d * 2, hy - 2.5, 14, 2.6, 0, 0, Math.PI * 2); ctx.fill();
+        ctx.fillStyle = '#ffe27a';
+        ctx.beginPath(); ctx.ellipse(hx - d * 5, hy - 9.5, 3.2, 1.8, -0.5 * d, 0, Math.PI * 2); ctx.fill();
+        ctx.fillStyle = '#15803d'; ctx.fillRect(hx - 2.6, hy - 12, 5.2, 5.2);
+        ctx.fillStyle = '#fff'; ctx.fillRect(hx - 0.8, hy - 11.4, 1.6, 4); ctx.fillRect(hx - 2, hy - 10.2, 4, 1.6);
+      }
+    }
+    ctx.globalAlpha = 1;
+    // HPバー
+    const w = 34, bx = P.x - w / 2, by = P.y + 20, ratio = Math.max(0, P.hp / stat.maxHp);
+    ctx.fillStyle = 'rgba(0,0,0,.7)'; ctx.fillRect(bx - 1, by - 1, w + 2, 6);
+    ctx.fillStyle = ratio > 0.35 ? COL.good : COL.hazard; ctx.fillRect(bx, by, w * ratio, 4);
+  }
+
+  function drawDrill(b) {
+    ctx.save(); ctx.translate(b.x, b.y); ctx.rotate(b.a);
+    ctx.fillStyle = '#9aa4ae';
+    ctx.beginPath(); ctx.moveTo(14, 0); ctx.lineTo(-6, -7); ctx.lineTo(-6, 7); ctx.closePath(); ctx.fill();
+    ctx.strokeStyle = '#e9edf1'; ctx.lineWidth = 1.5;
+    const sp = (anim * 30) % 6;
+    ctx.beginPath();
+    for (let k = -6 + sp; k < 12; k += 6) { const h = 7 * (1 - (k + 6) / 20); ctx.moveTo(k, -h); ctx.lineTo(k + 3, h); }
+    ctx.stroke();
+    ctx.fillStyle = '#3a6fa8'; ctx.fillRect(-12, -4, 6, 8);
+    ctx.restore();
+  }
+  function drawFork(f) {
+    ctx.save(); ctx.translate(f.x, f.y); ctx.scale(f.dir, 1);
+    ctx.fillStyle = 'rgba(0,0,0,.3)'; ctx.fillRect(-26, 14, 52, 5);
+    ctx.fillStyle = '#6f7880'; ctx.fillRect(18, -22, 4, 36);                 // マスト
+    ctx.fillStyle = '#c9d2da'; ctx.fillRect(22, 6, 18, 3); ctx.fillRect(22, 11, 18, 3);   // フォーク
+    ctx.fillStyle = '#f08a24';
+    ctx.beginPath(); ctx.roundRect(-26, -8, 44, 20, 4); ctx.fill();       // 車体
+    ctx.fillStyle = '#2b2d33'; ctx.fillRect(-10, -20, 3, 12); ctx.fillRect(10, -20, 3, 12); ctx.fillRect(-10, -22, 23, 3);  // 屋根
+    ctx.fillStyle = COL.safety; ctx.beginPath(); ctx.arc(1, -12, 5, Math.PI, 0); ctx.fill();   // 運転手のヘルメット
+    ctx.fillStyle = '#1c1618';
+    ctx.beginPath(); ctx.arc(-15, 13, 5, 0, Math.PI * 2); ctx.arc(10, 13, 5, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = '#ff5a2a'; ctx.fillRect(-26, -6, 3, 4);                // 回転灯
+    ctx.restore();
+  }
+  function drawAwakenWorld() {
+    if (!awakenFx) return;
+    const t = awakenFx.t, a = Math.max(0, 1 - t / 1.8);
+    const g = ctx.createLinearGradient(P.x, P.y - 400, P.x, P.y + 20);
+    g.addColorStop(0, 'rgba(255,226,122,0)'); g.addColorStop(1, `rgba(255,226,122,${0.55 * a})`);
+    ctx.fillStyle = g; ctx.fillRect(P.x - 36, P.y - 400, 72, 420);
+    for (let i = 0; i < 3; i++) {
+      const p = ((t * 1.4 + i / 3) % 1);
+      ctx.strokeStyle = `rgba(255,226,122,${(1 - p) * a})`; ctx.lineWidth = 4;
+      ctx.beginPath(); ctx.arc(P.x, P.y, 20 + p * 160, 0, Math.PI * 2); ctx.stroke();
+    }
+  }
+  function drawAwakenScreen() {
+    if (blue > 0) { ctx.fillStyle = `rgba(127,227,255,${blue * 0.45})`; ctx.fillRect(0, 0, W, H); }
+    if (!awakenFx) return;
+    const t = awakenFx.t;
+    const s = t < 0.25 ? 2.4 - 1.4 * (t / 0.25) : 1;
+    const alpha = t > 1.9 ? Math.max(0, 1 - (t - 1.9) / 0.5) : 1;
+    ctx.save();
+    ctx.globalAlpha = alpha;
+    ctx.translate(W / 2, H * 0.44); ctx.scale(s, s);
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.font = '84px DotGothic16, monospace';
+    ctx.lineWidth = 10; ctx.strokeStyle = 'rgba(30,18,4,.85)'; ctx.strokeText('覚醒', 0, 0);
+    ctx.fillStyle = '#ffe27a'; ctx.fillText('覚醒', 0, 0);
+    ctx.font = '20px DotGothic16, monospace';
+    ctx.lineWidth = 6; ctx.strokeText(awakenFx.name, 0, 62);
+    ctx.fillStyle = '#ffffff'; ctx.fillText(awakenFx.name, 0, 62);
+    ctx.restore();
+  }
+
+  function drawBox(b) {
+    const x = b.x, y = b.y + (reduceMotion ? 0 : Math.sin(anim * 3 + b.ph) * 2);
+    const glow = 0.18 + (reduceMotion ? 0 : Math.sin(anim * 4 + b.ph) * 0.08);
+    ctx.fillStyle = b.gold ? `rgba(242,194,48,${glow + 0.1})` : b.forced ? `rgba(95,208,138,${glow})` : `rgba(242,194,48,${glow})`;
+    ctx.beginPath(); ctx.arc(x, y, b.gold ? 34 : 26, 0, Math.PI * 2); ctx.fill();
+    shadow(b.x, b.y + 14, 15);
+    const body = b.gold ? '#e2b33a' : b.forced ? '#f4f1e8' : b.claim ? '#ff8a3d' : '#c8413a';
+    ctx.strokeStyle = b.gold ? '#8a6d12' : '#3a2320'; ctx.lineWidth = 3;
+    ctx.beginPath(); ctx.arc(x, y - 10, 6, Math.PI, 0); ctx.stroke();          // 取っ手
+    ctx.fillStyle = body;
+    ctx.beginPath(); ctx.roundRect(x - 15, y - 9, 30, 21, 3); ctx.fill();
+    ctx.fillStyle = 'rgba(0,0,0,.18)'; ctx.fillRect(x - 15, y - 9, 30, 6);
+    ctx.lineWidth = 1.5; ctx.strokeStyle = 'rgba(0,0,0,.4)';
+    ctx.beginPath(); ctx.roundRect(x - 15, y - 9, 30, 21, 3); ctx.stroke();
+    if (b.forced) {     // 救急箱：緑十字
+      ctx.fillStyle = '#15803d'; ctx.fillRect(x - 2.5, y - 4, 5, 13); ctx.fillRect(x - 6.5, y, 13, 5);
+    } else {
+      ctx.fillStyle = b.gold ? '#5a4610' : b.claim ? '#2b1400' : '#ffffff';
+      ctx.font = '14px DotGothic16, monospace'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+      ctx.fillText(b.gold ? '¥' : '?', x, y + 3);
+    }
+    if (b.claim) {   // 上に⚠マーク
+      const wy = y - 26 + Math.sin(anim * 5 + b.ph) * 2;
+      ctx.fillStyle = COL.safety;
+      ctx.beginPath(); ctx.moveTo(x, wy - 8); ctx.lineTo(x + 8, wy + 6); ctx.lineTo(x - 8, wy + 6); ctx.closePath(); ctx.fill();
+      ctx.fillStyle = '#1c1618'; ctx.fillRect(x - 1, wy - 3, 2, 5); ctx.fillRect(x - 1, wy + 3, 2, 2);
+    }
+  }
+  // 画面外のアイテムBOXを指す矢印
+  function drawBoxArrows() {
+    for (const b of boxes) {
+      const dx = b.x - P.x, dy = b.y - P.y;
+      if (Math.abs(dx) < W / 2 - 10 && Math.abs(dy) < H / 2 - 10) continue;
+      const a = Math.atan2(dy, dx), m = 30;
+      const k = Math.min((W / 2 - m) / Math.abs(Math.cos(a) || 1e-6), (H / 2 - m) / Math.abs(Math.sin(a) || 1e-6));
+      const x = W / 2 + Math.cos(a) * k, y = H / 2 + Math.sin(a) * k;
+      ctx.save(); ctx.translate(x, y); ctx.rotate(a);
+      ctx.fillStyle = b.gold ? COL.safety : b.forced ? COL.good : b.claim ? '#ff8a3d' : '#e5484d';
+      ctx.beginPath(); ctx.moveTo(12, 0); ctx.lineTo(-6, -9); ctx.lineTo(-6, 9); ctx.closePath(); ctx.fill();
+      ctx.restore();
+    }
+  }
+  function drawBossFxWorld() {
+    if (!fx) return;
+    for (let i = 0; i < 3; i++) {
+      const p = (fx.t - i * 0.12) / 1.1;
+      if (p <= 0 || p >= 1) continue;
+      ctx.strokeStyle = i === 1 ? `rgba(255,255,255,${1 - p})` : `rgba(242,194,48,${1 - p})`;
+      ctx.lineWidth = 14 * (1 - p) + 1;
+      ctx.beginPath(); ctx.arc(fx.x, fx.y, p * (fx.sup ? 1100 : 720), 0, Math.PI * 2); ctx.stroke();
+    }
+    if (fx.t < 1.6 && !reduceMotion) {
+      ctx.fillStyle = `rgba(255,226,122,${0.2 * (1 - fx.t / 1.6)})`;
+      for (let i = 0; i < 12; i++) {
+        const a = fx.t * 0.8 + i * Math.PI / 6;
+        ctx.beginPath(); ctx.moveTo(fx.x, fx.y); ctx.arc(fx.x, fx.y, 1000, a, a + 0.12); ctx.closePath(); ctx.fill();
+      }
+    }
+  }
+  // 超大ボスの大きなHPバーと出現時の警報
+  function drawSuperHud() {
+    if (warnT > 0) {
+      const a = 0.35 + Math.sin(anim * 14) * 0.25;
+      ctx.strokeStyle = `rgba(229,72,77,${a})`; ctx.lineWidth = 18; ctx.strokeRect(0, 0, W, H);
+      if (Math.sin(anim * 10) > -0.3) {
+        ctx.font = '40px DotGothic16, monospace'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+        ctx.lineWidth = 6; ctx.strokeStyle = 'rgba(0,0,0,.8)'; ctx.strokeText('⚠ WARNING ⚠', W / 2, H * 0.34);
+        ctx.fillStyle = '#e5484d'; ctx.fillText('⚠ WARNING ⚠', W / 2, H * 0.34);
+      }
+    }
+    const sb = enemies.find((e) => e.sup && !e.dead);
+    if (!sb || state === 'title') return;
+    const w = Math.min(520, W - 32), x = (W - w) / 2, y = 104;
+    ctx.fillStyle = 'rgba(8,6,12,.8)'; ctx.fillRect(x - 2, y - 2, w + 4, 16);
+    ctx.fillStyle = '#e5484d'; ctx.fillRect(x, y, w * Math.max(0, sb.hp / sb.max), 12);
+    ctx.font = '13px DotGothic16, monospace'; ctx.textAlign = 'center'; ctx.textBaseline = 'bottom';
+    ctx.fillStyle = '#ffffff'; ctx.fillText('超大ボス　リコール大魔王', W / 2, y - 4);
+  }
+  function drawBossFxScreen() {
+    if (flash > 0) { ctx.fillStyle = `rgba(255,255,255,${flash * 0.75})`; ctx.fillRect(0, 0, W, H); }
+    if (!fx) return;
+    const t = fx.t;
+    const s = t < 0.22 ? 3 - 2 * (t / 0.22) : 1;               // 判子をドンと押す
+    const alpha = t > 2.1 ? Math.max(0, 1 - (t - 2.1) / 0.5) : 1;
+    const w = fx.sup ? 320 : 210, h = 130;
+    ctx.save();
+    ctx.globalAlpha = alpha;
+    ctx.translate(W / 2, H * 0.46); ctx.rotate(-0.12); ctx.scale(s, s);
+    ctx.fillStyle = 'rgba(40,8,8,.45)'; ctx.fillRect(-w / 2 + 6, -h / 2 + 6, w, h);
+    ctx.fillStyle = 'rgba(255,245,235,.92)'; ctx.fillRect(-w / 2, -h / 2, w, h);
+    ctx.strokeStyle = '#d7263d'; ctx.lineWidth = 8; ctx.strokeRect(-w / 2, -h / 2, w, h);
+    ctx.lineWidth = 2; ctx.strokeRect(-w / 2 + 10, -h / 2 + 10, w - 20, h - 20);
+    ctx.fillStyle = '#d7263d'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.font = '64px DotGothic16, monospace'; ctx.fillText(fx.sup ? '完全撃退' : '撃退', 0, -8);
+    ctx.font = '14px DotGothic16, monospace'; ctx.fillText(fx.name, 0, h / 2 - 24);
+    ctx.restore();
+  }
+
+  function drawGem(g) {
+    if (g.coin) {
+      ctx.fillStyle = '#f2c230'; ctx.beginPath(); ctx.arc(g.x, g.y, 6.5, 0, Math.PI * 2); ctx.fill();
+      ctx.strokeStyle = '#8a6d12'; ctx.lineWidth = 1.5; ctx.stroke();
+      ctx.fillStyle = '#5a4610'; ctx.font = '9px DotGothic16, monospace'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+      ctx.fillText('¥', g.x, g.y + 0.5);
+      return;
+    }
+    const r = g.v >= 20 ? 7 : g.v >= 4 ? 6 : 4.5;
+    ctx.fillStyle = g.v >= 20 ? COL.weld : g.v >= 4 ? COL.safety : '#a9bccb';
+    poly(g.x, g.y, 6, r, 0); ctx.fill();
+    ctx.fillStyle = '#161b21'; ctx.beginPath(); ctx.arc(g.x, g.y, r * 0.42, 0, Math.PI * 2); ctx.fill();
+  }
+
+  function drawSpanner(x, y, a, sc = 1, glow = false) {
+    ctx.save(); ctx.translate(x, y); ctx.rotate(a); ctx.scale(sc, sc);
+    if (glow) { ctx.shadowColor = '#ffe27a'; ctx.shadowBlur = 12; }
+    ctx.fillStyle = '#c9d2da';
+    ctx.fillRect(-14, -3, 22, 6);
+    ctx.beginPath(); ctx.arc(10, 0, 7, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = COL.floor; ctx.fillRect(10, -3, 8, 6);
+    ctx.fillStyle = '#c9d2da'; ctx.beginPath(); ctx.arc(-14, 0, 5, 0, Math.PI * 2); ctx.fill();
+    ctx.restore();
+  }
+
+  function draw() {
+    ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+    const sx = shake ? rand(-shake, shake) * 0.5 : 0, sy = shake ? rand(-shake, shake) * 0.5 : 0;
+    const cx = P.x - sx, cy = P.y - sy;
+    drawFloor(cx, cy);
+    ctx.save();
+    ctx.translate(W / 2 - cx, H / 2 - cy);
+
+    // 溶接アーク
+    if (lv.weld) {
+      const R = weldParams().R;
+      const g = ctx.createRadialGradient(P.x, P.y, R * 0.2, P.x, P.y, R);
+      g.addColorStop(0, awake.weld ? 'rgba(200,245,255,.08)' : 'rgba(127,227,255,0)');
+      g.addColorStop(1, awake.weld ? 'rgba(160,235,255,.3)' : 'rgba(127,227,255,.16)');
+      ctx.fillStyle = g; ctx.beginPath(); ctx.arc(P.x, P.y, R, 0, Math.PI * 2); ctx.fill();
+      ctx.strokeStyle = 'rgba(127,227,255,.55)'; ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      for (let i = 0; i <= 40; i++) {
+        const a = i / 40 * Math.PI * 2, j = reduceMotion ? 0 : Math.sin(weldPulse * 20 + i * 1.7) * 2.5;
+        ctx.lineTo(P.x + Math.cos(a) * (R + j), P.y + Math.sin(a) * (R + j));
+      }
+      ctx.stroke();
+      if (plasma) {   // プラズマの大爆発リング
+        const p = plasma.t / 0.5;
+        ctx.strokeStyle = `rgba(230,250,255,${1 - p})`; ctx.lineWidth = 16 * (1 - p) + 2;
+        ctx.beginPath(); ctx.arc(P.x, P.y, 40 + p * 290, 0, Math.PI * 2); ctx.stroke();
+        ctx.strokeStyle = `rgba(127,227,255,${0.7 * (1 - p)})`; ctx.lineWidth = 6;
+        ctx.beginPath(); ctx.arc(P.x, P.y, 20 + p * 230, 0, Math.PI * 2); ctx.stroke();
+      }
+    }
+    drawAwakenWorld();
+
+    const vx0 = cx - W / 2 - 60, vx1 = cx + W / 2 + 60, vy0 = cy - H / 2 - 60, vy1 = cy + H / 2 + 60;
+    const inView = (o) => o.x > vx0 && o.x < vx1 && o.y > vy0 && o.y < vy1;
+    drawBossFxWorld();
+    for (const b of boxes) if (inView(b)) drawBox(b);
+    for (const g of gems) if (inView(g)) drawGem(g);
+    for (const e of enemies) if (inView(e)) drawEnemy(e);
+    if (freezeT > 0) {   // 非常停止中の敵は青く凍る
+      ctx.fillStyle = 'rgba(127,227,255,.3)';
+      for (const e of enemies) if (inView(e)) { ctx.beginPath(); ctx.arc(e.x, e.y, e.r * 1.1, 0, Math.PI * 2); ctx.fill(); }
+    }
+
+    // リベット・ドリル
+    for (const b of bullets) {
+      if (b.drill) { if (inView(b)) drawDrill(b); continue; }
+      const len = b.aw ? 22 : 14;
+      ctx.strokeStyle = b.aw ? 'rgba(255,179,71,.75)' : 'rgba(255,138,61,.5)'; ctx.lineWidth = b.aw ? 4 : 3;
+      ctx.beginPath(); ctx.moveTo(b.x, b.y); ctx.lineTo(b.x - Math.cos(b.a) * len, b.y - Math.sin(b.a) * len); ctx.stroke();
+      ctx.fillStyle = b.aw ? '#ffe27a' : '#e6ebef'; ctx.beginPath(); ctx.arc(b.x, b.y, b.aw ? 5 : 4, 0, Math.PI * 2); ctx.fill();
+    }
+    for (const f of forks) drawFork(f);
+    for (const b of ebullets) {   // 超大ボスの弾
+      ctx.fillStyle = 'rgba(229,72,77,.3)'; ctx.beginPath(); ctx.arc(b.x, b.y, 10, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = '#e5484d'; ctx.beginPath(); ctx.arc(b.x, b.y, 6, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = '#ffffff'; ctx.beginPath(); ctx.arc(b.x, b.y, 2.5, 0, Math.PI * 2); ctx.fill();
+    }
+
+    if (lv.spanner) {
+      const S = spanParams();
+      for (let i = 0; i < S.n; i++) {
+        const a = spanA + i * Math.PI * 2 / S.n;
+        if (awake.spanner && !reduceMotion) {   // 光の残像
+          for (let k = 3; k >= 1; k--) {
+            const b2 = a - k * 0.14;
+            ctx.globalAlpha = 0.22 / k;
+            drawSpanner(P.x + Math.cos(b2) * S.R, P.y + Math.sin(b2) * S.R, b2 * 3, S.scale);
+          }
+          ctx.globalAlpha = 1;
+        }
+        drawSpanner(P.x + Math.cos(a) * S.R, P.y + Math.sin(a) * S.R, a * 3, S.scale, awake.spanner);
+      }
+    }
+
+    if (buffT > 0) {     // 栄養ドリンクのオーラ
+      ctx.strokeStyle = `rgba(255,138,61,${0.35 + Math.sin(anim * 12) * 0.15})`; ctx.lineWidth = 3;
+      ctx.beginPath(); ctx.arc(P.x, P.y, 24 + Math.sin(anim * 8) * 2, 0, Math.PI * 2); ctx.stroke();
+    }
+    drawPlayer();
+
+    for (const b of bolts) {
+      ctx.globalAlpha = Math.min(1, b.life / 0.28);
+      ctx.strokeStyle = COL.weld; ctx.lineWidth = 4;
+      ctx.beginPath(); for (const [px, py] of b.pts) ctx.lineTo(px, py); ctx.stroke();
+      ctx.strokeStyle = '#ffffff'; ctx.lineWidth = 1.5; ctx.stroke();
+      ctx.fillStyle = 'rgba(127,227,255,.35)'; ctx.beginPath(); ctx.arc(b.x, b.y, b.r || 46, 0, Math.PI * 2); ctx.fill();
+    }
+    ctx.globalAlpha = 1;
+    for (const p of parts) { ctx.globalAlpha = Math.min(1, p.life * 3); ctx.fillStyle = p.color; ctx.fillRect(p.x - p.size / 2, p.y - p.size / 2, p.size, p.size); }
+    ctx.globalAlpha = 1;
+    ctx.font = '13px DotGothic16, monospace'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.lineWidth = 3; ctx.strokeStyle = 'rgba(0,0,0,.8)';
+    for (const t of texts) {
+      ctx.globalAlpha = Math.min(1, t.life * 3);
+      ctx.strokeText(t.v, t.x, t.y); ctx.fillStyle = '#ffffff'; ctx.fillText(t.v, t.x, t.y);
+    }
+    ctx.globalAlpha = 1;
+    ctx.font = '15px DotGothic16, monospace'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.lineWidth = 4;
+    for (const t of pops) {
+      ctx.globalAlpha = Math.min(1, t.life * 2);
+      ctx.strokeStyle = 'rgba(0,0,0,.85)'; ctx.strokeText(t.text, t.x, t.y);
+      ctx.fillStyle = t.color; ctx.fillText(t.text, t.x, t.y);
+    }
+    ctx.globalAlpha = 1;
+    ctx.restore();
+
+    // ナトリウム灯の周辺減光
+    const vg = ctx.createRadialGradient(W / 2, H / 2, Math.min(W, H) * 0.3, W / 2, H / 2, Math.hypot(W, H) * 0.6);
+    vg.addColorStop(0, 'rgba(5,7,10,0)');
+    vg.addColorStop(1, 'rgba(5,7,10,.7)');
+    ctx.fillStyle = vg; ctx.fillRect(0, 0, W, H);
+
+    if (state !== 'title') drawBoxArrows();
+    drawSuperHud();
+    drawBossFxScreen();
+    drawAwakenScreen();
+
+    if (joy && state === 'play') {
+      ctx.strokeStyle = 'rgba(233,237,241,.35)'; ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.arc(joy.ox, joy.oy, 44, 0, Math.PI * 2); ctx.stroke();
+      const dx = joy.x - joy.ox, dy = joy.y - joy.oy, d = Math.hypot(dx, dy), m = Math.min(d, 44) / (d || 1);
+      ctx.fillStyle = 'rgba(242,194,48,.6)';
+      ctx.beginPath(); ctx.arc(joy.ox + dx * m, joy.oy + dy * m, 16, 0, Math.PI * 2); ctx.fill();
+    }
+  }
+
+  // ---------- HUD ----------
+  const fmt = (s) => { s = Math.floor(s); return String(Math.floor(s / 60)).padStart(2, '0') + ':' + String(s % 60).padStart(2, '0'); };
+  function shiftClock(t) {
+    const m = Math.floor(22 * 60 + t * 0.8) % (24 * 60);
+    return String(Math.floor(m / 60)).padStart(2, '0') + ':' + String(m % 60).padStart(2, '0');
+  }
+  const hudCache = {};
+  function setText(id, v) { if (hudCache[id] !== v) { hudCache[id] = v; $(id).textContent = v; } }
+  function updateHud() {
+    $('xpfill').style.width = Math.min(100, P.xp / P.xpNext * 100).toFixed(1) + '%';
+    setText('lvText', 'Lv.' + P.level);
+    setText('killText', '撃破 ' + kills);
+    setText('payText', trial ? '試運転（給料なし）' : '給料 ' + yen(payFor(time, kills, false).total));
+    setText('timerText', fmt(time));
+    setText('shiftText', '工場時刻 ' + shiftClock(time));
+    const buffs = [];
+    if (freezeT > 0) buffs.push('非常停止 ' + Math.ceil(freezeT) + '秒');
+    if (buffT > 0) buffs.push('栄養ドリンク ' + Math.ceil(buffT) + '秒');
+    if (claim) buffs.push('⚠ クレーム対応中：オレンジの箱から対策書を探せ');
+    setText('buffText', buffs.join('　'));
+  }
+  function renderGear() {
+    const el = $('gear');
+    el.innerHTML = '';
+    for (const k in UPG) {
+      if (!lv[k]) continue;
+      const s = document.createElement('span');
+      s.className = UPG[k].w ? 'w' : '';
+      s.title = UPG[k].name;
+      s.textContent = UPG[k].icon;
+      const i = document.createElement('i'); i.textContent = awake[k] ? '覚' : lv[k]; s.appendChild(i);
+      if (awake[k]) { s.className = 'w aw'; s.textContent = AWAKE[k].icon; s.appendChild(i); s.title = AWAKE[k].name; }
+      el.appendChild(s);
+    }
+    if (awards) {
+      const s = document.createElement('span'); s.textContent = '賞'; s.title = '表彰状';
+      const i = document.createElement('i'); i.textContent = awards; s.appendChild(i); el.appendChild(s);
+    }
+  }
+  let bannerTimer = 0;
+  function banner(text) {
+    const b = $('banner');
+    b.textContent = text; b.classList.add('show');
+    clearTimeout(bannerTimer);
+    bannerTimer = setTimeout(() => b.classList.remove('show'), 2200);
+  }
+
+  // ---------- 画面遷移 ----------
+  const OVERLAYS = ['ovTitle', 'ovLevel', 'ovPause', 'ovOver', 'ovShop', 'ovRules'];
+  function showOverlay(id) { for (const o of OVERLAYS) $(o).hidden = o !== id; }
+
+  // 試運転：覚醒装備4つをそろえた状態で遊べる。給料・記録・貯金は増えない
+  let trial = false;
+  function start(opt) {
+    trial = !!(opt && opt.trial);
+    initAudio();
+    if (actx && actx.state === 'suspended') actx.resume();
+    reset();
+    if (trial) {
+      Object.assign(lv, { rivet: 10, spanner: 10, weld: 10, spark: 10, oil: 5, gloves: 5, heart: 5, magnet: 5 });
+      awake = { rivet: true, spanner: true, weld: true, spark: true };
+      P.hp = stat.maxHp;
+      time = 110;   // 敵が増えてくる時間から始め、10秒ほどでボスが来る
+      nextSwarm = 120;
+      renderGear();
+    }
+    state = 'play';
+    BGM.start(stage.bgm);
+    $('stageText').textContent = (trial ? '試運転・' : '') + stage.level + '・' + stage.name;
+    showOverlay(null);
+    $('hud').hidden = false; $('gear').hidden = false;
+    banner(trial ? '試運転：覚醒装備4つを体験中（給料・記録は出ません）' : '22:00 ' + stage.name + ' 夜勤スタート');
+  }
+  function pause() {
+    state = 'pause'; joy = null; BGM.duck(true);
+    fillSlip($('slipPause'), payFor(time, kills, false), false, false);
+    $('awakeProgress').textContent = awakenProgress();
+    showOverlay('ovPause'); $('resumeBtn').focus();
+  }
+  function resume() { if (state === 'pause') BGM.duck(false); state = 'play'; showOverlay(null); last = performance.now(); }
+  function toTitle() {
+    state = 'title'; BGM.stop(); showOverlay('ovTitle');
+    $('hud').hidden = true; $('gear').hidden = true;
+    setupDemo(); renderStages(); renderMoney(); $('startBtn').focus();
+  }
+
+  // 検定1級を持っている武器について、覚醒の条件をカードに書き添える
+  // その改善が関わる覚醒（検定1級を持っていて、まだ覚醒していないもの）と、残りのレベル数
+  function awakenInfo(k) {
+    for (const w in AWAKE) {
+      if (ml('cap_' + w) < 2 || awake[w]) continue;
+      const p = AWAKE[w].partner;
+      if (k !== w && k !== p) continue;
+      const needW = Math.max(0, 10 - lv[w]), needP = Math.max(0, 5 - lv[p]);
+      return { w, p, needW, needP, remain: needW + needP };
+    }
+    return null;
+  }
+  function awakenHint(k) {
+    const a = awakenInfo(k);
+    return a ? '（覚醒条件：' + UPG[a.w].name + ' Lv10＋' + UPG[a.p].name + ' Lv5）' : '';
+  }
+  // カードに目立たせて出す「覚醒まであと○」
+  function awakenBadge(k) {
+    const a = awakenInfo(k);
+    if (!a) return '';
+    const parts = [];
+    if (a.needW) parts.push(UPG[a.w].name + ' あと' + a.needW);
+    if (a.needP) parts.push(UPG[a.p].name + ' あと' + a.needP);
+    return '🔥 ' + AWAKE[a.w].name + ' まであと ' + a.remain + '（' + parts.join('・') + '）';
+  }
+  function awakenProgress() {
+    const rows = [];
+    for (const w in AWAKE) {
+      if (ml('cap_' + w) < 2) continue;
+      const p = AWAKE[w].partner;
+      const remain = Math.max(0, 10 - lv[w]) + Math.max(0, 5 - lv[p]);
+      rows.push(awake[w] ? UPG[w].name + '：覚醒済み' : UPG[w].name + ' Lv' + lv[w] + '/10・' + UPG[p].name + ' Lv' + lv[p] + '/5（あと' + remain + '）');
+    }
+    return rows.length ? '覚醒の進み具合　' + rows.join('　／　') : '';
+  }
+  let choices = [], luckyFlags = [], awakenOnly = false;   // awakenOnly：条件がそろった直後の「覚醒カードだけ」の画面
+  function openLevel() {
+    state = 'level'; joy = null;
+    sfx('level');
+    const pool = Object.keys(UPG).filter((k) => lv[k] < capOf(k));
+    const aw = Object.keys(AWAKE).filter(canAwaken);
+    const picks = aw.length ? ['awaken:' + aw[0]] : [];   // 覚醒できるなら必ず1枚目に出す
+    const bonusAwaken = awakenOnly && aw.length > 0;
+    awakenOnly = false;
+    if (bonusAwaken) { pool.length = 0; for (const w of aw.slice(1)) picks.push('awaken:' + w); }
+    while (picks.length < 3 && pool.length) {
+      // 未所持の武器は少し出やすく
+      const weights = pool.map((k) => (UPG[k].w && lv[k] === 0 ? 1.6 : 1));
+      let r = Math.random() * weights.reduce((a, b) => a + b, 0), idx = 0;
+      while (r > weights[idx]) { r -= weights[idx]; idx++; }
+      picks.push(pool.splice(Math.min(idx, pool.length - 1), 1)[0]);
+    }
+    // 取れる物がなければ表彰状と缶コーヒー（同じカードは1枚ずつ）。覚醒だけの画面では足さない
+    if (!bonusAwaken && picks.length < 3) picks.push('award');
+    if (!bonusAwaken && picks.length < 3) picks.push('coffee');
+    if (!bonusAwaken && P.hp < stat.maxHp * 0.35 && medOk() && !boxes.some((b) => b.forced === 'medkit')) picks.push('medkit');   // 初級でHPピンチなら4枚目に全回復（1回だけ）
+    choices = picks;
+    // ラッキーボーナス：武器のカードがまれに「3段階アップ」になる
+    luckyFlags = picks.map((k) => !!(UPG[k] && UPG[k].w && lv[k] + 1 < capOf(k) && Math.random() < stat.luck));
+    say(luckyFlags.some(Boolean) ? 'lucky' : 'level');
+    const cards = $('cards');
+    cards.innerHTML = '';
+    picks.forEach((k, n) => {
+      const awk = k.startsWith('awaken:') ? k.slice(7) : null;
+      const u = awk ? { ...AWAKE[awk], w: true } : k === 'coffee' ? COFFEE : k === 'medkit' ? MEDKIT : k === 'award' ? AWARD : UPG[k];
+      const cur = UPG[k] ? lv[k] : 0;
+      const desc = k === 'coffee' && P.hp >= stat.maxHp
+        ? 'HP満タンなので飲まずに我慢。¥' + COFFEE_SAVE + ' を貯金する'
+        : Array.isArray(u.desc) ? u.desc[cur] : u.desc;
+      const lucky = luckyFlags[n];
+      const btn = document.createElement('button');
+      btn.type = 'button'; btn.className = 'card' + (u.w ? ' w' : '') + (lucky ? ' lucky' : '') + (awk ? ' awaken' : '');
+      btn.innerHTML = '<span class="ico"></span><span class="txt"><span><b></b><span class="tag"></span></span><small></small><span class="awbadge" hidden></span></span><kbd></kbd>';
+      btn.querySelector('.ico').textContent = u.icon;
+      btn.querySelector('b').textContent = u.name;
+      const tag = btn.querySelector('.tag');
+      if (awk) { tag.className = 'luckytag'; tag.textContent = '覚醒 ・ ' + UPG[awk].name; }
+      else if (lucky) { tag.className = 'luckytag'; tag.textContent = 'ラッキー！ ' + (cur ? 'Lv.' + cur : '新規') + ' → Lv.' + Math.min(capOf(k), cur + 3); }
+      else if (k === 'award') { tag.className = 'new'; tag.textContent = awards ? '×' + (awards + 1) + '枚目' : '何度でも'; }
+      else if (k === 'medkit') { tag.className = 'new'; tag.textContent = 'HPピンチ'; }
+      else if (k !== 'coffee') {
+        if (cur === 0) { tag.className = 'new'; tag.textContent = '新規'; }
+        else { tag.className = 'lvl'; tag.textContent = 'Lv.' + cur + ' → ' + (cur + 1); }
+      }
+      btn.querySelector('small').textContent = (lucky ? '3段階まとめてレベルアップ！' : desc) + awakenHint(k);
+      const badge = awakenBadge(k);
+      if (badge && !awk) {
+        const el = btn.querySelector('.awbadge');
+        el.textContent = badge; el.hidden = false;
+        btn.classList.add('awnear');
+      }
+      btn.querySelector('kbd').textContent = n + 1;
+      btn.addEventListener('click', () => choose(k, lucky));
+      cards.appendChild(btn);
+    });
+    $('lvEyebrow').textContent = bonusAwaken ? 'AWAKENING ・ 覚醒の条件がそろった！' : 'LEVEL UP ・ Lv.' + (P.level - pending + 1);
+    const prog = awakenProgress();
+    $('lvAwake').textContent = prog; $('lvAwake').hidden = !prog;
+    showOverlay('ovLevel');
+    const first = cards.querySelector('button');
+    if (first) first.focus({ preventScroll: true });
+  }
+  function choose(k, lucky) {
+    if (state !== 'level') return;
+    if (k === 'coffee') {
+      if (P.hp >= stat.maxHp) {   // HP満タンなら飲まずに我慢して貯金
+        found += COFFEE_SAVE;
+        pop(P.x, P.y - 52, '💰 +' + yen(COFFEE_SAVE));
+        sfx('coin');
+        banner('缶コーヒーを我慢して ' + yen(COFFEE_SAVE) + ' 貯金');
+      } else P.hp = Math.min(stat.maxHp, P.hp + 30);
+    }
+    else if (k === 'medkit') { P.hp = stat.maxHp; medUsed = true; boxes = boxes.filter((b) => b.forced !== 'medkit'); banner('救急箱：HP全回復（この夜勤ではもう出ません）'); }
+    else if (k.startsWith('awaken:')) {
+      const w = k.slice(7);
+      awake[w] = true;
+      awakenFx = { t: 0, name: AWAKE[w].name };
+      flash = Math.max(flash, 0.6);
+      sfx('awaken');
+      say('awaken', true);
+      banner('覚醒！ ' + UPG[w].name + ' → ' + AWAKE[w].name);
+    }
+    else if (k === 'award') {
+      awards++;
+      P.hp = Math.min(stat.maxHp, P.hp + 5);
+      banner('表彰状：威力 +2%・最大HP +5（' + awards + '枚目）');
+    }
+    else if (lucky) {
+      const before = lv[k];
+      lv[k] = Math.min(capOf(k), lv[k] + 3);
+      sfx('lucky');
+      banner('ラッキーボーナス！ ' + UPG[k].name + ' Lv.' + before + ' → ' + lv[k]);
+    } else {
+      lv[k]++;
+      if (k === 'heart') P.hp = Math.min(stat.maxHp, P.hp + 20);
+    }
+    renderGear();
+    pending--;
+    if (!k.startsWith('awaken:') && Object.keys(AWAKE).some(canAwaken)) { awakenOnly = true; pending++; }   // 条件がそろった瞬間に覚醒カードを出す
+    if (pending > 0) openLevel();
+    else resume();
+  }
+
+  function finish(win) {
+    state = 'over';
+    BGM.stop();
+    const wasOpen = mgrOpen();
+    const best = trial ? loadBest() : Math.max(loadBest(), Math.floor(time));
+    if (!trial) saveBest(best);
+    if (win && !trial) saveCleared(stageId);
+    $('overEyebrow').textContent = stage.level + '・' + stage.name + '　' + (win ? 'SHIFT COMPLETE 06:00' : 'LINE STOP ' + shiftClock(time));
+    $('overTitle').textContent = win ? '定時退勤！' : 'ライン停止';
+    $('overLead').textContent = win
+      ? '朝6時まで持ち場を守り切りました。お疲れさまでした。'
+      : '工場時刻 ' + shiftClock(time) + ' で倒れました。改善の組み合わせを変えて、もう一度挑戦してみてください。';
+    if (!wasOpen && mgrOpen()) $('overLead').textContent += '　🎉 3ステージすべて定時退勤！「管理職モード」が解放されました。';
+    $('stTime').textContent = fmt(time);
+    $('stLv').textContent = P.level;
+    $('stKills').textContent = kills;
+    $('bestOver').textContent = stage.name + 'の最長記録（この端末） ' + fmt(best);
+    const pay = payFor(time, kills, win);
+    if (trial) {
+      $('overLead').textContent = '試運転はここまでです。本番で覚醒するには、自己投資で検定1級を取ってください。';
+      const slip = $('slip'); slip.innerHTML = '';
+      const tr = document.createElement('tr'); const th = document.createElement('th'); const td = document.createElement('td');
+      th.textContent = '試運転のため、給料と記録は出ません'; td.textContent = '—'; tr.append(th, td); slip.appendChild(tr);
+    } else {
+      meta.money += pay.total; meta.earned += pay.total;
+      saveMeta();
+      fillSlip($('slip'), pay, win, true);
+    }
+    showOverlay('ovOver');
+    $('retryBtn').focus();
+  }
+  function fillSlip(table, pay, win, withBank) {
+    const rows = [
+      ['基本給（時給 ' + yen(pay.wage) + ' × ' + pay.hours.toFixed(1) + '時間）', yen(pay.base)],
+      ['撃破手当（' + kills + '体 × ' + yen(KILL_PAY) + '）', yen(pay.killPay)],
+      ['定時退勤手当', win ? yen(pay.bonus) : '—'],
+      ['夜勤手当（' + stage.level + '）', '上の3つ × ' + stage.pay],
+      ['拾得金（💰 大入り袋・小銭・缶コーヒー我慢）', '＋' + yen(pay.found)],
+    ];
+    table.innerHTML = '';
+    const addRow = (a, b, cls) => {
+      const tr = document.createElement('tr'); if (cls) tr.className = cls;
+      const th = document.createElement('th'); th.textContent = a;
+      const td = document.createElement('td'); td.textContent = b;
+      tr.append(th, td); table.appendChild(tr);
+    };
+    for (const [a, b] of rows) addRow(a, b);
+    addRow(withBank ? '支給額' : '今の時点の支給額', yen(pay.total), 'total');
+    if (withBank) addRow('貯金', yen(meta.money), 'bank');
+  }
+
+  // ---------- ルール画面 ----------
+  let rulesBack = null;
+  function openRules() {
+    rulesBack = { state, overlay: OVERLAYS.find((o) => !$(o).hidden) || null, focus: document.activeElement };
+    state = 'rules';
+    renderRules();
+    showOverlay('ovRules');
+    $('rulesClose').focus();
+  }
+  function closeRules() {
+    if (!rulesBack) return;
+    state = rulesBack.state;
+    showOverlay(rulesBack.overlay);
+    if (rulesBack.focus && rulesBack.focus.focus) rulesBack.focus.focus();
+    rulesBack = null;
+  }
+  function renderRules() {
+    const grid = $('rulesItems');
+    grid.innerHTML = '';
+    for (const k in ITEMS) {
+      const it = document.createElement('div'); it.className = 'ritem';
+      it.innerHTML = '<span class="ico"></span><span><b></b><small></small></span>';
+      it.querySelector('.ico').textContent = ITEMS[k].icon;
+      it.querySelector('b').textContent = ITEMS[k].name;
+      it.querySelector('small').textContent = ITEMS[k].desc;
+      grid.appendChild(it);
+    }
+    const wage = WAGE * (1 + 0.1 * ml('raise'));
+    const t = $('rulesPay');
+    t.innerHTML = '';
+    const rows = [
+      ['基本給', '時給 ' + yen(wage) + ' × 勤務時間。ゲームの1分が工場の48分なので、10分で8時間分（' + yen(wage * 8) + '）' + (ml('raise') ? '　※昇給交渉で時給アップ中' : '')],
+      ['撃破手当', '倒した敵1体につき ' + yen(KILL_PAY)],
+      ['定時退勤手当', '06:00まで生き延びると ' + yen(CLEAR_PAY)],
+      ['夜勤手当', '上の3つの合計に倍率をかける：初級 ×' + STAGES.screw.pay + '／中級 ×' + STAGES.smt.pay + '／上級 ×' + STAGES.line.pay + '／管理職 ×' + STAGES.mgr.pay],
+      ['拾得金 💰', '大入り袋・小銭・ボス撃破のボーナス箱。拾った額（倍率込み）がそのまま加算'],
+      ['支給額', '合計が貯金に入り、「設備投資・福利厚生」で強化に使えます'],
+    ];
+    for (const [a, b] of rows) {
+      const tr = document.createElement('tr');
+      const th = document.createElement('th'); th.textContent = a;
+      const td = document.createElement('td'); td.textContent = b;
+      tr.append(th, td); t.appendChild(tr);
+    }
+    $('voiceCredit').textContent = voiceCredit;
+    $('voiceCredit').hidden = !voiceCredit;
+    const ex = (wage * 8 + 800 * KILL_PAY + CLEAR_PAY);
+    $('rulesExample').textContent = '例：初級で朝まで生き延び、800体倒した場合　(' + yen(wage * 8) + ' ＋ ' + yen(800 * KILL_PAY) + ' ＋ ' + yen(CLEAR_PAY) + ') × 1 ＝ ' + yen(ex) + '（＋拾得金）。上級なら同じ働きで ' + yen(ex * STAGES.line.pay) + '。';
+  }
+
+  function renderMoney() {
+    $('moneyTitle').textContent = '貯金 ' + yen(meta.money) + '　（設備投資で強化できます）';
+  }
+  function openShop() {
+    initAudio();
+    state = 'shop';
+    showOverlay('ovShop');
+    renderShop();
+    $('shopClose').focus();
+  }
+  function closeShop() {
+    state = 'title';
+    showOverlay('ovTitle');
+    setupDemo(); renderStages(); renderMoney();
+    $('shopBtn').focus();
+  }
+  function renderShop() {
+    $('shopMoney').textContent = '貯金 ' + yen(meta.money);
+    const groups = [['shopTools', (x) => x.start], ['shopSelf', (x) => x.cap], ['shopPerks', (x) => !x.start && !x.cap]];
+    for (const [boxId, test] of groups) {
+      const box = $(boxId);
+      box.innerHTML = '';
+      for (const it of SHOP.filter(test)) {
+        const l = ml(it.id), maxed = l >= it.max, c = shopCost(it, l);
+        const row = document.createElement('div');
+        row.className = 'srow';
+        row.innerHTML = '<span class="ico"></span><div class="stxt"><b></b><small></small><span class="pips"></span></div><button type="button" class="buy"></button>';
+        row.querySelector('.ico').textContent = it.icon;
+        row.querySelector('b').textContent = it.name;
+        let now = '';
+        if (it.id === 'rivet') now = '（今は Lv.' + (1 + l) + ' で開始）';
+        else if (it.start) now = l ? '（今は Lv.' + l + ' で開始）' : '';
+        row.querySelector('small').textContent = it.cap
+          ? (l < it.max ? '次：' + it.steps[l] : '修了：' + it.steps[it.max - 1])
+          : it.desc + now;
+        row.querySelector('.pips').textContent = '■'.repeat(Math.min(l, it.max)) + '□'.repeat(Math.max(0, it.max - l));
+        const btn = row.querySelector('.buy');
+        btn.id = 'buy-' + it.id;
+        if (maxed) { btn.textContent = '最大'; btn.disabled = true; }
+        else {
+          btn.textContent = yen(c);
+          btn.disabled = meta.money < c;
+          btn.setAttribute('aria-label', it.name + ' を ' + yen(c) + ' で買う');
+          btn.addEventListener('click', () => buy(it.id));
+        }
+        box.appendChild(row);
+      }
+    }
+  }
+  function buy(id) {
+    const it = SHOP.find((x) => x.id === id);
+    const l = ml(id), c = shopCost(it, l);
+    if (l >= it.max || meta.money < c) return;
+    meta.money -= c;
+    meta.up[id] = l + 1;
+    saveMeta();
+    sfx('buy');
+    renderShop();
+    const again = $('buy-' + id);
+    if (again && !again.disabled) again.focus(); else $('shopClose').focus();
+  }
+
+  function renderStages() {
+    const box = $('stages');
+    box.innerHTML = '';
+    for (const id in STAGES) {
+      const S = STAGES[id];
+      const btn = document.createElement('button');
+      const locked = isLocked(id);
+      btn.type = 'button'; btn.className = 'stage' + (locked ? ' locked' : '') + (S.lv === 4 ? ' boss' : '');
+      btn.setAttribute('role', 'radio');
+      if (locked) btn.setAttribute('aria-disabled', 'true');
+      btn.setAttribute('aria-checked', String(id === stageId));
+      btn.innerHTML = '<span class="lvchip"></span><b></b><small class="sub"></small><small class="rec"></small>';
+      const chip = btn.querySelector('.lvchip');
+      chip.className = 'lvchip l' + S.lv; chip.textContent = S.level + ' ' + '★'.repeat(S.lv);
+      btn.querySelector('b').textContent = S.name;
+      btn.querySelector('.sub').textContent = S.sub;
+      const best = loadBest(id);
+      btn.querySelector('.rec').textContent = locked ? '🔒 3ステージすべて定時退勤で解放' : isCleared(id) ? '定時退勤済み' : best ? '最長 ' + fmt(best) : '未挑戦';
+      btn.addEventListener('click', () => selectStage(id));
+      box.appendChild(btn);
+    }
+    const R = stage.roles;
+    $('roster').textContent = stage.desc + '　出没する不良品：' + roleNames(R.basic) + '／' + roleNames(R.fast) + '（速い）／' +
+      roleNames(R.tank) + '（硬い）／' + roleNames(R.boss) + '（ボス）' + (stage.superAt ? '／リコール大魔王（超大ボス）' : '');
+  }
+  function selectStage(id) {
+    if (!id || isLocked(id)) {
+      if (id) $('roster').textContent = '管理職モードは、初級・中級・上級の3ステージすべてを定時退勤（クリア）すると解放されます。';
+      return;
+    }
+    stageId = id; stage = STAGES[id];
+    try { localStorage.setItem('yakin-stage', id); } catch (e) {}
+    renderStages(); setupDemo();
+    if (BGM.playing) BGM.start(stage.bgm);
+    const cur = $('stages').querySelector('[aria-checked="true"]');
+    if (cur) cur.focus();
+  }
+
+  $('startBtn').addEventListener('click', () => start());
+  $('shopBtn').addEventListener('click', openShop);
+  $('shopClose').addEventListener('click', closeShop);
+  $('rulesBtn').addEventListener('click', openRules);
+  $('pauseRules').addEventListener('click', openRules);
+  $('rulesClose').addEventListener('click', closeRules);
+  $('retryBtn').addEventListener('click', () => start({ trial }));
+  $('trialBtn').addEventListener('click', () => start({ trial: true }));
+  $('titleBtn').addEventListener('click', toTitle);
+  $('quitBtn').addEventListener('click', toTitle);
+  $('resumeBtn').addEventListener('click', resume);
+  $('pauseBtn').addEventListener('click', () => { if (state === 'play') pause(); });
+  function renderBgmUi() {
+    $('bgmBtn').textContent = BGM.on ? '曲' : '無';
+    $('bgmBtn').setAttribute('aria-pressed', String(BGM.on));
+    $('bgmVol').value = Math.round(BGM.vol * 100);
+    $('bgmVolOut').textContent = Math.round(BGM.vol * 100);
+    for (const [boxId, tgId] of [['bgmPickTitle', 'bgmToggleTitle'], ['bgmPickPause', 'bgmTogglePause']]) {
+      const box = $(boxId), tg = $(tgId);
+      tg.querySelector('.cur').textContent = '♪ ' + BGM_STYLES[BGM.style].name;
+      tg.querySelector('.more').textContent = box.hidden ? '曲を選ぶ ▼（全' + Object.keys(BGM_STYLES).length + '曲）' : '閉じる ▲';
+      tg.setAttribute('aria-expanded', String(!box.hidden));
+      box.innerHTML = '';
+      for (const id in BGM_STYLES) {
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.setAttribute('role', 'radio');
+        btn.setAttribute('aria-checked', String(id === BGM.style));
+        btn.innerHTML = '<b></b><small></small>';
+        btn.querySelector('b').textContent = BGM_STYLES[id].name;
+        btn.querySelector('small').textContent = BGM_STYLES[id].note;
+        btn.addEventListener('click', () => pickBgm(id, boxId));
+        box.appendChild(btn);
+      }
+    }
+  }
+  function renderVoiceUi() {
+    for (const boxId of ['voicePickTitle', 'voicePickPause']) {
+      const box = $(boxId);
+      box.innerHTML = '';
+      for (const id in VOICES) {
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.setAttribute('role', 'radio');
+        btn.setAttribute('aria-checked', String(id === voiceId));
+        btn.innerHTML = '<b></b>';
+        btn.querySelector('b').textContent = VOICES[id].name;
+        btn.addEventListener('click', () => {
+          voiceId = id;
+          try { localStorage.setItem('yakin-voice', id); } catch (e) {}
+          renderVoiceUi();
+          say('level', true);
+          const cur = $(boxId).querySelector('[aria-checked="true"]');
+          if (cur) cur.focus();
+        });
+        box.appendChild(btn);
+      }
+    }
+  }
+  renderVoiceUi();
+  function pickBgm(id, boxId) {
+    initAudio();
+    if (actx && actx.state === 'suspended') actx.resume();
+    BGM.setStyle(id);
+    if (!BGM.on) BGM.toggle();
+    if (state === 'title') BGM.start(stage.bgm);     // タイトル画面では試聴として鳴らす
+    renderBgmUi();
+    const cur = $(boxId).querySelector('[aria-checked="true"]');
+    if (cur) cur.focus();
+  }
+  // BGMの一覧は普段は畳んでおき、ボタンで開閉する
+  for (const [boxId, tgId] of [['bgmPickTitle', 'bgmToggleTitle'], ['bgmPickPause', 'bgmTogglePause']]) {
+    $(tgId).addEventListener('click', () => {
+      $(boxId).hidden = !$(boxId).hidden;
+      renderBgmUi();
+      if (!$(boxId).hidden) { const cur = $(boxId).querySelector('[aria-checked="true"]'); if (cur) cur.scrollIntoView({ block: 'nearest' }); }
+    });
+  }
+  $('bgmBtn').addEventListener('click', () => { BGM.toggle(); renderBgmUi(); });
+  $('bgmVol').addEventListener('input', (e) => { BGM.setVol(Number(e.target.value) / 100); renderBgmUi(); });
+  renderBgmUi();
+  $('muteBtn').addEventListener('click', () => {
+    muted = !muted;
+    $('muteBtn').textContent = muted ? '消' : '音';
+    $('muteBtn').setAttribute('aria-pressed', String(muted));
+  });
+
+  // ---------- ループ ----------
+  let last = performance.now();
+  function loop(now) {
+    const dt = Math.min(0.05, (now - last) / 1000);
+    last = now;
+    anim += dt;
+    const slow = (fx && fx.t < 0.9) || (awakenFx && awakenFx.t < 0.7);
+    if (state === 'play') { update(dt * (slow ? 0.25 : 1)); updateHud(); }
+    if (awakenFx) { awakenFx.t += dt; if (awakenFx.t > 2.4) awakenFx = null; }
+    if (blue > 0) blue = Math.max(0, blue - dt * 1.4);
+    if (fx) { fx.t += dt; if (fx.t > 2.6) fx = null; }
+    if (flash > 0) flash = Math.max(0, flash - dt * 1.6);
+    else if (state === 'title') { P.walk += dt * 0.3; }
+    draw();
+    requestAnimationFrame(loop);
+  }
+
+  // タイトル背景用に、選んだステージの敵を少しだけ並べておく
+  function setupDemo() {
+    reset();
+    const R = stage.roles;
+    for (let i = 0; i < 14; i++) {
+      const e = spawnEnemy(pickRole(i % 5 === 0 ? R.tank : i % 3 === 0 ? R.fast : R.basic), i / 14 * Math.PI * 2);
+      e.x = P.x + (e.x - P.x) * 0.55; e.y = P.y + (e.y - P.y) * 0.55;
+    }
+    for (let i = 0; i < 20; i++) dropGem(rand(-260, 260), rand(-200, 200), i % 6 === 0 ? 4 : 1);
+  }
+  // ---------- クラウドセーブ（claude.ai で開いたとき、アカウントごとに保存） ----------
+  // 端末内（localStorage）の yakin-* をまとめて、本人だけが読める data/users/<id>/save に置く。
+  // 開いたとき、累計の稼ぎ（earned）が多いほうを正として、もう一方をそろえる。
+  let cloudRef = null, cloudLast = '', cloudTimer = 0, cloudBusy = false;
+  function localSnapshot() {
+    const v = {};
+    try {
+      for (let i = 0; i < localStorage.length; i++) {
+        const k = localStorage.key(i);
+        if (k && k.startsWith('yakin-')) v[k] = localStorage.getItem(k);
+      }
+    } catch (e) {}
+    return v;
+  }
+  const earnedOf = (v) => { try { return Number((JSON.parse(v['yakin-save'] || 'null') || {}).earned) || 0; } catch (e) { return 0; } };
+  function cloudPush() {
+    if (!cloudRef) return;
+    clearTimeout(cloudTimer);
+    cloudTimer = setTimeout(async () => {
+      if (cloudBusy) { cloudPush(); return; }
+      const v = localSnapshot(), j = JSON.stringify(v);
+      if (j === cloudLast) return;
+      cloudBusy = true;
+      try { await cloudRef.set({ v, t: Date.now() }); cloudLast = j; }
+      catch (e) { if (e && e.code === 'invalid_argument') cloudRef = null; }
+      cloudBusy = false;
+    }, 1500);
+  }
+  function applyCloud(v) {
+    try { for (const k in v) if (typeof v[k] === 'string') localStorage.setItem(k, v[k]); } catch (e) {}
+    try {
+      const m = JSON.parse(v['yakin-save'] || 'null');
+      if (m) { meta.money = Math.max(0, m.money | 0); meta.earned = Math.max(0, m.earned | 0); meta.up = m.up || {}; }
+    } catch (e) {}
+    const sid = v['yakin-stage'];
+    if (state === 'title' && sid && STAGES[sid] && !isLocked(sid)) { stageId = sid; stage = STAGES[sid]; setupDemo(); }
+    if (state === 'title') { renderStages(); renderMoney(); }
+    if (state === 'shop') renderShop();
+  }
+  (async () => {
+    try {
+      if (!window.claude || typeof window.claude.use !== 'function') return;
+      const [db, user] = await Promise.all([window.claude.use('db'), window.claude.use('user')]);
+      if (!db || !user) return;
+      const uid = await user.id();
+      if (!uid) return;
+      const ref = db.doc('data/users/' + uid + '/save');
+      const snap = await ref.get();
+      const data = snap && snap.exists ? snap.data() : null;
+      const cloud = data && typeof data.v === 'object' ? data.v : null;
+      cloudRef = ref;
+      if (cloud && Object.keys(cloud).length && earnedOf(cloud) >= earnedOf(localSnapshot())) {
+        applyCloud(cloud);
+        cloudLast = JSON.stringify(cloud);
+      }
+      cloudPush();
+    } catch (e) {}
+  })();
+
+  if (isLocked(stageId)) { stageId = 'screw'; stage = STAGES.screw; }
+  setupDemo();
+  renderStages();
+  renderMoney();
+  requestAnimationFrame(loop);
+})();
+</script>
