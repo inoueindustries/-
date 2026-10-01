@@ -49,9 +49,14 @@
   /* HUD */
   .hud {
     position: absolute; inset: 0 0 auto 0;
-    padding: 10px 16px 0;
+    /* iPhoneのノッチ／ダイナミックアイランド（時計・電波・電池）の下から表示する。
+       safe-area が取れない閲覧環境でも隠れないよう、タッチ端末は最低 60px 下げる */
+    padding: calc(max(env(safe-area-inset-top, 0px), 0px) + 10px) 16px 0;
     display: grid; gap: 6px;
     pointer-events: none;
+  }
+  @media (pointer: coarse) {
+    .hud { padding-top: calc(max(env(safe-area-inset-top, 0px), 54px) + 8px); }
   }
   .xpbar { height: 10px; background: #05070acc; border: 1px solid var(--line); border-radius: 2px; overflow: hidden; }
   .xpfill { height: 100%; width: 0; background: repeating-linear-gradient(90deg, var(--weld) 0 6px, #4fb8d8 6px 8px); transition: width .12s linear; }
@@ -155,6 +160,10 @@
     box-shadow: 0 4px 0 #8a6d12;
   }
   .btn:active { transform: translateY(2px); box-shadow: 0 2px 0 #8a6d12; }
+  .updbar { display: flex; align-items: center; justify-content: center; gap: 10px; flex-wrap: wrap; font-size: 14px; color: var(--safety); min-height: 1em; }
+  .updbar[hidden] { display: none; }
+  .ver { margin: 0; text-align: center; font-size: 12px; color: var(--muted); }
+  .linkbtn { background: none; border: 0; padding: 4px 6px; color: var(--weld); font: inherit; text-decoration: underline; cursor: pointer; }
   .btn.ghost { background: transparent; color: var(--ink); border: 1px solid var(--line); box-shadow: none; }
   .btn:focus-visible { outline: 3px solid var(--weld); outline-offset: 3px; }
 
@@ -379,6 +388,11 @@
         <button class="btn ghost" id="reportBtn" type="button">業務日報</button>
         <button class="btn ghost" id="trialBtn" type="button">覚醒の試運転</button>
       </div>
+      <div class="updbar" id="updBar" hidden>
+        <span id="updMsg"></span>
+        <button class="btn" id="updBtn" type="button" hidden>更新する</button>
+      </div>
+      <p class="ver"><span id="verText"></span> <button class="linkbtn" id="updCheckBtn" type="button">更新を確認</button></p>
     </div>
   </div>
 
@@ -549,6 +563,9 @@
 (() => {
   'use strict';
   const $ = (id) => document.getElementById(id);
+  // 公開のたびに tools/bump_version.py で、ここと version.json を同じ値に更新する
+  const BUILD = '2026-10-01.1';
+  const av = (u) => u + (u.indexOf('?') < 0 ? '?' : '&') + 'v=' + BUILD;   // 画像・音声のキャッシュ対策（BUILDが変わった時だけ取り直す）
   const cvs = $('game');
   const ctx = cvs.getContext('2d');
   const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -1618,7 +1635,7 @@
   // vansaba/tools/make_voices_gemini.py などで作った voice/voices.json があれば読み込む
   let voiceCredit = '';
   try {
-    fetch('voice/voices.json').then((r) => (r.ok ? r.json() : null)).then((j) => {
+    fetch(av('voice/voices.json')).then((r) => (r.ok ? r.json() : null)).then((j) => {
       if (!j) return;
       for (const k of ['male', 'female', 'boy']) if (j[k]) VOICE_FILES[k] = j[k];
       voiceCredit = j.credit || '';
@@ -1642,7 +1659,7 @@
   const pitchFor = (V, v) => (V.male && v && !V.prefer.slice(0, 4).some((re) => re.test(v.name)) ? 0.7 : V.pitch);
   const voiceFileCache = {};
   function playVoiceFile(path) {
-    if (!voiceFileCache[path]) { const a = new Audio(path); a.preload = 'auto'; voiceFileCache[path] = a; }
+    if (!voiceFileCache[path]) { const a = new Audio(av(path)); a.preload = 'auto'; voiceFileCache[path] = a; }
     const a = voiceFileCache[path];
     try { a.currentTime = 0; } catch (e) {}
     a.volume = 1;
@@ -2557,12 +2574,12 @@
   function loadSprite(k, src) {
     const img = new Image();
     img.onload = () => { SPR[k] = img; };
-    img.src = src;
+    img.src = av(src);
   }
   for (const k in SPRITE_FILES) if (SPRITE_FILES[k]) loadSprite(k, SPRITE_FILES[k]);
   // vansaba/tools/make_sprites.py などで作った sprites/sprites.json があれば、書かれている画像を読み込む
   try {
-    fetch('sprites/sprites.json').then((r) => (r.ok ? r.json() : null)).then((j) => {
+    fetch(av('sprites/sprites.json')).then((r) => (r.ok ? r.json() : null)).then((j) => {
       if (j) for (const k in j) if (k in SPRITE_FILES && typeof j[k] === 'string') loadSprite(k, j[k]);
     }).catch(() => {});
   } catch (e) {}
@@ -2571,14 +2588,14 @@
   //   向きのコマが足りないときは、右⇔左は反転して使い、上がなければ下を使う
   const MOTS = {};
   try {
-    fetch('sprites/motion/motion.json').then((r) => (r.ok ? r.json() : null)).then((j) => {
+    fetch(av('sprites/motion/motion.json')).then((r) => (r.ok ? r.json() : null)).then((j) => {
       if (!j) return;
       if (Array.isArray(j.down)) j = { screw: j };            // 古い形式（初級だけ）
       for (const st in j) {
         MOTS[st] = {};
         for (const k in j[st]) {
           if (!Array.isArray(j[st][k])) continue;
-          MOTS[st][k] = j[st][k].map((src) => { const img = new Image(); img.src = src; return img; });
+          MOTS[st][k] = j[st][k].map((src) => { const img = new Image(); img.src = av(src); return img; });
         }
       }
     }).catch(() => {});
@@ -3435,6 +3452,31 @@
     showOverlay('ovPause'); $('resumeBtn').focus();
   }
   function resume() { if (state === 'pause') BGM.duck(false); state = 'play'; showOverlay(null); last = performance.now(); }
+  // 更新の確認：公開側の version.json と、この画面の BUILD を比べる
+  function showUpd(msg, canApply) {
+    $('updMsg').textContent = msg; $('updBtn').hidden = !canApply; $('updBar').hidden = !msg;
+  }
+  function checkUpdate(manual) {
+    if (manual) showUpd('確認しています…', false);
+    return fetch('version.json?t=' + Date.now(), { cache: 'no-store' })
+      .then((r) => { if (!r.ok) throw new Error('no'); return r.json(); })
+      .then((j) => {
+        if (j && j.build && j.build !== BUILD) showUpd('新しいバージョンがあります', true);
+        else showUpd(manual ? '最新の状態です' : '', false);
+      })
+      .catch(() => { showUpd(manual ? '確認できませんでした（通信を確認してください）' : '', false); });
+  }
+  function applyUpdate() {
+    showUpd('更新しています…', false);
+    // ホーム画面のショートカットでも古い画面が残らないよう、本体を取り直してから読み込み直す
+    fetch(location.href.split('#')[0], { cache: 'reload' }).catch(() => {}).then(() => location.reload());
+  }
+  $('verText').textContent = 'バージョン ' + BUILD;
+  $('updBtn').addEventListener('click', applyUpdate);
+  $('updCheckBtn').addEventListener('click', () => checkUpdate(true));
+  checkUpdate(false);
+  document.addEventListener('visibilitychange', () => { if (!document.hidden && state === 'title') checkUpdate(false); });
+
   function toTitle() {
     state = 'title'; BGM.stop(); showOverlay('ovTitle');
     $('hud').hidden = true; $('gear').hidden = true;
