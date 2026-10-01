@@ -49,9 +49,14 @@
   /* HUD */
   .hud {
     position: absolute; inset: 0 0 auto 0;
-    padding: 10px 16px 0;
+    /* iPhoneのノッチ／ダイナミックアイランド（時計・電波・電池）の下から表示する。
+       safe-area が取れない閲覧環境でも隠れないよう、タッチ端末は最低 60px 下げる */
+    padding: calc(max(env(safe-area-inset-top, 0px), 0px) + 10px) 16px 0;
     display: grid; gap: 6px;
     pointer-events: none;
+  }
+  @media (pointer: coarse) {
+    .hud { padding-top: calc(max(env(safe-area-inset-top, 0px), 54px) + 8px); }
   }
   .xpbar { height: 10px; background: #05070acc; border: 1px solid var(--line); border-radius: 2px; overflow: hidden; }
   .xpfill { height: 100%; width: 0; background: repeating-linear-gradient(90deg, var(--weld) 0 6px, #4fb8d8 6px 8px); transition: width .12s linear; }
