@@ -8,8 +8,9 @@
 - [x] 6シーンの絵コンテ（Claude Design）: https://claude.ai/artifact/HHmn5ayELqSbN47GX9oSWi
 - [x] 試作動画（無音・人物は静止画のゆっくりズームのみ）を書き出し済み
 - [x] ナレーション＋BGMを合成する仕組み（`audio/build_audio.py`）。仮の音で42.000秒の書き出しを確認済み
-- [ ] ナレーション音声: Gemini TTS（女性の声）で作る。環境変数 `GEMINI_API_KEY` が必要
-- [x] BGM: オリジナル曲を合成（`audio/make_bgm.py`、外部音源なし）。依頼者の確認待ち。別のBGMを渡されたらそちらを使う
+- [x] ナレーション音声: Gemini TTS（女性の声・Kore、`gemini-3.1-flash-tts-preview`）で6区間を生成。書き起こしで読み間違いがないことを確認済み
+- [x] BGM: 壮大に盛り上がる映画風オーケストラ曲に作り直し（`audio/make_bgm.py`、ボーカルなし・外部音源なし）。29秒で頂点
+- [x] 完成版 `out/seminar_pr_42s.mp4`（42.000秒・1080×1080・30fps・AAC 48kHz・-16 LUFS）を書き出し済み。依頼者の確認待ち
 - [ ] 人物の実際の動き: 画像→動画生成（台本の PROMPT 1〜6）。この環境ではできない
 
 ## 再開手順
@@ -18,7 +19,7 @@
 cd video-seminar-pr-42s
 # 1. 無音の映像を書き出す（約2分）
 node render.mjs video out/silent.mp4
-# 2. BGMを作る（オリジナル・約10秒）
+# 2. BGMを作る（オリジナル・約1分）
 python3 audio/make_bgm.py out/bgm.wav
 # 3. ナレーションを作る（voice/01.wav〜06.wav）
 python3 audio/build_audio.py gemini
@@ -27,6 +28,9 @@ python3 audio/build_audio.py mix out/bgm.wav out/silent.mp4 out/seminar_pr_42s.m
 ```
 
 - 声を変える: `GEMINI_VOICE=Aoede`（女性: Kore / Aoede / Leda / Zephyr など）
+- 気に入らない区間だけ作り直す: `python3 audio/build_audio.py gemini 2 6`（毎回少しずつ読み方が変わる）
+- 回数制限（HTTP 429）が出ても、少し待って同じモデルで作り直す。声質が混ざらないようにするため
+- 生成後に前後の無音を切り、文中の間を0.45秒までに詰めている（`MAX_GAP=0.6` などで変更可）
 - 話す速さが合わないときは、各シーンの開始秒を `audio/build_audio.py` の `SEGMENTS` と `video/player.html` の `SCENES` の両方で直す
 - 依頼者が自分で作った音声を使う場合は `audio/voice/01.wav`〜`06.wav` を置いて手順3を飛ばす
 - `out/` と `audio/voice/` は生成物なのでコミットしない
@@ -38,8 +42,8 @@ python3 audio/build_audio.py mix out/bgm.wav out/silent.mp4 out/seminar_pr_42s.m
 | `assets/scene1〜6.jpg` | 添付画像から文字のない部分だけを切り出した素材 |
 | `video/player.html` | 動画の画面設計。`renderAt(秒)` でその瞬間の画面を描く |
 | `render.mjs` | player.html を1コマずつ撮って MP4 にする（Playwright + ffmpeg） |
-| `audio/make_bgm.py` | 42秒のオリジナルBGMを合成（Dメジャー・16小節。シーンに合わせて楽器が増える） |
-| `audio/build_audio.py` | Gemini TTS で6区間のナレーションを作り、BGMと合わせて動画に入れる |
+| `audio/make_bgm.py` | 42秒のオリジナルBGMを合成（Dメジャー・16小節。弦・金管・合唱・太鼓で29秒の頂点へ盛り上がる） |
+| `audio/build_audio.py` | Gemini TTS で6区間のナレーションを作り、BGMと合わせて動画に入れる（声の間はBGMを自動で下げる） |
 
 ## 台本の要点（制作ルール）
 
