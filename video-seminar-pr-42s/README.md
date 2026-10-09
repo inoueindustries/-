@@ -9,7 +9,7 @@
 - [x] 試作動画（無音・人物は静止画のゆっくりズームのみ）を書き出し済み
 - [x] ナレーション＋BGMを合成する仕組み（`audio/build_audio.py`）。仮の音で42.000秒の書き出しを確認済み
 - [ ] ナレーション音声: Gemini TTS（女性の声）で作る。環境変数 `GEMINI_API_KEY` が必要
-- [ ] BGM: 依頼者から受け取る（mp3 / wav）。まだ届いていない
+- [x] BGM: オリジナル曲を合成（`audio/make_bgm.py`、外部音源なし）。依頼者の確認待ち。別のBGMを渡されたらそちらを使う
 - [ ] 人物の実際の動き: 画像→動画生成（台本の PROMPT 1〜6）。この環境ではできない
 
 ## 再開手順
@@ -18,15 +18,17 @@
 cd video-seminar-pr-42s
 # 1. 無音の映像を書き出す（約2分）
 node render.mjs video out/silent.mp4
-# 2. ナレーションを作る（voice/01.wav〜06.wav）
+# 2. BGMを作る（オリジナル・約10秒）
+python3 audio/make_bgm.py out/bgm.wav
+# 3. ナレーションを作る（voice/01.wav〜06.wav）
 python3 audio/build_audio.py gemini
-# 3. BGMと合成して完成版を書き出す（区間からはみ出すと止まる）
-python3 audio/build_audio.py mix <BGMファイル> out/silent.mp4 out/seminar_pr_42s.mp4
+# 4. BGMと合成して完成版を書き出す（区間からはみ出すと止まる）
+python3 audio/build_audio.py mix out/bgm.wav out/silent.mp4 out/seminar_pr_42s.mp4
 ```
 
 - 声を変える: `GEMINI_VOICE=Aoede`（女性: Kore / Aoede / Leda / Zephyr など）
 - 話す速さが合わないときは、各シーンの開始秒を `audio/build_audio.py` の `SEGMENTS` と `video/player.html` の `SCENES` の両方で直す
-- 依頼者が自分で作った音声を使う場合は `audio/voice/01.wav`〜`06.wav` を置いて手順3だけ実行する
+- 依頼者が自分で作った音声を使う場合は `audio/voice/01.wav`〜`06.wav` を置いて手順3を飛ばす
 - `out/` と `audio/voice/` は生成物なのでコミットしない
 
 ## ファイル
@@ -36,6 +38,7 @@ python3 audio/build_audio.py mix <BGMファイル> out/silent.mp4 out/seminar_pr
 | `assets/scene1〜6.jpg` | 添付画像から文字のない部分だけを切り出した素材 |
 | `video/player.html` | 動画の画面設計。`renderAt(秒)` でその瞬間の画面を描く |
 | `render.mjs` | player.html を1コマずつ撮って MP4 にする（Playwright + ffmpeg） |
+| `audio/make_bgm.py` | 42秒のオリジナルBGMを合成（Dメジャー・16小節。シーンに合わせて楽器が増える） |
 | `audio/build_audio.py` | Gemini TTS で6区間のナレーションを作り、BGMと合わせて動画に入れる |
 
 ## 台本の要点（制作ルール）
