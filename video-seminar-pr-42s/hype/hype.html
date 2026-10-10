@@ -1,0 +1,263 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<title>人材募集PR 激しい版</title>
+<link href="https://fonts.googleapis.com/css2?family=Dela+Gothic+One&family=Noto+Sans+JP:wght@900&display=block" rel="stylesheet">
+<style>
+html,body{margin:0;background:#000}
+#stage{position:relative;width:1080px;height:1080px;overflow:hidden;background:#05060c}
+#cam{position:absolute;inset:0;transform-origin:540px 540px}
+.scene{position:absolute;inset:0;overflow:hidden;visibility:hidden}
+.photo{position:absolute;left:0;top:0;width:1080px;height:1080px;transform-origin:0 0}
+.kbg{position:absolute;inset:-60px;width:1200px;height:1200px;object-fit:cover;filter:blur(22px) brightness(.22) saturate(1.3)}
+.slam{position:absolute;left:0;right:0;text-align:center;font-family:'Dela Gothic One',sans-serif;line-height:1;white-space:nowrap;opacity:0}
+.slam .main,.slam .ghost{display:inline-block;transform-origin:50% 55%}
+.slam .ghost{position:absolute;left:0;right:0}
+.gold{background:linear-gradient(180deg,#fff6c8 0%,#ffd34d 38%,#e39a12 62%,#fff0a0 100%);-webkit-background-clip:text;background-clip:text;color:transparent;
+  filter:drop-shadow(0 0 2px #2a1400) drop-shadow(0 6px 0 #3a1c00) drop-shadow(0 0 26px rgba(255,170,30,.55))}
+.white{color:#fff;filter:drop-shadow(0 0 2px #000) drop-shadow(0 5px 0 #0b1a3a) drop-shadow(0 0 18px rgba(120,170,255,.5))}
+#speed{position:absolute;left:-460px;top:-460px;width:2000px;height:2000px;opacity:0;
+  background:repeating-conic-gradient(from 0deg,rgba(255,255,255,0) 0deg 3.1deg,rgba(255,236,190,.55) 3.1deg 3.6deg);
+  -webkit-mask-image:radial-gradient(circle,transparent 0 260px,#000 560px);mask-image:radial-gradient(circle,transparent 0 260px,#000 560px);mix-blend-mode:screen}
+.streak{position:absolute;left:-300px;width:1700px;border-radius:50%;mix-blend-mode:screen;opacity:0;
+  background:linear-gradient(90deg,rgba(255,200,80,0),rgba(255,226,150,.95) 45%,#fff 50%,rgba(255,226,150,.95) 55%,rgba(255,200,80,0));filter:blur(2px)}
+#shine{position:absolute;top:-200px;width:260px;height:1480px;opacity:0;mix-blend-mode:screen;transform:rotate(18deg);
+  background:linear-gradient(90deg,rgba(255,255,255,0),rgba(255,250,220,.85) 50%,rgba(255,255,255,0))}
+.spark{position:absolute;left:0;top:0;border-radius:50%;opacity:0;mix-blend-mode:screen}
+#flash{position:absolute;inset:0;background:#fff;opacity:0;pointer-events:none}
+#vignette{position:absolute;inset:0;pointer-events:none;background:radial-gradient(circle at 50% 50%,rgba(0,0,0,0) 55%,rgba(0,0,0,.55) 100%)}
+</style>
+</head>
+<body>
+<div id="stage">
+  <div id="cam">
+    <div class="scene" id="s0"></div>
+    <div class="scene" id="s1"><img class="photo" src="assets/summit.jpg" alt=""></div>
+    <div class="scene" id="s2"><img class="photo" src="assets/challenge1000.jpg" alt=""></div>
+    <div class="scene" id="s3"><img class="photo" src="assets/record.jpg" alt=""></div>
+    <div class="scene" id="s4"><img class="photo" src="assets/checklist.jpg" alt=""></div>
+    <div class="scene" id="s5"><img class="kbg" src="assets/challenge1000.jpg" alt=""></div>
+    <div class="scene" id="s6"><img class="photo" src="assets/cta.jpg" alt=""></div>
+    <div id="speed"></div>
+    <div id="streaks"></div>
+    <div id="shine"></div>
+    <div id="sparks"></div>
+    <div id="texts"></div>
+  </div>
+  <div id="flash"></div>
+  <div id="vignette"></div>
+</div>
+<script>
+// ---------- 映像の台本(秒) ----------
+// kf: [秒, 拡大率, 注目点x(0-1), 注目点y(0-1), その点へ向かう動き方]
+const SCENES = [
+  {id:'s0', start:0, end:2.0},
+  {id:'s1', start:2.0, end:8.0, kf:[[2.0,1.35,.5,.42],[2.3,1.0,.5,.5,'expo'],[7.5,1.08,.5,.48,'cubic']]},
+  {id:'s2', start:8.0, end:14.0, kf:[[8.0,1.35,.5,.45],[8.3,1.0,.5,.5,'expo'],[11.8,1.06,.5,.52,'cubic'],[12.1,1.45,.47,.84,'expo'],[13.5,1.52,.47,.84,'cubic']]},
+  {id:'s3', start:14.0, end:21.0, kf:[[14.0,1.5,.5,.3],[14.3,1.12,.5,.3,'expo'],[17.4,1.16,.5,.3,'cubic'],[17.75,1.8,.68,.53,'expo'],[19.2,1.85,.68,.53,'cubic'],[19.55,1.35,.4,.84,'expo'],[20.55,1.4,.4,.84,'cubic']]},
+  {id:'s4', start:21.0, end:27.0, kf:[[21.0,2.0,.32,.345],[21.3,1.6,.32,.345,'expo'],[22.45,1.62,.32,.345,'cubic'],[22.75,1.6,.3,.465,'expo'],[23.7,1.62,.3,.465,'cubic'],[24.0,1.55,.33,.58,'expo'],[25.2,1.58,.33,.58,'cubic'],[25.6,1.0,.5,.5,'expo'],[26.55,1.04,.5,.5,'cubic']]},
+  {id:'s5', start:27.0, end:33.0},
+  {id:'s6', start:33.0, end:42.0, kf:[[33.0,1.6,.5,.3],[33.35,1.15,.5,.3,'expo'],[35.55,1.18,.5,.31,'cubic'],[35.85,1.32,.5,.32,'expo'],[37.9,1.36,.5,.32,'cubic'],[38.25,1.0,.5,.5,'expo'],[42.0,1.05,.5,.52,'cubic']]},
+];
+// 叩きつける文字: [出る秒, 消える秒, 文字, 大きさ, 中心y, 色]
+const SLAMS = [
+  [0.50, 2.0, '本気の人だけ、', 112, 420, 'white'],
+  [1.25, 2.0, '見てほしい。', 150, 620, 'gold'],
+  [27.0, 29.0, '本気の人材、', 116, 330, 'white'],
+  [27.5, 29.0, '求む。', 250, 590, 'gold'],
+  [29.05, 33.0, '本気で挑戦する', 122, 360, 'white'],
+  [30.15, 33.0, 'あなただ。', 188, 610, 'gold'],
+];
+const DRUMS = [[2.0, 27.0], [33.0, 41.4]];       // 4つ打ちに合わせて画面も脈打つ区間
+const BEAT = 0.5;
+
+// ---------- 道具 ----------
+const clamp = (v, a, b) => Math.min(b, Math.max(a, v));
+const EASE = {
+  lin: p => p,
+  cubic: p => p < .5 ? 4*p*p*p : 1 - Math.pow(-2*p + 2, 3) / 2,
+  expo: p => p >= 1 ? 1 : 1 - Math.pow(2, -10*p),
+  back: p => 1 + 2.70158*Math.pow(p - 1, 3) + 1.70158*Math.pow(p - 1, 2),
+};
+function rand(seed) { const x = Math.sin(seed * 12.9898) * 43758.5453; return x - Math.floor(x); }
+let TL = null, HITS = [];
+
+function camAt(kf, t) {
+  if (t <= kf[0][0]) return kf[0].slice(1, 4);
+  for (let i = 1; i < kf.length; i++) {
+    const [t1, s1, x1, y1, e] = kf[i], [t0, s0, x0, y0] = kf[i - 1];
+    if (t <= t1) {
+      const p = EASE[e || 'cubic'](clamp((t - t0) / (t1 - t0), 0, 1));
+      return [s0 + (s1 - s0)*p, x0 + (x1 - x0)*p, y0 + (y1 - y0)*p];
+    }
+  }
+  return kf[kf.length - 1].slice(1, 4);
+}
+
+// ---------- 部品を作る ----------
+const streaks = [], dust = [], burst = [], slamEls = [];
+function build() {
+  const S = document.getElementById('streaks');
+  for (let i = 0; i < 7; i++) {
+    const d = document.createElement('div'); d.className = 'streak';
+    d.style.height = (4 + rand(i + 1) * 22) + 'px';
+    S.appendChild(d); streaks.push(d);
+  }
+  const P = document.getElementById('sparks');
+  for (let i = 0; i < 70; i++) {
+    const d = document.createElement('div'); d.className = 'spark';
+    const r = 2 + rand(i * 3.1) * 5; d.style.width = d.style.height = r + 'px';
+    d.style.background = rand(i * 7.7) > .5 ? '#ffe9a8' : '#fff';
+    d.style.boxShadow = `0 0 ${r * 3}px ${r}px rgba(255,190,60,.8)`;
+    P.appendChild(d); dust.push(d);
+  }
+  for (let i = 0; i < 220; i++) {
+    const d = document.createElement('div'); d.className = 'spark';
+    const r = 7 + rand(i * 5.3 + 2) * 9; d.style.width = d.style.height = r + 'px';
+    d.style.mixBlendMode = 'normal';
+    const hue = [45, 40, 200, 330, 50][i % 5];
+    d.style.background = `hsl(${hue},100%,85%)`;
+    d.style.boxShadow = `0 0 ${r * 2}px ${r * .6}px hsla(${hue},100%,55%,.95), 0 0 ${r * 5}px ${r * 1.5}px hsla(${hue},100%,50%,.45)`;
+    P.appendChild(d); burst.push(d);
+  }
+  const T = document.getElementById('texts');
+  for (const [, , text, size, y, color] of SLAMS) {
+    const w = document.createElement('div'); w.className = 'slam';
+    w.style.fontSize = size + 'px'; w.style.top = (y - size / 2) + 'px';
+    w.innerHTML = `<span class="ghost ${color}">${text}</span><span class="main ${color}">${text}</span>`;
+    T.appendChild(w); slamEls.push(w);
+  }
+}
+
+window.init = function (tl) {
+  TL = tl;
+  HITS = tl.hits.map(h => ({...h}));
+  // whoosh は次の「ドン/バン」(=カット)まで画面を加速させる
+  HITS.forEach((h, i) => {
+    if (h.kind === 'whoosh') h.until = (HITS.slice(i + 1).find(x => x.kind === 'don' || x.kind === 'ban') || {t: h.t + .45}).t;
+  });
+  renderAt(0);
+};
+
+// ---------- 1コマ描く ----------
+window.renderAt = function (t) {
+  // 衝撃(ドン/バン)の揺れ・フラッシュ・ズームの跳ね
+  let kick = 0, sx = 0, sy = 0, flash = 0, blur = 0, warp = 0, streakBoost = 0, speedBoost = 0;
+  for (const h of HITS) {
+    const d = t - h.t;
+    if (h.kind === 'whoosh' && t >= h.t && t < h.until + .3) {
+      const pre = clamp((t - h.t) / (h.until - h.t), 0, 1);
+      if (t < h.until) { blur += 16 * pre * pre; warp += .22 * pre * pre; streakBoost += pre; }
+      else blur += 16 * (1 - (t - h.until) / .3);
+    }
+    if (h.kind === 'riser' && d >= 0 && d < h.dur) {
+      const p = d / h.dur; sx += Math.sin(t * 70) * 10 * p; sy += Math.cos(t * 61) * 10 * p;
+      streakBoost += p * 1.5; speedBoost += p; warp += .05 * p;
+    }
+    if (d < 0 || d > 1.6) continue;
+    if (h.kind === 'don' || h.kind === 'ban') {
+      const big = h.big ? 1.7 : 1, A = (h.kind === 'don' ? 30 : 16) * big;
+      const e = Math.exp(-d * (h.kind === 'don' ? 8 : 12));
+      sx += A * e * Math.sin(d * 95 + h.t); sy += A * e * Math.cos(d * 83 + h.t * 2);
+      kick += (h.kind === 'don' ? .07 : .04) * big * Math.exp(-d * 9);
+      flash = Math.max(flash, h.kind === 'don' ? (h.big ? Math.exp(-d * 3.5) : .85 * Math.exp(-d * 10)) : .45 * Math.exp(-d * 15));
+      if (h.kind === 'don') { streakBoost += Math.exp(-d * 3); speedBoost += .8 * Math.exp(-d * 4); }
+    }
+  }
+  let pulse = 0;
+  for (const [a, b] of DRUMS) if (t >= a && t < b) pulse = .012 * Math.exp(-(((t - a) % BEAT)) * 12);
+
+  const cam = document.getElementById('cam');
+  const S = 1 + kick + pulse + warp;
+  cam.style.transform = `translate(${sx}px,${sy}px) scale(${S})`;
+  cam.style.filter = blur > .1 ? `blur(${blur}px)` : 'none';
+
+  // シーン
+  let kin = false;
+  for (const sc of SCENES) {
+    const el = document.getElementById(sc.id);
+    const on = t >= sc.start && t < sc.end;
+    el.style.visibility = on ? 'visible' : 'hidden';
+    if (!on) continue;
+    if (!sc.kf) { kin = true; continue; }
+    let [s, x, y] = camAt(sc.kf, t);
+    x = clamp(x, .5 / s, 1 - .5 / s); y = clamp(y, .5 / s, 1 - .5 / s);
+    el.querySelector('.photo').style.transform = `translate(${540 - x * 1080 * s}px,${540 - y * 1080 * s}px) scale(${s})`;
+  }
+  if (t >= 27 && t < 33) document.querySelector('#s5 .kbg').style.transform = `scale(${1 + (t - 27) * .03}) rotate(${(t - 27) * .6}deg)`;
+
+  // 光の筋
+  const sBase = kin ? 1 : 0;
+  const sInt = clamp(sBase + streakBoost * .9, 0, 1.6);
+  streaks.forEach((d, i) => {
+    const speed = 900 + rand(i + 9) * 1400;
+    const x = ((t * speed + rand(i + 4) * 2600) % 2800) - 1400;
+    const y = 80 + rand(i + 17) * 920;
+    d.style.transform = `translate(${x}px,${y}px) rotate(${-18 + rand(i + 3) * 8}deg)`;
+    d.style.opacity = clamp(sInt * (.35 + rand(i + 30) * .6), 0, 1);
+  });
+
+  // 集中線
+  const sp = document.getElementById('speed');
+  sp.style.opacity = clamp((kin ? .45 : 0) + speedBoost * .5, 0, .9);
+  sp.style.transform = `rotate(${(Math.floor(t * 30) % 2) * 1.3 + t * 4}deg)`;
+
+  // キラーン(光が走る)
+  let shine = -1;
+  for (const h of HITS) if (h.kind === 'kira' && t >= h.t && t < h.t + .7) shine = (t - h.t) / .7;
+  const sh = document.getElementById('shine');
+  sh.style.opacity = shine < 0 ? 0 : Math.sin(shine * Math.PI) * .9;
+  sh.style.left = (-400 + shine * 1900) + 'px';
+
+  // 金の粉(ずっと舞っている)
+  const dustAmt = kin ? .9 : (t >= 33 ? .7 : .4);
+  dust.forEach((d, i) => {
+    const x = rand(i * 1.7) * 1080 + Math.sin(t * .8 + i) * 30;
+    const y = 1080 - ((t * (30 + rand(i * 2.3) * 70) + rand(i * 9.1) * 1080) % 1140);
+    d.style.transform = `translate(${x}px,${y}px)`;
+    d.style.opacity = dustAmt * (.3 + .7 * Math.abs(Math.sin(t * (1.5 + rand(i) * 3) + i)));
+  });
+
+  // 花火
+  burst.forEach(d => d.style.opacity = 0);
+  for (const h of HITS) {
+    if (!h.fireworks) continue;
+    const d = t - h.t;
+    if (d < 0 || d > 1.8) continue;
+    const centers = h.t < 40 ? [[300, 300], [800, 250]] : [[540, 360], [230, 520], [860, 520]];
+    burst.forEach((el, i) => {
+      const c = centers[i % centers.length], a = rand(i * 3.7 + h.t) * Math.PI * 2;
+      const v = 380 + rand(i * 1.3 + h.t) * 520;
+      const k = 1 - Math.exp(-d * 3.2);
+      const x = c[0] + Math.cos(a) * v * k * .5;
+      const y = c[1] + Math.sin(a) * v * k * .5 + 160 * d * d;
+      el.style.transform = `translate(${x}px,${y}px)`;
+      el.style.opacity = clamp(1 - d / 1.8, 0, 1) * (.6 + .4 * Math.abs(Math.sin(d * 25 + i)));
+    });
+  }
+
+  // 叩きつける文字
+  SLAMS.forEach(([a, b], i) => {
+    const w = slamEls[i];
+    if (t < a || t >= b) { w.style.opacity = 0; return; }
+    const p = clamp((t - a) / .22, 0, 1);
+    const main = w.querySelector('.main'), ghost = w.querySelector('.ghost');
+    let sc = 2.6 - 1.6 * EASE.back(p);
+    if (i === 5 && t > 31.1) sc *= 1 + Math.pow((t - 31.1) / 1.9, 2) * .3;   // ラストへ向けて迫ってくる
+    const out = clamp((b - t) / .12, 0, 1);
+    w.style.opacity = Math.min(clamp(p * 5, 0, 1), out);
+    main.style.transform = `scale(${sc}) rotate(${(1 - p) * -5}deg)`;
+    const g = clamp((t - a - .2) / .5, 0, 1);
+    ghost.style.transform = `scale(${1 + g * .6})`;
+    ghost.style.opacity = g > 0 && g < 1 ? (1 - g) * .6 : 0;
+  });
+
+  document.getElementById('flash').style.opacity = clamp(flash, 0, 1);
+};
+
+build();
+window.ready = document.fonts.ready.then(() => Promise.all([...document.images].map(i => i.decode().catch(() => {}))));
+</script>
+</body>
+</html>

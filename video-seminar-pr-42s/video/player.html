@@ -1,0 +1,140 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<title>セミナーPR 42秒</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@500;700;900&display=block" rel="stylesheet">
+<style>
+:root{--navy:#0b1a3a;--gold:#f2c14e}
+html,body{margin:0;background:#000}
+#stage{position:relative;width:1080px;height:1080px;overflow:hidden;background:var(--navy);font-family:'Noto Sans JP',sans-serif;color:#fff}
+.scene{position:absolute;inset:0;opacity:0}
+.bg{position:absolute;inset:-80px;width:calc(100% + 160px);height:calc(100% + 160px);object-fit:cover;filter:blur(38px) brightness(.5) saturate(1.15)}
+.shade{position:absolute;inset:0;background:linear-gradient(180deg,rgba(11,26,58,.15),rgba(11,26,58,.55))}
+.band{position:absolute;left:0;width:1080px;overflow:hidden;box-shadow:0 18px 50px rgba(0,0,0,.35)}
+.band img{width:100%;height:100%;object-fit:cover;display:block;transform-origin:50% 50%}
+.telop{position:absolute;left:86px;right:86px;text-align:center}
+.rule{width:64px;height:5px;background:var(--gold);margin:0 auto 26px;border-radius:3px}
+.main{font-weight:900;font-size:72px;line-height:1.28;letter-spacing:.02em;
+  text-shadow:0 0 3px var(--navy),0 0 3px var(--navy),0 3px 0 var(--navy),0 6px 22px rgba(5,12,30,.7)}
+.sub{margin-top:22px;font-weight:700;font-size:40px;line-height:1.4;letter-spacing:.04em;
+  text-shadow:0 0 3px var(--navy),0 2px 0 var(--navy),0 4px 14px rgba(5,12,30,.7)}
+.cta{position:absolute;left:50%;bottom:86px;transform:translateX(-50%);display:flex;align-items:center;gap:18px;
+  padding:16px 34px 16px 18px;border-radius:999px;background:rgba(255,255,255,.95);color:var(--navy);
+  font-weight:900;font-size:38px;letter-spacing:.03em;white-space:nowrap;box-shadow:0 10px 30px rgba(0,0,0,.35)}
+.cam{width:58px;height:58px;border-radius:50%;background:#1f6fe5;display:flex;align-items:center;justify-content:center}
+.pillar{position:absolute;overflow:hidden;box-shadow:0 18px 50px rgba(0,0,0,.35)}
+.pillar img{width:100%;height:100%;object-fit:cover;display:block}
+</style>
+</head>
+<body>
+<div id="stage">
+
+<!-- 1 -->
+<div class="scene" id="s1">
+  <img class="bg" src="../assets/scene1.jpg" alt="">
+  <div class="shade"></div>
+  <div class="band" style="top:170px;height:370px"><img class="kb" src="../assets/scene1.jpg" alt=""></div>
+  <div class="telop" style="top:620px">
+    <div class="t1"><div class="rule"></div><div class="main">今の毎日を、<br>少し変えてみたい。</div></div>
+    <div class="t2 sub">その思いを、次の一歩へ。</div>
+  </div>
+</div>
+
+<!-- 2 -->
+<div class="scene" id="s2">
+  <img class="bg" src="../assets/scene2.jpg" alt="">
+  <div class="shade"></div>
+  <div class="band" style="top:200px;height:340px"><img class="kb" src="../assets/scene2.jpg" alt="" style="object-position:30% 50%"></div>
+  <div class="telop" style="top:660px">
+    <div class="t1"><div class="rule"></div><div class="main">一緒に挑戦する<br>仲間と。</div></div>
+  </div>
+</div>
+
+<!-- 3 -->
+<div class="scene" id="s3">
+  <img class="bg" src="../assets/scene3.jpg" alt="">
+  <div class="shade"></div>
+  <div class="band" style="top:110px;height:540px"><img class="kb" src="../assets/scene3.jpg" alt=""></div>
+  <div class="telop" style="top:712px">
+    <div class="t1"><div class="rule"></div><div class="main">出会いから、学びへ。</div></div>
+    <div class="t2 sub">自分の可能性を、少しずつ。</div>
+  </div>
+</div>
+
+<!-- 4 -->
+<div class="scene" id="s4">
+  <img class="bg" src="../assets/scene4.jpg" alt="">
+  <div class="shade"></div>
+  <div class="band" style="top:130px;height:450px"><img class="kb" src="../assets/scene4.jpg" alt="" style="object-position:40% 50%"></div>
+  <div class="telop" style="top:660px">
+    <div class="t1"><div class="rule"></div><div class="main">成長したい。</div></div>
+    <div class="t2 sub">仲間と、夢を追いたい。</div>
+  </div>
+</div>
+
+<!-- 5 -->
+<div class="scene" id="s5">
+  <img class="bg" src="../assets/scene5.jpg" alt="">
+  <div class="shade"></div>
+  <div class="pillar" style="left:120px;top:110px;width:340px;height:860px"><img class="kb" src="../assets/scene5.jpg" alt=""></div>
+  <div class="telop" style="left:500px;right:60px;top:380px">
+    <div class="t1">
+      <div style="display:flex;justify-content:center;margin-bottom:28px">
+        <div class="cam" style="width:96px;height:96px">
+          <svg width="52" height="52" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2.5" y="6" width="13" height="12" rx="2.5"/><path d="M15.5 10.5l6-3.5v10l-6-3.5z"/></svg>
+        </div>
+      </div>
+      <div class="main" style="font-size:80px">Zoom<br><span style="font-size:68px">セミナー開催</span></div>
+    </div>
+  </div>
+</div>
+
+<!-- 6 -->
+<div class="scene" id="s6">
+  <img class="bg" src="../assets/scene6.jpg" alt="">
+  <div class="shade"></div>
+  <div class="band" style="top:100px;height:440px"><img class="kb" src="../assets/scene6.jpg" alt=""></div>
+  <div class="telop" style="top:590px">
+    <div class="t1"><div class="rule"></div><div class="main" style="font-size:64px">あなたのこれからを<br>考える、1時間。</div></div>
+    <div class="t2 sub" style="font-size:38px">新しい挑戦を、ここから一緒に。</div>
+  </div>
+  <div class="cta t3">
+    <div class="cam"><svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="2.5" y="6" width="13" height="12" rx="2.5"/><path d="M15.5 10.5l6-3.5v10l-6-3.5z"/></svg></div>
+    Zoomセミナー開催
+  </div>
+</div>
+
+</div>
+<script>
+// シーン区間(秒) — 台本の仮タイムラインどおり
+const SCENES=[[0,8],[8,16],[16,23],[23,29],[29,34],[34,42]];
+const XF=0.4;            // ディゾルブ長
+const ease=x=>1-Math.pow(1-Math.min(Math.max(x,0),1),3);
+const ramp=(t,a,d)=>ease((t-a)/d);
+const els=SCENES.map((_,i)=>{
+  const s=document.getElementById('s'+(i+1));
+  return {s,kb:s.querySelector('.kb'),t1:s.querySelector('.t1'),t2:s.querySelector('.t2'),t3:s.querySelector('.t3')};
+});
+function show(el,v,dy){ if(!el) return; el.style.opacity=v; el.style.transform=(el.classList.contains('cta')?'translateX(-50%) ':'')+`translateY(${(1-v)*dy}px)`; }
+window.renderAt=function(t){
+  SCENES.forEach(([a,b],i)=>{
+    const e=els[i];
+    const vis = t>=a-XF/2 && t<b+XF/2;
+    const op = i===0 ? 1 : ramp(t,a-XF/2,XF);
+    e.s.style.opacity = vis?op:0;
+    e.s.style.zIndex=i;
+    if(!vis) return;
+    const p=(t-a)/(b-a);
+    e.kb.style.transform=`scale(${1+0.06*Math.min(Math.max(p,0),1)})`;
+    show(e.t1,ramp(t,a+0.3,0.6),18);
+    show(e.t2,ramp(t,a+1.1,0.6),14);
+    show(e.t3,ramp(t,a+1.8,0.6),14);
+  });
+};
+window.ready=document.fonts.ready.then(()=>Promise.all([...document.images].map(i=>i.decode().catch(()=>{}))));
+renderAt(0);
+</script>
+</body>
+</html>
