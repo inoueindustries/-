@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <title>人材募集PR 激しい版</title>
-<link href="https://fonts.googleapis.com/css2?family=Dela+Gothic+One&family=Noto+Sans+JP:wght@900&display=block" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Dela+Gothic+One&family=Noto+Serif+JP:wght@900&display=block" rel="stylesheet">
 <style>
 html,body{margin:0;background:#000}
 #stage{position:relative;width:1080px;height:1080px;overflow:hidden;background:#05060c}
@@ -11,10 +11,10 @@ html,body{margin:0;background:#000}
 .scene{position:absolute;inset:0;overflow:hidden;visibility:hidden}
 .photo{position:absolute;left:0;top:0;width:1080px;height:1080px;transform-origin:0 0}
 .kbg{position:absolute;inset:-60px;width:1200px;height:1200px;object-fit:cover;filter:blur(22px) brightness(.22) saturate(1.3)}
-.slam{position:absolute;left:0;right:0;text-align:center;font-family:'Dela Gothic One',sans-serif;line-height:1;white-space:nowrap;opacity:0}
+.slam{position:absolute;left:0;right:0;text-align:center;font-family:'Noto Serif JP',serif;font-weight:900;line-height:1;white-space:nowrap;opacity:0}
 .slam .main,.slam .ghost{display:inline-block;transform-origin:50% 55%}
 .slam .ghost{position:absolute;left:0;right:0}
-.gold{background:linear-gradient(180deg,#fff6c8 0%,#ffd34d 38%,#e39a12 62%,#fff0a0 100%);-webkit-background-clip:text;background-clip:text;color:transparent;
+.gold{background:linear-gradient(180deg,#fff6d0 0%,#ffd25a 38%,#d9900f 63%,#fff1a8 100%);-webkit-background-clip:text;background-clip:text;color:transparent;
   filter:drop-shadow(0 0 2px #2a1400) drop-shadow(0 6px 0 #3a1c00) drop-shadow(0 0 26px rgba(255,170,30,.55))}
 .white{color:#fff;filter:drop-shadow(0 0 2px #000) drop-shadow(0 5px 0 #0b1a3a) drop-shadow(0 0 18px rgba(120,170,255,.5))}
 #speed{position:absolute;left:-460px;top:-460px;width:2000px;height:2000px;opacity:0;
@@ -26,19 +26,66 @@ html,body{margin:0;background:#000}
   background:linear-gradient(90deg,rgba(255,255,255,0),rgba(255,250,220,.85) 50%,rgba(255,255,255,0))}
 .spark{position:absolute;left:0;top:0;border-radius:50%;opacity:0;mix-blend-mode:screen}
 #flash{position:absolute;inset:0;background:#fff;opacity:0;pointer-events:none}
+.layer{position:absolute;inset:0;visibility:hidden;background:#07070a}
+.rays{position:absolute;left:-360px;top:-360px;width:1800px;height:1800px;
+  -webkit-mask-image:radial-gradient(circle,transparent 0 200px,#000 820px);mask-image:radial-gradient(circle,transparent 0 200px,#000 820px)}
+.rays.gold-rays{background:repeating-conic-gradient(from 0deg,rgba(255,214,120,0) 0deg 4deg,rgba(255,214,120,.11) 4deg 5deg)}
+.rays.red-rays{background:repeating-conic-gradient(from 3deg,rgba(255,90,60,0) 0deg 5deg,rgba(255,120,70,.16) 5deg 6.5deg)}
+.glow{position:absolute;inset:0}
+.band{position:absolute;left:-160px;width:1400px}
+.flare{position:absolute;left:0;width:1080px;height:3px;background:linear-gradient(90deg,rgba(255,255,255,0),#fff 50%,rgba(255,255,255,0));box-shadow:0 0 18px 4px rgba(255,214,120,.75)}
+.pill{position:absolute;left:50%;top:718px;display:flex;align-items:center;gap:20px;padding:18px 44px 18px 20px;border-radius:999px;white-space:nowrap;
+  background:linear-gradient(180deg,#d8122f 0%,#a60a22 100%);box-shadow:0 0 0 3px #ffd25a,0 12px 36px rgba(216,18,47,.5);font-family:'Dela Gothic One',sans-serif;font-size:44px;color:#fff;opacity:0}
 #vignette{position:absolute;inset:0;pointer-events:none;background:radial-gradient(circle at 50% 50%,rgba(0,0,0,0) 55%,rgba(0,0,0,.55) 100%)}
 </style>
 </head>
 <body>
 <div id="stage">
   <div id="cam">
-    <div class="scene" id="s0"></div>
+    <div class="scene" id="s0">
+      <div class="layer" style="visibility:inherit">
+        <div class="rays gold-rays"></div>
+        <div class="glow" style="background:radial-gradient(circle at 50% 50%,rgba(255,176,60,.26) 0%,rgba(255,176,60,0) 52%)"></div>
+        <div class="band" data-in="0.5" data-rot="-7" style="top:640px;height:128px;background:linear-gradient(90deg,rgba(150,8,30,0) 0%,#b80d27 18%,#d8122f 60%,rgba(150,8,30,0) 100%)"></div>
+        <div class="flare" data-flash="1.25" style="top:505px"></div>
+      </div>
+    </div>
     <div class="scene" id="s1"><img class="photo" src="assets/summit.jpg" alt=""></div>
     <div class="scene" id="s2"><img class="photo" src="assets/challenge1000.jpg" alt=""></div>
     <div class="scene" id="s3"><img class="photo" src="assets/record.jpg" alt=""></div>
     <div class="scene" id="s4"><img class="photo" src="assets/checklist.jpg" alt=""></div>
-    <div class="scene" id="s5"><img class="kbg" src="assets/challenge1000.jpg" alt=""></div>
+    <div class="scene" id="s5">
+      <div class="layer" id="s5a">
+        <div class="rays red-rays"></div>
+        <div class="glow" style="background:radial-gradient(circle at 50% 62%,rgba(216,18,47,.42) 0%,rgba(216,18,47,0) 50%)"></div>
+        <div class="band" data-in="27.0" data-rot="-9" style="top:820px;height:96px;background:#b80d27"></div>
+        <div class="band" data-in="27.08" data-rot="-9" style="top:790px;height:6px;background:#ffd25a;box-shadow:0 0 16px 2px rgba(255,200,80,.7)"></div>
+      </div>
+      <div class="layer" id="s5b">
+        <div id="spot" style="position:absolute;left:240px;top:-200px;width:600px;height:1100px;background:linear-gradient(180deg,rgba(255,236,190,.34) 0%,rgba(255,214,120,.08) 70%,rgba(255,214,120,0) 100%);clip-path:polygon(38% 0,62% 0,100% 100%,0 100%)"></div>
+        <div class="glow" style="background:radial-gradient(ellipse 60% 26% at 50% 64%,rgba(255,190,70,.4) 0%,rgba(255,190,70,0) 100%)"></div>
+        <svg width="1080" height="1080" viewBox="0 0 1080 1080" style="position:absolute;left:0;top:0">
+          <g id="cracks" fill="none" stroke="#ffd25a" stroke-width="3" stroke-linecap="round" opacity=".6">
+            <path pathLength="1" d="M540 690 L470 760 L430 900 L380 1080"></path><path pathLength="1" d="M470 760 L330 800 L120 860"></path>
+            <path pathLength="1" d="M540 690 L640 770 L700 930 L760 1080"></path><path pathLength="1" d="M640 770 L820 790 L1080 850"></path>
+            <path pathLength="1" d="M430 900 L300 960"></path><path pathLength="1" d="M700 930 L860 990"></path>
+          </g>
+        </svg>
+        <div class="band" data-in="29.05" data-rot="-4" style="left:-100px;width:1280px;top:210px;height:4px;background:#b80d27"></div>
+      </div>
+    </div>
     <div class="scene" id="s6"><img class="photo" src="assets/cta.jpg" alt=""></div>
+    <div class="scene" id="s7">
+      <div class="layer" style="visibility:inherit">
+        <div class="rays gold-rays"></div>
+        <div class="glow" style="background:radial-gradient(circle at 50% 40%,rgba(255,176,60,.3) 0%,rgba(255,176,60,0) 50%)"></div>
+        <div class="frame" style="position:absolute;left:90px;top:90px;width:900px;height:900px;box-sizing:border-box;border:2px solid rgba(255,210,90,.55)"></div>
+        <div class="frame" style="position:absolute;left:106px;top:106px;width:868px;height:868px;box-sizing:border-box;border:1px solid rgba(255,210,90,.25)"></div>
+        <div class="pill" id="pill"><div style="width:64px;height:64px;border-radius:50%;background:#fff;display:flex;align-items:center;justify-content:center">
+          <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="#b80d27" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><rect x="2.5" y="6" width="13" height="12" rx="2.5"/><path d="M15.5 10.5l6-3.5v10l-6-3.5z"/></svg>
+        </div><span>Zoomセミナー開催</span></div>
+      </div>
+    </div>
     <div id="speed"></div>
     <div id="streaks"></div>
     <div id="shine"></div>
@@ -58,16 +105,20 @@ const SCENES = [
   {id:'s3', start:14.0, end:21.0, kf:[[14.0,1.5,.5,.3],[14.3,1.12,.5,.3,'expo'],[17.4,1.16,.5,.3,'cubic'],[17.75,1.8,.68,.53,'expo'],[19.2,1.85,.68,.53,'cubic'],[19.55,1.35,.4,.84,'expo'],[20.55,1.4,.4,.84,'cubic']]},
   {id:'s4', start:21.0, end:27.0, kf:[[21.0,2.0,.32,.345],[21.3,1.6,.32,.345,'expo'],[22.45,1.62,.32,.345,'cubic'],[22.75,1.6,.3,.465,'expo'],[23.7,1.62,.3,.465,'cubic'],[24.0,1.55,.33,.58,'expo'],[25.2,1.58,.33,.58,'cubic'],[25.6,1.0,.5,.5,'expo'],[26.55,1.04,.5,.5,'cubic']]},
   {id:'s5', start:27.0, end:33.0},
-  {id:'s6', start:33.0, end:42.0, kf:[[33.0,1.6,.5,.3],[33.35,1.15,.5,.3,'expo'],[35.55,1.18,.5,.31,'cubic'],[35.85,1.32,.5,.32,'expo'],[37.9,1.36,.5,.32,'cubic'],[38.25,1.0,.5,.5,'expo'],[42.0,1.05,.5,.52,'cubic']]},
+  {id:'s6', start:33.0, end:37.9, kf:[[33.0,1.6,.5,.3],[33.35,1.15,.5,.3,'expo'],[35.55,1.18,.5,.31,'cubic'],[35.85,1.32,.5,.32,'expo'],[37.9,1.38,.5,.32,'cubic']]},
+  {id:'s7', start:37.9, end:42.0},
 ];
 // 叩きつける文字: [出る秒, 消える秒, 文字, 大きさ, 中心y, 色]
 const SLAMS = [
-  [0.50, 2.0, '本気の人だけ、', 112, 420, 'white'],
-  [1.25, 2.0, '見てほしい。', 150, 620, 'gold'],
-  [27.0, 29.0, '本気の人材、', 116, 330, 'white'],
-  [27.5, 29.0, '求む。', 250, 590, 'gold'],
-  [29.05, 33.0, '本気で挑戦する', 122, 360, 'white'],
-  [30.15, 33.0, 'あなただ。', 188, 610, 'gold'],
+  [0.50, 2.0, '本気の人だけ、', 76, 338, 'white', .14],
+  [1.25, 2.0, '見てほしい。', 196, 513, 'gold', .02],
+  [27.0, 29.05, '本気の人材、', 96, 198, 'white', .1],
+  [27.5, 29.05, '求む。', 380, 465, 'gold', -.02],
+  [29.05, 33.0, '本気で挑戦する', 100, 340, 'white', .08],
+  [30.15, 33.0, 'あなただ。', 200, 530, 'gold', 0],
+  [37.95, 42.1, 'まずは、', 64, 262, 'white', .16],
+  [38.5, 42.1, '1時間。', 210, 440, 'gold', .02],
+  [39.62, 42.1, 'Zoomセミナーで、待っている。', 58, 621, 'white', .08],
 ];
 const DRUMS = [[2.0, 27.0], [33.0, 41.4]];       // 4つ打ちに合わせて画面も脈打つ区間
 const BEAT = 0.5;
@@ -122,9 +173,9 @@ function build() {
     P.appendChild(d); burst.push(d);
   }
   const T = document.getElementById('texts');
-  for (const [, , text, size, y, color] of SLAMS) {
+  for (const [, , text, size, y, color, ls] of SLAMS) {
     const w = document.createElement('div'); w.className = 'slam';
-    w.style.fontSize = size + 'px'; w.style.top = (y - size / 2) + 'px';
+    w.style.fontSize = size + 'px'; w.style.top = (y - size / 2) + 'px'; w.style.letterSpacing = (ls || 0) + 'em';
     w.innerHTML = `<span class="ghost ${color}">${text}</span><span class="main ${color}">${text}</span>`;
     T.appendChild(w); slamEls.push(w);
   }
@@ -139,6 +190,37 @@ window.init = function (tl) {
   });
   renderAt(0);
 };
+
+// ---------- Claude Design のタイトル画面を動かす ----------
+function designLayers(id, t) {
+  const sc = document.getElementById(id);
+  if (id === 's5') {
+    document.getElementById('s5a').style.visibility = t < 29.05 ? 'visible' : 'hidden';
+    document.getElementById('s5b').style.visibility = t >= 29.05 ? 'visible' : 'hidden';
+  }
+  sc.querySelectorAll('.rays').forEach(r => r.style.transform = `rotate(${t * 5}deg)`);
+  sc.querySelectorAll('.band').forEach(b => {            // 帯が横から斬り込む
+    const p = EASE.expo(clamp((t - Number(b.dataset.in)) / .35, 0, 1));
+    b.style.transform = `rotate(${b.dataset.rot}deg) translateX(${(1 - p) * -1500}px)`;
+  });
+  sc.querySelectorAll('.flare').forEach(f => {           // 横一文字の閃光
+    const d = t - Number(f.dataset.flash);
+    f.style.opacity = d < 0 ? .25 : .45 + .55 * Math.exp(-d * 3);
+    f.style.transform = `scaleX(${d < 0 ? .4 : .4 + .6 * EASE.expo(clamp(d / .3, 0, 1))})`;
+  });
+  if (id === 's5') {
+    const p = EASE.expo(clamp((t - 30.15) / .4, 0, 1));   // 「あなただ。」で地面に亀裂が走る
+    document.querySelectorAll('#cracks path').forEach(c => { c.style.strokeDasharray = 1; c.style.strokeDashoffset = 1 - p; });
+    document.getElementById('spot').style.opacity = .85 + .15 * Math.sin(t * 9);
+  }
+  if (id === 's7') {
+    const p = EASE.expo(clamp((t - 37.9) / .5, 0, 1));
+    sc.querySelectorAll('.frame').forEach(f => { f.style.transform = `scale(${1.25 - .25 * p})`; f.style.opacity = p; });
+    const q = clamp((t - 40.3) / .25, 0, 1), pill = document.getElementById('pill');
+    pill.style.opacity = q;
+    pill.style.transform = `translateX(-50%) scale(${q ? 1.6 - .6 * EASE.back(q) : 1.6})`;
+  }
+}
 
 // ---------- 1コマ描く ----------
 window.renderAt = function (t) {
@@ -180,15 +262,14 @@ window.renderAt = function (t) {
     const on = t >= sc.start && t < sc.end;
     el.style.visibility = on ? 'visible' : 'hidden';
     if (!on) continue;
-    if (!sc.kf) { kin = true; continue; }
+    if (!sc.kf) { kin = true; designLayers(sc.id, t); continue; }
     let [s, x, y] = camAt(sc.kf, t);
     x = clamp(x, .5 / s, 1 - .5 / s); y = clamp(y, .5 / s, 1 - .5 / s);
     el.querySelector('.photo').style.transform = `translate(${540 - x * 1080 * s}px,${540 - y * 1080 * s}px) scale(${s})`;
   }
-  if (t >= 27 && t < 33) document.querySelector('#s5 .kbg').style.transform = `scale(${1 + (t - 27) * .03}) rotate(${(t - 27) * .6}deg)`;
 
   // 光の筋
-  const sBase = kin ? 1 : 0;
+  const sBase = kin ? .45 : 0;
   const sInt = clamp(sBase + streakBoost * .9, 0, 1.6);
   streaks.forEach((d, i) => {
     const speed = 900 + rand(i + 9) * 1400;
@@ -200,7 +281,7 @@ window.renderAt = function (t) {
 
   // 集中線
   const sp = document.getElementById('speed');
-  sp.style.opacity = clamp((kin ? .45 : 0) + speedBoost * .5, 0, .9);
+  sp.style.opacity = clamp((kin ? .18 : 0) + speedBoost * .5, 0, .9);
   sp.style.transform = `rotate(${(Math.floor(t * 30) % 2) * 1.3 + t * 4}deg)`;
 
   // キラーン(光が走る)

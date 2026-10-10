@@ -67,6 +67,8 @@ python3 audio/build_audio.py mix out/bgm.wav out/silent.mp4 out/seminar_pr_42s.m
 - 映像: チラシ5枚をそのまま使い、叩きつけるズーム・画面の揺れ・白フラッシュ・光の筋・集中線・金の粉・花火・文字の叩きつけ（「本気の人だけ、見てほしい。」「本気の人材、求む。」「本気で挑戦する あなただ。」）
 - 音: 120BPMの4つ打ちBGM、効果音（ドン／バン／シュッ／キラーン／上昇音／花火）、ナレーション7文。すべてこの環境で合成
 - ナレーション: 今は Kokoro（オープンソースの音声合成・Apache-2.0）の男性の声 `jm_kumo`。`VOICE_STYLE=trailer` で低く太い予告編風に加工（音程を約1半音下げ、胸の低音と輪郭を強調、1オクターブ下を薄く重ね、短い残響）。Gemini の鍵がある環境では `narration.py gemini` で差し替えられる（男性なら `GEMINI_VOICE=Fenrir` など）
+- タイトル画面: Claude Design でデザイン（https://claude.ai/artifact/PTea5J8uevCJcr5MEhooc9）。極太明朝×金、深紅の斜め帯、放射状の光線、横一文字の閃光、「あなただ。」で走る金の亀裂、額縁つきエンドカード（37.9秒〜）。`hype.html` に同じ見た目で組み込み済み
+- AI Studio 用のTTS台本: `tts_prompt_ai_studio.md`。届いた音声が1本なら `python3 split_voice.py <音声.wav> out/voice` で7文に切り分けてから合成する
 - 字幕・書き起こし: `narration_ja.srt`（動画編集ソフトやSNSにそのまま読み込める）と `narration_ja.txt`
 - 秒数はすべて `hype/timeline.json` で管理。映像（`hype.html`）と音（`audio_hype.py`）の両方がこれを読む
 
