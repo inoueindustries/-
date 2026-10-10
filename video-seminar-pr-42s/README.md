@@ -59,3 +59,22 @@ python3 audio/build_audio.py mix out/bgm.wav out/silent.mp4 out/seminar_pr_42s.m
 - 「1ヶ月で1000人」「1年で1万人」「日本トッププレイヤー」などの数字・実績コピーは、根拠を確認するまで使わない
 - 会社名・日時・申込URLは未確認のため入れない（受け取ったら差し替える）
 - 完成の条件: 実ファイルを全編再生して、読み・間・最後の切れ・テロップのはみ出しを確認すること
+
+## 激しい版（人材募集PR・`hype/`）
+
+参考動画（チラシ画像をそのまま見せ、光の演出でつなぐ42秒）をもとに、動きと音を強めた版。
+
+- 映像: チラシ5枚をそのまま使い、叩きつけるズーム・画面の揺れ・白フラッシュ・光の筋・集中線・金の粉・花火・文字の叩きつけ（「本気の人だけ、見てほしい。」「本気の人材、求む。」「本気で挑戦する あなただ。」）
+- 音: 120BPMの4つ打ちBGM、効果音（ドン／バン／シュッ／キラーン／上昇音／花火）、ナレーション7文。すべてこの環境で合成
+- ナレーション: 今は Kokoro（オープンソースの音声合成・Apache-2.0、声 `jf_alpha`）。Gemini の鍵がある環境では `narration.py gemini` で差し替えられる
+- 秒数はすべて `hype/timeline.json` で管理。映像（`hype.html`）と音（`audio_hype.py`）の両方がこれを読む
+
+```bash
+cd video-seminar-pr-42s/hype
+node render.mjs video out/hype_silent.mp4                      # 映像（約2分）
+python narration.py gemini out/voice                            # または kokoro（要: kokoro-onnx, misaki[ja], モデル2ファイル）
+python3 audio_hype.py out/voice out/hype_silent.mp4 out/hype_42s.mp4
+```
+
+- ナレーションを差し替えたら、各文の長さが `timeline.json` の次の文の開始までに収まるか確認する（`audio_hype.py` が開始・終了秒を表示する）
+- 画像内の「1ヶ月で1000人」「1年で1万人」「日本トッププレイヤー」などの実績表現は依頼者のチラシそのまま。公開前に根拠を確認する
