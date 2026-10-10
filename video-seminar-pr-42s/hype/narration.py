@@ -40,7 +40,7 @@ def gemini(outdir):
     voice = os.environ.get('GEMINI_VOICE', 'Kore')
     model = os.environ.get('GEMINI_TTS_MODEL', 'gemini-2.5-flash-preview-tts')
     for i, (text, tone) in enumerate(LINES, 1):
-        prompt = ('人材募集のPR動画の、熱く力強い女性ナレーターとして読んでください。'
+        prompt = ('人材募集のPR動画の、熱く力強いナレーターとして読んでください。'
                   f'叫ばず、張りのある声で。{tone}\n\n{text}')
         body = {'contents': [{'parts': [{'text': prompt}]}],
                 'generationConfig': {'responseModalities': ['AUDIO'], 'speechConfig': {
