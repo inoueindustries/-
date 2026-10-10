@@ -175,7 +175,7 @@ def se_riser(sec):
     x = filtered_sweep(sec, 200, 9000, 0.4) * 0.6
     f = 180 * (1300 / 180) ** (t / sec)
     x += np.sin(2 * np.pi * np.cumsum(f) / SR) * 0.25
-    return x * (t / sec) ** 2
+    return x * (0.35 + 0.65 * (t / sec) ** 1.5)
 
 
 # ---------------- BGM ----------------
@@ -212,7 +212,7 @@ def bgm():
                 add(buf, tb, bass(root, BEAT * 2 - 0.02), 0.5)
     for k in range(32):                                                     # 31.1〜33秒のスネアロール
         s = 31.1 + 1.9 * (1 - (1 - k / 32) ** 1.6)
-        add(buf, s, C, 0.18 + 0.5 * k / 32)
+        add(buf, s, C, 0.3 + 0.9 * k / 32)
     notes, root = PROG[0]                                                   # 最後の決め
     add(buf, 41.4, stab([n + 12 for n in notes] + [n for n in notes], dur=0.9, bright=12), 0.9)
     add(buf, 41.4, bass(root, 0.9), 0.9)
@@ -230,7 +230,7 @@ def effects():
         elif k == 'kira':
             add(buf, h['t'], se_kira(), 0.45, pan=0.2)
         elif k == 'riser':
-            add(buf, h['t'], se_riser(h['dur']), 0.6)
+            add(buf, h['t'], se_riser(h['dur']), 1.2)
         elif k == 'whoosh':
             nxt = min((x['t'] for x in TL['hits'] if x['t'] > h['t'] and x['kind'] in ('don', 'ban')), default=h['t'] + .45)
             add(buf, h['t'], se_whoosh(nxt - h['t']), 0.55)
