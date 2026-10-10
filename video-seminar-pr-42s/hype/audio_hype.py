@@ -242,9 +242,22 @@ def effects():
     return reverb(buf[:, : int(LENGTH * SR)], 2.4, 0.22, seed=5)
 
 
+# 声の仕上げ。VOICE_STYLE=trailer で、映画予告のような低く太い迫力のある声にする
+VOICE_FX = {
+    'clear': '[0:a]highpass=f=90,equalizer=f=3000:t=q:w=1:g=3,acompressor=threshold=0.1:ratio=3:attack=5:release=80[out]',
+    'trailer': (
+        '[0:a]aresample=48000,rubberband=pitch=0.94,highpass=f=70,'
+        'equalizer=f=110:t=q:w=1:g=4,equalizer=f=350:t=q:w=1.2:g=-3,equalizer=f=2800:t=q:w=1:g=4,equalizer=f=6000:t=q:w=1:g=2,'
+        'acompressor=threshold=0.08:ratio=5:attack=3:release=60:makeup=2,volume=1.6,asoftclip=type=tanh,asplit[a][b];'
+        '[b]rubberband=pitch=0.5,lowpass=f=500,volume=0.12[sub];'                    # 1オクターブ下を薄く重ねて厚みを出す
+        '[a][sub]amix=inputs=2:normalize=0,aecho=0.85:0.5:35|70:0.16|0.09[out]'       # 短い残響で響きを足す
+    ),
+}
+
+
 def load_voice(path):
-    raw = subprocess.check_output(['ffmpeg', '-v', 'error', '-i', path, '-af',
-                                   'highpass=f=90,equalizer=f=3000:t=q:w=1:g=3,acompressor=threshold=0.1:ratio=3:attack=5:release=80',
+    fx = VOICE_FX[os.environ.get('VOICE_STYLE', 'clear')]
+    raw = subprocess.check_output(['ffmpeg', '-v', 'error', '-i', path, '-filter_complex', fx, '-map', '[out]',
                                    '-ar', str(SR), '-ac', '1', '-f', 'f32le', '-'])
     return np.frombuffer(raw, '<f4').astype(np.float64)
 
@@ -256,7 +269,7 @@ def narration(folder):
         v /= np.max(np.abs(v)) + 1e-9
         end = n['at'] + len(v) / SR
         print(f"  {n['file']}: {n['at']:.2f}s → {end:.2f}s")
-        add(buf, n['at'], v, 1.0)
+        add(buf, n['at'], v, n.get('gain', 1.0))       # gain: 盛り上がる区間で声だけ持ち上げる
     return buf[:, : int(LENGTH * SR)]
 
 
@@ -268,8 +281,8 @@ def main(folder, video, out):
     k = int(0.15 * SR)
     env = np.convolve(env, np.ones(k) / k, mode='same')
     env = np.clip(env / (np.max(env) + 1e-9) * 3, 0, 1)
-    music *= 1 - 0.8 * env
-    fx *= 1 - 0.6 * env
+    music *= 1 - 0.9 * env
+    fx *= 1 - 0.75 * env
     mix = music * 0.45 + fx * 0.7 + voice
     t = np.arange(mix.shape[1]) / SR
     mix *= np.clip((LENGTH - t) / 0.35, 0, 1)

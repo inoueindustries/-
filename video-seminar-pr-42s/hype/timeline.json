@@ -7,8 +7,8 @@
     {"file": "n03.wav", "at": 14.60},
     {"file": "n04.wav", "at": 21.30},
     {"file": "n05.wav", "at": 27.70},
-    {"file": "n06.wav", "at": 33.30},
-    {"file": "n07.wav", "at": 38.05}
+    {"file": "n06.wav", "at": 33.20, "gain": 1.3},
+    {"file": "n07.wav", "at": 37.98, "gain": 1.3}
   ],
   "hits": [
     {"t": 0.50, "kind": "don"},
