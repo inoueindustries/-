@@ -5,6 +5,7 @@
   実質負荷重量 = ROUND(体重 × 自重換算係数 + 重量, 1)   （有酸素・リカバリーは対象外）
   総ボリューム = 実質負荷重量 × 回数 × セット数
   基礎獲得EXP = ROUND(総ボリューム × 基礎EXP倍率)
+  有酸素・リカバリー（ウォーキング・サイクリング・サウナ）は 1回 50 EXP
   Lv = MIN(99, INT((有効EXP / 係数) ^ (1 / 乗数)) + 1)
 
 使い方:
@@ -23,6 +24,7 @@ from pathlib import Path
 
 MASTER = json.loads((Path(__file__).resolve().parent.parent / "references" / "master.json").read_text(encoding="utf-8"))
 EXERCISES = {e["name"]: e for e in MASTER["exercises"]}
+CARDIO_EXP = 50   # スプシ『トレーニング・運動ログ』N列：部位が「有酸素・リカバリー」なら 50
 MAJORS = ["肩", "胸", "背中", "腕", "脚", "腹筋・体幹"]
 KANA = {"肩": "かた", "胸": "むね", "背中": "せなか", "腕": "うで", "脚": "あし", "腹筋・体幹": "ふっきん"}
 
@@ -92,7 +94,10 @@ def parse_line(line):
 def calc_entry(p, bw):
     ex = EXERCISES[p["name"]]
     cardio = ex["category"] in ("有酸素運動", "リカバリー")
-    if cardio or not p["reps"]:
+    if cardio:
+        load, volume = None, 0
+        exp = CARDIO_EXP if ex["major"] == "有酸素・リカバリー" else 0
+    elif not p["reps"]:
         load, volume, exp = None, 0, 0
     else:
         if ex["bodyweight_coef"] > 0 and bw is None:
@@ -170,7 +175,10 @@ def main():
     out = []
     for e in entries:
         if e["cardio"]:
-            out.append(f"・{e['name']}：有酸素・リカバリーなので EXP は 0（スプシと同じ扱い）")
+            out.append(f"・{e['name']}：有酸素・リカバリーなので 1回 **{e['exp']} EXP**（時間・距離は関係なし）")
+            if e["fines"]:
+                top = sorted(e["fines"].items(), key=lambda x: -x[1])[:3]
+                out.append("　　└ " + "、".join(f"{f} +{v:.0f}" for f, v in top))
             continue
         if not e["reps"]:
             out.append(f"・{e['name']}：回数が読み取れませんでした")
