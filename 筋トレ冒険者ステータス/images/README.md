@@ -10,7 +10,8 @@
 | sauna.png | サウナ・温冷交代浴 | 同上 |
 | bent-over-row.png | ダンベルベントオーバーロウ | 同上 |
 | russian-twist.png | ロシアンツイスト | 同上 |
-| lying-leg-raise.png | ライイングレッグレイズ、フラッターキック（共用） | 同上 |
+| lying-leg-raise.png | ライイングレッグレイズ | 同上 |
+| flutter-kick.png | フラッターキック | 同上 |
 
 ほかの種目の画像は Wikimedia Commons の運動イラスト（Everkinetic、CC BY-SA 3.0）を直接参照しています。
 スプシ側のURLは main ブランチの raw URL（https://raw.githubusercontent.com/inoueindustries/-/main/...）なので、main にマージされてから表示されます。
