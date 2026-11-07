@@ -104,16 +104,16 @@ var QSWeb = (function () {
   }
 
   function loadMaster(v) {
-    var master = {}, multipliers = {}, labels = {};
+    var master = {}, multipliers = {}, labels = {}, guides = {};
     var hr = findHeaderRow(v, function (h) {
       return h.some(function (x) { return /種目/.test(x); }) &&
         h.filter(function (x) { return FINE_MATCHERS.some(function (m) { return m[1](x); }); }).length >= 5;
     }, 15);
-    if (hr < 0) return { master: master, multipliers: multipliers, labels: labels, partCols: 0 };
-    var header = v[hr].map(norm), exCol = findCol(header, /種目/, 0), mulCol = findCol(header, /倍率/, -1);
+    if (hr < 0) return { master: master, multipliers: multipliers, labels: labels, guides: guides, partCols: 0 };
+    var header = v[hr].map(norm), exCol = findCol(header, /種目/, 0), mulCol = findCol(header, /倍率/, -1), guideCol = findCol(header, /目安/, -1);
     var cols = [], used = {};
     header.forEach(function (h, i) {
-      if (i === exCol || i === mulCol || !h) return;
+      if (i === exCol || i === mulCol || i === guideCol || !h) return;
       var hit = null;
       for (var k = 0; k < FINE_MATCHERS.length; k++) if (!used[FINE_MATCHERS[k][0]] && FINE_MATCHERS[k][1](h)) { hit = FINE_MATCHERS[k]; break; }
       if (!hit) return;
@@ -129,8 +129,9 @@ var QSWeb = (function () {
       if (sum > 0) master[ex] = ratios;
       var mul = num(cell(row, mulCol));
       if (mulCol >= 0 && mul > 0) multipliers[ex] = mul;
+      if (guideCol >= 0 && String(cell(row, guideCol)).trim()) guides[ex] = String(cell(row, guideCol)).trim();
     });
-    return { master: master, multipliers: multipliers, labels: labels, partCols: cols.length };
+    return { master: master, multipliers: multipliers, labels: labels, guides: guides, partCols: cols.length };
   }
 
   function loadLog(v, multipliers) {
@@ -207,6 +208,21 @@ var QSWeb = (function () {
     while (n > 1 && need(n) > e + 1e-9) n--;
     return Math.min(C.MAX_LV, Math.max(1, n));
   }
+  function lvNext(e) { var lv = lvFromExp(e); return lv >= C.MAX_LV ? 0 : Math.max(0, expForLv(lv + 1) - Math.round(e)); }
+  function lvProgress(e) {
+    var lv = lvFromExp(e), a = expForLv(lv), b = expForLv(Math.min(lv + 1, C.MAX_LV));
+    return lv >= C.MAX_LV ? 1 : Math.max(0, Math.min(1, (e - a) / (b - a)));
+  }
+  // 17部位ごとに、配分の大きい種目を上から3つ（スプシの「主に経験値が入る種目と推奨負荷目安」と同じ考え方）
+  function tipsOf(m) {
+    var out = {};
+    FINES.forEach(function (f) {
+      out[f] = Object.keys(m.master).filter(function (ex) { return (m.master[ex][f] || 0) >= 0.3; })
+        .sort(function (a, b) { return m.master[b][f] - m.master[a][f]; }).slice(0, 3)
+        .map(function (ex) { return { ex: ex, guide: (m.guides[ex] || '').replace(/\s*[×x]\s*[\d〜~\-]+\s*セット.*$/, '').replace(/\s+/g, '') }; });
+    });
+    return out;
+  }
   function titleOf(lv) { var t = C.TITLES[0][1]; C.TITLES.forEach(function (x) { if (lv >= x[0]) t = x[1]; }); return t; }
   function condition(el) {
     if (el == null) return { cond: 'sleep', label: '💤 未修行' };
@@ -218,7 +234,8 @@ var QSWeb = (function () {
   function partView(st, t) {
     var el = st.last ? t - st.last : null, c = condition(el);
     return {
-      lv: lvFromExp(st.eff), eff: Math.round(st.eff), cum: Math.round(st.cum),
+      lv: lvFromExp(st.eff), eff: Math.round(st.eff), cum: Math.round(st.cum), effRaw: st.eff, cumRaw: st.cum,
+      lost: Math.round(st.cum - st.eff), next: lvNext(st.eff), progress: lvProgress(st.eff),
       last: st.last ? fmt(st.last) : null, elapsed: el,
       retention: el == null ? 0 : Math.round(retention(el) * 100),
       daysToDecay: el != null && el <= C.KEEP_DAYS ? C.KEEP_DAYS - el + 1 : null,
@@ -284,11 +301,17 @@ var QSWeb = (function () {
     var trend = [];
     for (var d = t - C.TREND_DAYS + 1; d <= t; d++) { var sn = d === t ? s : snapshot(data, d); trend.push({ d: fmt(d), eff: Math.round(sn.eff), lv: lvFromExp(sn.eff) }); }
     var forecast = [3, 7, 14, 20].map(function (k) { var e = snapshot(data, t + k).eff; return { days: k, eff: Math.round(e), lv: lvFromExp(e) }; });
+    var lastDay = data.entries.filter(function (e) { return e.day <= t; }).reduce(function (a, e) { return Math.max(a, e.day); }, -1);
+    var latest = lastDay < 0 ? null : { last: fmt(lastDay, true), elapsed: t - lastDay, toZero: Math.max(0, C.KEEP_DAYS + Math.ceil(1 / C.DECAY_PER_DAY) - (t - lastDay)) };
     var warnings = [];
     if (!m.partCols) warnings.push('『経験値・部位負荷マスタ』の部位配分列が読み取れなかったので、「部位」列で大部位に振り分けています');
     return {
       player: C.PLAYER_NAME, asOf: fmt(t, true),
-      settings: { keepDays: C.KEEP_DAYS, decayPct: Math.round(C.DECAY_PER_DAY * 100), zeroDay: C.KEEP_DAYS + Math.ceil(1 / C.DECAY_PER_DAY) },
+      settings: { keepDays: C.KEEP_DAYS, decayPct: Math.round(C.DECAY_PER_DAY * 100), zeroDay: C.KEEP_DAYS + Math.ceil(1 / C.DECAY_PER_DAY),
+        curveA: C.CURVE_A, curveP: C.CURVE_P, maxLv: C.MAX_LV },
+      latest: latest,
+      titles: C.TITLES.map(function (x) { return { lv: x[0], name: x[1], exp: Math.max(0, expForLv(x[0])) || 0 }; }),
+      tips: tipsOf(m),
       total: {
         lv: lv, title: titleOf(lv), job: job, upperJob: upper,
         eff: Math.round(s.eff), cum: Math.round(s.cum), lost: Math.round(s.cum - s.eff),
