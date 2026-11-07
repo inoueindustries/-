@@ -35,22 +35,16 @@ const QS_CONFIG = {
   // （スプシの「100EXPごとに1Lv」で Lv42 だった約4,200EXP が、ほぼ Lv42 のまま残るように合わせています）
   CURVE_A: 15.9,
   CURVE_P: 1.5,
-  MAX_LV: 99,
+  MAX_LV: 999,
   MAJOR_CURVE_SCALE: 1,       // 大部位Lv：総合と同じ曲線（同じEXPなら同じLv）
   FINE_CURVE_SCALE: 1,        // 17部位Lv：総合と同じ曲線
 
   TREND_DAYS: 30,             // 推移グラフに出す日数
   BACKFILL_DAYS: 90,
 
-  // 称号（現在総有効EXPで決まる。スプシの「現在の称号」の式と同じ区切り）
-  TITLES: [
-    [0, 'みならい冒険者'],
-    [500, 'かけだし武闘家'],
-    [1000, '歴戦の戦士'],
-    [2000, '剛腕バトルマスター'],
-    [3500, '無敵のパラディン'],
-    [5000, '神域のゴッドハンド'],
-  ],
+  // 称号（総合Lvで決まる）。スプシの称号テーブル（必要Lv／称号）が読めればそちらを使う
+  TITLES: [[1, 'みならい冒険者'], [10, 'かけだし武闘家'], [20, '歴戦の戦士'], [30, '剛腕バトルマスター'], [40, '無敵のパラディン'], [50, '神域のゴッドハンド'],
+      [70, '鋼の覇王'], [100, '伝説の筋肉勇者'], [150, '天を突く巨人'], [200, '大地を揺らす豪傑'], [300, '星をも砕く拳聖'], [500, '神話に刻まれし者'], [700, '天地創造の筋神'], [999, '筋肉の神（カンスト）']],
   // 職業（いちばん鍛えている大部位で決まる）。全部位がバランスよく育つと上級職へ転職
   JOBS: {
     '肩': '鉄壁の盾兵',
@@ -293,7 +287,7 @@ const QS = (() => {
   function loadSettings(book) {
     const sh = book.getSheetByName(C.SHEET_STATUS);
     if (!sh) return;
-    const v = sh.getDataRange().getValues().slice(0, 20);
+    const v = sh.getDataRange().getValues().slice(0, 40);
     const pick = re => {
       for (const row of v) {
         for (let i = 0; i < row.length - 1; i++) {
@@ -308,6 +302,19 @@ const QS = (() => {
     if (p > 0) C.CURVE_P = p;
     if (keep != null && keep >= 0) C.KEEP_DAYS = keep;
     if (decay > 0 && decay < 1) C.DECAY_PER_DAY = decay;
+    // 称号テーブル：「必要Lv」「称号」の見出しの下を読む
+    for (let r = 0; r < v.length; r++) {
+      const row = v[r].map(norm), c = row.indexOf('必要Lv');
+      if (c < 0 || row[c + 1] !== '称号') continue;
+      const t = [];
+      for (let k = r + 1; k < v.length; k++) {
+        const lv = Number(v[k][c]), name = String(v[k][c + 1] || '').trim();
+        if (!(lv > 0) || !name) break;
+        t.push([lv, name]);
+      }
+      if (t.length) C.TITLES = t;
+      break;
+    }
   }
 
   function loadData() {
@@ -355,7 +362,7 @@ const QS = (() => {
   }
 
   const expForLv = (n, a) => Math.ceil(a * Math.pow(n - 1, C.CURVE_P) - 1e-9);   // この値以上で Lv n
-  // スプシの式 =MIN(99, INT((EXP/係数)^(1/乗数))+1) と同じ判定
+  // スプシの式 =MIN(999, INT((EXP/係数)^(1/乗数))+1) と同じ判定
   function lvFromExp(e, a) {
     const need = n => a * Math.pow(n - 1, C.CURVE_P);
     let n = Math.floor(Math.pow(Math.max(0, e) / a, 1 / C.CURVE_P) + 1e-9) + 1;
@@ -363,9 +370,9 @@ const QS = (() => {
     while (n > 1 && need(n) > e + 1e-9) n--;
     return Math.min(C.MAX_LV, Math.max(1, n));
   }
-  function titleOf(exp) {
+  function titleOf(lv) {
     let t = C.TITLES[0][1];
-    C.TITLES.forEach(([min, name]) => { if (exp >= min) t = name; });
+    C.TITLES.forEach(([min, name]) => { if (lv >= min) t = name; });
     return t;
   }
 
@@ -425,7 +432,7 @@ const QS = (() => {
       asOf: fmt(t, true),
       settings: { keepDays: C.KEEP_DAYS, decayPct: Math.round(C.DECAY_PER_DAY * 100), zeroDay: C.KEEP_DAYS + Math.ceil(1 / C.DECAY_PER_DAY) },
       total: {
-        lv, title: titleOf(Math.round(s.eff)), job, upperJob: upper,
+        lv, title: titleOf(lv), job, upperJob: upper,
         eff: Math.round(s.eff), cum: Math.round(s.cum), lost: Math.round(s.cum - s.eff),
         curLvExp: cur, nextLvExp: nxt, need: Math.max(0, nxt - Math.round(s.eff)),
         progress: lv >= C.MAX_LV ? 1 : Math.max(0, Math.min(1, (s.eff - cur) / (nxt - cur))),
