@@ -184,7 +184,7 @@ var QSWeb = (function () {
     return s;
   }
 
-  function expForLv(n) { return Math.round(C.CURVE_A * Math.pow(n - 1, C.CURVE_P)); }
+  function expForLv(n) { return Math.ceil(C.CURVE_A * Math.pow(n - 1, C.CURVE_P) - 1e-9); }   // この値以上で Lv n
   function lvFromExp(e) {
     var need = function (n) { return C.CURVE_A * Math.pow(n - 1, C.CURVE_P); };
     var n = Math.floor(Math.pow(Math.max(0, e) / C.CURVE_A, 1 / C.CURVE_P) + 1e-9) + 1;
