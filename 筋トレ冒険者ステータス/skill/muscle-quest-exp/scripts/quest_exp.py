@@ -120,7 +120,7 @@ def lv_of(e, a, p):
 
 
 def need_for(lv, a, p):
-    return round(a * math.pow(lv, p))   # Lv+1 に必要な有効EXP
+    return math.ceil(a * math.pow(lv, p) - 1e-9)   # Lv+1 に必要な有効EXP（この値以上で到達）
 
 
 def main():

@@ -354,7 +354,7 @@ const QS = (() => {
     return s;
   }
 
-  const expForLv = (n, a) => Math.round(a * Math.pow(n - 1, C.CURVE_P));
+  const expForLv = (n, a) => Math.ceil(a * Math.pow(n - 1, C.CURVE_P) - 1e-9);   // この値以上で Lv n
   // スプシの式 =MIN(99, INT((EXP/係数)^(1/乗数))+1) と同じ判定
   function lvFromExp(e, a) {
     const need = n => a * Math.pow(n - 1, C.CURVE_P);
