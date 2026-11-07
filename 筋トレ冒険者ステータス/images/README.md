@@ -8,7 +8,7 @@
 | road-cycling.png | ロードサイクリング | 同上 |
 | walking.png | ウォーキング | 同上 |
 | sauna.png | サウナ・温冷交代浴 | 同上 |
-| bent-over-row.png | ダンベルベントオーバーロウ | 同上 |
+| bent-over-row.png | ダンベルロウ | 同上 |
 | russian-twist.png | ロシアンツイスト | 同上 |
 | lying-leg-raise.png | ライイングレッグレイズ | 同上 |
 | flutter-kick.png | フラッターキック | 同上 |
