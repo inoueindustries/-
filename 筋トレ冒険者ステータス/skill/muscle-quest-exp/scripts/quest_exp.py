@@ -6,7 +6,7 @@
   総ボリューム = 実質負荷重量 × 回数 × セット数
   基礎獲得EXP = ROUND(総ボリューム × 基礎EXP倍率)
   有酸素・リカバリー（ウォーキング・サイクリング・サウナ）は 1回 50 EXP
-  Lv = MIN(99, INT((有効EXP / 係数) ^ (1 / 乗数)) + 1)
+  Lv = MIN(999, INT((有効EXP / 係数) ^ (1 / 乗数)) + 1)
 
 使い方:
   python quest_exp.py "サイドレイズ 8kg 12回 3セット" --bw 67.2
@@ -120,7 +120,7 @@ def calc_entry(p, bw):
 
 def lv_of(e, a, p):
     n = math.floor(math.pow(max(0.0, e) / a, 1 / p) + 1e-9) + 1
-    return max(1, min(99, n))
+    return max(1, min(999, n))
 
 
 def need_for(lv, a, p):
@@ -158,7 +158,7 @@ def main():
         before, after = a.total, a.total + gained
         lb, la = lv_of(before, a.a, a.p), lv_of(after, a.a, a.p)
         result["total"] = {"before": round(before), "after": round(after), "lv_before": lb, "lv_after": la,
-                           "to_next": 0 if la >= 99 else max(0, need_for(la, a.a, a.p) - round(after))}
+                           "to_next": 0 if la >= 999 else max(0, need_for(la, a.a, a.p) - round(after))}
     if a.parts:
         cur = {}
         for kv in a.parts.split(","):
