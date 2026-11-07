@@ -1,0 +1,13 @@
+# 種目画像
+
+スプシ『筋トレマスタ』のH列（画像URL）から、IMAGE関数で表示する画像です。
+
+| ファイル | 種目 | 出どころ |
+|---|---|---|
+| ab-roller.png | アブローラー | Canva の画像生成で作成（既存の線画に合わせたスタイル） |
+| road-cycling.png | ロードサイクリング | 同上 |
+| walking.png | ウォーキング | 同上 |
+| sauna.png | サウナ・温冷交代浴 | 同上 |
+
+ほかの種目の画像は Wikimedia Commons の運動イラスト（Everkinetic、CC BY-SA 3.0）を直接参照しています。
+スプシ側のURLは main ブランチの raw URL（https://raw.githubusercontent.com/inoueindustries/-/main/...）なので、main にマージされてから表示されます。
