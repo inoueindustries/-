@@ -185,18 +185,20 @@ const QS = (() => {
     const master = {};
     const multipliers = {};
     const labels = {};   // 17部位の表示名（マスタの見出しをそのまま使う）
-    if (!sh) return { master, multipliers, labels, partCols: 0 };
+    const guides = {};   // 種目ごとの推奨負荷の目安
+    if (!sh) return { master, multipliers, labels, guides, partCols: 0 };
     const v = sh.getDataRange().getValues();
     const hr = findHeaderRow(v, h => h.some(x => /種目/.test(x)) &&
       h.filter(x => FINE_MATCHERS.some(m => m[1](x))).length >= 5, 15);
-    if (hr < 0) return { master, multipliers, labels, partCols: 0 };
+    if (hr < 0) return { master, multipliers, labels, guides, partCols: 0 };
     const header = v[hr].map(norm);
     const exCol = findCol(header, /種目/, 0);
     const mulCol = findCol(header, /倍率/, -1);
+    const guideCol = findCol(header, /目安/, -1);
     const cols = [];   // [colIndex, fineName]
     const used = {};
     header.forEach((h, i) => {
-      if (i === exCol || i === mulCol || !h) return;
+      if (i === exCol || i === mulCol || i === guideCol || !h) return;
       const hit = FINE_MATCHERS.find(m => !used[m[0]] && m[1](h));
       if (!hit) return;
       // 中身が数字の列だけを配分列として扱う
@@ -218,8 +220,9 @@ const QS = (() => {
       });
       if (sum > 0) master[ex] = ratios;
       if (mulCol >= 0 && Number(row[mulCol]) > 0) multipliers[ex] = Number(row[mulCol]);
+      if (guideCol >= 0 && String(row[guideCol] || '').trim()) guides[ex] = String(row[guideCol]).trim();
     });
-    return { master, multipliers, labels, partCols: cols.length };
+    return { master, multipliers, labels, guides, partCols: cols.length };
   }
 
   function loadLog(book, multipliers) {
@@ -321,7 +324,7 @@ const QS = (() => {
     const book = openBook();
     loadSettings(book);
     const m = loadMaster(book);
-    return { master: m.master, labels: m.labels, entries: loadLog(book, m.multipliers), body: loadBody(book), partCols: m.partCols };
+    return { master: m.master, labels: m.labels, guides: m.guides, entries: loadLog(book, m.multipliers), body: loadBody(book), partCols: m.partCols };
   }
 
   // ---------- 計算 ----------
@@ -384,11 +387,31 @@ const QS = (() => {
     return { cond: 'sleep', label: '💤 休眠中' };
   }
 
+  function lvNext(e, a) {
+    const lv = lvFromExp(e, a);
+    return lv >= C.MAX_LV ? 0 : Math.max(0, expForLv(lv + 1, a) - Math.round(e));
+  }
+  function lvProgress(e, a) {
+    const lv = lvFromExp(e, a), lo = expForLv(lv, a), hi = expForLv(Math.min(lv + 1, C.MAX_LV), a);
+    return lv >= C.MAX_LV ? 1 : Math.max(0, Math.min(1, (e - lo) / (hi - lo)));
+  }
+  // 17部位ごとに、配分の大きい種目を上から3つ（スプシの「主に経験値が入る種目と推奨負荷目安」と同じ考え方）
+  function tipsOf(data) {
+    const out = {};
+    FINES.forEach(f => {
+      out[f] = Object.keys(data.master).filter(ex => (data.master[ex][f] || 0) >= 0.3)
+        .sort((x, y) => data.master[y][f] - data.master[x][f]).slice(0, 3)
+        .map(ex => ({ ex, guide: ((data.guides || {})[ex] || '').replace(/\s*[×x]\s*[\d〜~\-]+\s*セット.*$/, '').replace(/\s+/g, '') }));
+    });
+    return out;
+  }
+
   function partView(st, t, a) {
     const elapsed = st.last ? t - st.last : null;
     const c = condition(elapsed);
     return {
-      lv: lvFromExp(st.eff, a), eff: Math.round(st.eff), cum: Math.round(st.cum),
+      lv: lvFromExp(st.eff, a), eff: Math.round(st.eff), cum: Math.round(st.cum), effRaw: st.eff, cumRaw: st.cum,
+      lost: Math.round(st.cum - st.eff), next: lvNext(st.eff, a), progress: lvProgress(st.eff, a),
       last: st.last ? fmt(st.last) : null, elapsed,
       retention: elapsed == null ? 0 : Math.round(retention(elapsed) * 100),
       daysToDecay: elapsed != null && elapsed <= C.KEEP_DAYS ? C.KEEP_DAYS - elapsed + 1 : null,
@@ -427,10 +450,18 @@ const QS = (() => {
       return { days: k, eff: Math.round(e), lv: lvFromExp(e, A) };
     });
 
+    const lastDay = data.entries.filter(e => e.day <= t).reduce((x, e) => Math.max(x, e.day), -1);
+    const zeroDay = C.KEEP_DAYS + Math.ceil(1 / C.DECAY_PER_DAY);
+    const latest = lastDay < 0 ? null : { last: fmt(lastDay, true), elapsed: t - lastDay, toZero: Math.max(0, zeroDay - (t - lastDay)) };
+
     return {
       player: C.PLAYER_NAME,
       asOf: fmt(t, true),
-      settings: { keepDays: C.KEEP_DAYS, decayPct: Math.round(C.DECAY_PER_DAY * 100), zeroDay: C.KEEP_DAYS + Math.ceil(1 / C.DECAY_PER_DAY) },
+      settings: { keepDays: C.KEEP_DAYS, decayPct: Math.round(C.DECAY_PER_DAY * 100), zeroDay: C.KEEP_DAYS + Math.ceil(1 / C.DECAY_PER_DAY),
+        curveA: A, curveP: C.CURVE_P, maxLv: C.MAX_LV },
+      latest,
+      titles: C.TITLES.map(([lvl, name]) => ({ lv: lvl, name, exp: Math.max(0, expForLv(lvl, A)) || 0 })),
+      tips: tipsOf(data),
       total: {
         lv, title: titleOf(lv), job, upperJob: upper,
         eff: Math.round(s.eff), cum: Math.round(s.cum), lost: Math.round(s.cum - s.eff),
