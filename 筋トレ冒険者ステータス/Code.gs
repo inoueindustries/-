@@ -22,12 +22,15 @@ const QS_CONFIG = {
   SHEET_MASTER: '経験値・部位負荷マスタ',
   SHEET_BODY: '体組成ログ',
   SHEET_HISTORY: 'EXP日次履歴ログ',
+  SHEET_STATUS: 'ドラクエ風ステータス・EXP',   // ここの「Lv曲線 係数／乗数」「100%維持期間」「8日目〜減衰率」があればそちらを優先
 
   // 減衰ルール（スプシの設定と同じ：7日間は100%維持 → 8日目から1日5%ずつ減 → 27日で0%）
+  // ※ スプシ『ドラクエ風ステータス・EXP』の設定セルが読めたときは、そちらの値で上書きされます
   KEEP_DAYS: 7,
   DECAY_PER_DAY: 0.05,
 
   // レベル曲線：Lv n に必要な有効EXP = CURVE_A × (n-1)^CURVE_P
+  // ※ スプシの「Lv曲線 係数」「Lv曲線 乗数」セルが読めたときは、そちらの値で上書きされます
   // 1.5乗にすると、Lvが上がるほど次のLvまでの必要EXPが増える
   // （スプシの「100EXPごとに1Lv」で Lv42 だった約4,200EXP が、ほぼ Lv42 のまま残るように合わせています）
   CURVE_A: 15.9,
@@ -39,17 +42,14 @@ const QS_CONFIG = {
   TREND_DAYS: 30,             // 推移グラフに出す日数
   BACKFILL_DAYS: 90,
 
-  // 称号（総合Lvで決まる）。名前は自由に書き換えてOK
+  // 称号（現在総有効EXPで決まる。スプシの「現在の称号」の式と同じ区切り）
   TITLES: [
-    [1, 'かけだしの見習い'],
-    [5, '汗かきの新兵'],
-    [10, '鉄腕の戦士'],
-    [20, '剛腕の闘士'],
-    [30, '鋼鉄の武闘家'],
-    [40, '筋骨の勇士'],
-    [50, '不屈の覇者'],
-    [70, '伝説の豪傑'],
-    [90, '筋肉の神'],
+    [0, 'みならい冒険者'],
+    [500, 'かけだし武闘家'],
+    [1000, '歴戦の戦士'],
+    [2000, '剛腕バトルマスター'],
+    [3500, '無敵のパラディン'],
+    [5000, '神域のゴッドハンド'],
   ],
   // 職業（いちばん鍛えている大部位で決まる）。全部位がバランスよく育つと上級職へ転職
   JOBS: {
@@ -289,8 +289,30 @@ const QS = (() => {
     }
   }
 
+  /** 『ドラクエ風ステータス・EXP』の設定セル（見出しの右隣の数字）を読んで QS_CONFIG を上書きする */
+  function loadSettings(book) {
+    const sh = book.getSheetByName(C.SHEET_STATUS);
+    if (!sh) return;
+    const v = sh.getDataRange().getValues().slice(0, 20);
+    const pick = re => {
+      for (const row of v) {
+        for (let i = 0; i < row.length - 1; i++) {
+          if (re.test(norm(row[i])) && typeof row[i + 1] === 'number') return row[i + 1];
+        }
+      }
+      return null;
+    };
+    const a = pick(/^Lv曲線係数/), p = pick(/^Lv曲線乗数/);
+    const keep = pick(/^100%維持期間/), decay = pick(/^8日目.*減衰率/);
+    if (a > 0) C.CURVE_A = a;
+    if (p > 0) C.CURVE_P = p;
+    if (keep != null && keep >= 0) C.KEEP_DAYS = keep;
+    if (decay > 0 && decay < 1) C.DECAY_PER_DAY = decay;
+  }
+
   function loadData() {
     const book = openBook();
+    loadSettings(book);
     const m = loadMaster(book);
     return { master: m.master, labels: m.labels, entries: loadLog(book, m.multipliers), body: loadBody(book), partCols: m.partCols };
   }
@@ -333,15 +355,17 @@ const QS = (() => {
   }
 
   const expForLv = (n, a) => Math.round(a * Math.pow(n - 1, C.CURVE_P));
+  // スプシの式 =MIN(99, INT((EXP/係数)^(1/乗数))+1) と同じ判定
   function lvFromExp(e, a) {
-    let n = Math.floor(Math.pow(Math.max(0, e) / a, 1 / C.CURVE_P)) + 1;
-    while (n < C.MAX_LV && expForLv(n + 1, a) <= e) n++;
-    while (n > 1 && expForLv(n, a) > e) n--;
+    const need = n => a * Math.pow(n - 1, C.CURVE_P);
+    let n = Math.floor(Math.pow(Math.max(0, e) / a, 1 / C.CURVE_P) + 1e-9) + 1;
+    while (n < C.MAX_LV && need(n + 1) <= e + 1e-9) n++;
+    while (n > 1 && need(n) > e + 1e-9) n--;
     return Math.min(C.MAX_LV, Math.max(1, n));
   }
-  function titleOf(lv) {
+  function titleOf(exp) {
     let t = C.TITLES[0][1];
-    C.TITLES.forEach(([min, name]) => { if (lv >= min) t = name; });
+    C.TITLES.forEach(([min, name]) => { if (exp >= min) t = name; });
     return t;
   }
 
@@ -401,7 +425,7 @@ const QS = (() => {
       asOf: fmt(t, true),
       settings: { keepDays: C.KEEP_DAYS, decayPct: Math.round(C.DECAY_PER_DAY * 100), zeroDay: C.KEEP_DAYS + Math.ceil(1 / C.DECAY_PER_DAY) },
       total: {
-        lv, title: titleOf(lv), job, upperJob: upper,
+        lv, title: titleOf(Math.round(s.eff)), job, upperJob: upper,
         eff: Math.round(s.eff), cum: Math.round(s.cum), lost: Math.round(s.cum - s.eff),
         curLvExp: cur, nextLvExp: nxt, need: Math.max(0, nxt - Math.round(s.eff)),
         progress: lv >= C.MAX_LV ? 1 : Math.max(0, Math.min(1, (s.eff - cur) / (nxt - cur))),
