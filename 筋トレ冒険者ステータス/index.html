@@ -1,0 +1,666 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<base target="_top">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#070b1f">
+<title>筋トレ冒険者ステータス</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=DotGothic16&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #070b1f;
+    --bg2: #111a3d;
+    --win: #04050c;
+    --line: #f4f1e8;
+    --text: #f4f1e8;
+    --muted: #9aa3c2;
+    --gold: #ffd75e;
+    --gold2: #ff9f2e;
+    --good: #2fd39a;
+    --warn: #ff9a3c;
+    --danger: #ff5470;
+    --sleep: #6c7393;
+    --cyan: #6fd6ff;
+    --r: 12px;
+    color-scheme: dark;
+  }
+  * { box-sizing: border-box; }
+  [hidden] { display: none !important; }
+  html, body { margin: 0; }
+  body {
+    background: radial-gradient(120% 80% at 50% 0%, var(--bg2) 0%, var(--bg) 60%) fixed, var(--bg);
+    color: var(--text);
+    font-family: "DotGothic16", "Hiragino Kaku Gothic ProN", "Yu Gothic", monospace;
+    font-size: 15px;
+    line-height: 1.6;
+    -webkit-font-smoothing: none;
+    padding-block: 12px calc(84px + env(safe-area-inset-bottom, 0px));
+    padding-left: max(16px, env(safe-area-inset-left, 0px));
+    padding-right: max(16px, env(safe-area-inset-right, 0px));
+  }
+  .wrap { max-width: 1180px; margin: 0 auto; }
+
+  /* RPGウィンドウ */
+  .win {
+    background: var(--win);
+    border: 3px solid var(--line);
+    border-radius: var(--r);
+    box-shadow: 0 0 0 3px var(--win), 0 0 0 4px #2a3366, 0 10px 30px rgba(0,0,0,.45);
+    padding: 14px 14px 12px;
+    margin: 0 0 16px;
+    position: relative;
+  }
+  .win-title {
+    position: absolute; top: -13px; left: 14px;
+    background: var(--win); padding: 0 8px;
+    font-size: 13px; letter-spacing: .08em; color: var(--gold);
+  }
+  .muted { color: var(--muted); }
+  .num { font-variant-numeric: tabular-nums; }
+
+  /* ヘッダー */
+  .hero { display: grid; grid-template-columns: 1fr auto; gap: 4px 12px; align-items: end; }
+  .name { font-size: 22px; letter-spacing: .06em; }
+  .job { color: var(--cyan); font-size: 14px; }
+  .job .badge { display: inline-block; border: 1px solid var(--gold); color: var(--gold); border-radius: 4px; font-size: 11px; padding: 0 5px; margin-left: 6px; vertical-align: 2px; }
+  .lv { text-align: right; line-height: 1; }
+  .lv small { display: block; font-size: 12px; color: var(--muted); margin-bottom: 4px; }
+  .lv b { font-size: 46px; color: var(--gold); text-shadow: 0 0 12px rgba(255,215,94,.35); font-weight: normal; }
+  .bar { height: 14px; border: 2px solid var(--line); border-radius: 4px; background: #1a1f3a; overflow: hidden; margin-top: 10px; grid-column: 1 / -1; }
+  .bar > i { display: block; height: 100%; background: linear-gradient(90deg, var(--gold2), var(--gold)); width: 0; transition: width 1.2s cubic-bezier(.2,.8,.2,1); }
+  .next { grid-column: 1 / -1; display: flex; justify-content: space-between; font-size: 13px; color: var(--muted); margin-top: 4px; }
+  .next b { color: var(--text); font-weight: normal; }
+
+  .stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-top: 14px; }
+  .stat { border-top: 1px dashed #3a4274; padding-top: 8px; }
+  .stat small { display: block; color: var(--muted); font-size: 11px; }
+  .stat span { font-size: 19px; }
+  .stat.lost span { color: var(--danger); }
+
+  /* レーダー */
+  .radar svg { width: 100%; max-width: 360px; display: block; margin: 0 auto; }
+  .radar text { fill: var(--text); font-family: inherit; font-size: 13px; }
+  .radar .lvlabel { fill: var(--gold); font-size: 12px; }
+
+  /* 部位リスト */
+  .parts { list-style: none; margin: 0; padding: 0; }
+  .parts li { display: grid; grid-template-columns: 30px 1fr auto; gap: 2px 10px; align-items: center; padding: 9px 0; border-bottom: 1px dashed #262d55; }
+  .parts li:last-child { border-bottom: 0; }
+  .parts .ic { font-size: 20px; text-align: center; grid-row: span 2; }
+  .parts .nm { font-size: 16px; }
+  .parts .nm small { color: var(--gold); margin-left: 8px; font-size: 14px; }
+  .parts .cd { font-size: 12px; text-align: right; }
+  .parts .meta { grid-column: 2 / 4; display: grid; grid-template-columns: 1fr auto; gap: 8px; align-items: center; font-size: 12px; color: var(--muted); }
+  .mini { height: 6px; background: #1a1f3a; border-radius: 3px; overflow: hidden; }
+  .mini > i { display: block; height: 100%; width: 0; transition: width 1s ease; }
+  .c-good { color: var(--good); } .c-warn { color: var(--warn); } .c-danger { color: var(--danger); } .c-sleep { color: var(--sleep); }
+  .b-good { background: var(--good); } .b-warn { background: var(--warn); } .b-danger { background: var(--danger); } .b-sleep { background: var(--sleep); }
+
+  /* 17部位 */
+  .group { margin-bottom: 12px; }
+  .group h3 { font-size: 14px; font-weight: normal; color: var(--gold); margin: 6px 0 4px; }
+  .fine { display: grid; grid-template-columns: 11.5em 2.6em 1fr 3.2em; gap: 8px; align-items: center; font-size: 13px; padding: 4px 0; }
+  .fine .dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 6px; vertical-align: 1px; }
+  .fine .l { color: var(--gold); text-align: right; }
+  .fine .e { text-align: right; color: var(--muted); }
+
+  /* たたかいのきろく */
+  .msg { font-size: 15px; line-height: 1.85; min-height: 7em; }
+  .msg p { margin: 0 0 6px; }
+  .msg p::before { content: "＊ "; color: var(--muted); }
+  .msg .t-levelup { color: var(--gold); }
+  .msg .t-leveldown, .msg .t-danger { color: var(--danger); }
+  .msg .t-warn { color: var(--warn); }
+  .msg .t-sleep { color: var(--sleep); }
+  .msg .t-gain { color: var(--good); }
+  .cursor { display: inline-block; color: var(--text); animation: blink 1s steps(1) infinite; margin-left: 4px; }
+  @keyframes blink { 50% { opacity: 0; } }
+
+  .forecast { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; text-align: center; }
+  .forecast div { border: 1px solid #2a3366; border-radius: 8px; padding: 8px 2px; }
+  .forecast small { display: block; color: var(--muted); font-size: 11px; }
+  .forecast b { display: block; font-weight: normal; font-size: 16px; }
+  .forecast em { font-style: normal; font-size: 12px; color: var(--danger); }
+  .rule { font-size: 12px; color: var(--muted); margin-top: 10px; }
+
+  /* 推移 */
+  .chart svg { width: 100%; display: block; }
+  .chart text { fill: var(--muted); font-family: inherit; font-size: 11px; }
+  .body-row { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; }
+  .body-row div small { display: block; color: var(--muted); font-size: 11px; }
+  .body-row div span { font-size: 22px; }
+  .delta-down { color: var(--good); font-size: 12px; } .delta-up { color: var(--warn); font-size: 12px; }
+
+  /* コマンドメニュー（スマホ） */
+  .cmd {
+    position: fixed; left: 50%; transform: translateX(-50%);
+    bottom: calc(10px + env(safe-area-inset-bottom));
+    width: min(560px, calc(100% - 20px));
+    display: grid; grid-template-columns: repeat(4, 1fr);
+    background: var(--win); border: 3px solid var(--line); border-radius: var(--r);
+    box-shadow: 0 0 0 3px var(--win), 0 6px 20px rgba(0,0,0,.6);
+    z-index: 10;
+  }
+  .cmd button {
+    font: inherit; color: var(--text); background: none; border: 0;
+    padding: 11px 4px 10px; font-size: 15px; cursor: pointer; position: relative;
+  }
+  .cmd button[aria-selected="true"] { color: var(--gold); }
+  .cmd button[aria-selected="true"]::before { content: "▶"; position: absolute; left: 6px; font-size: 11px; top: 14px; animation: blink 1s steps(1) infinite; }
+
+  .foot { display: flex; justify-content: space-between; align-items: center; gap: 8px; font-size: 12px; color: var(--muted); padding: 4px 4px 0; }
+  .refresh { font: inherit; color: var(--text); background: var(--win); border: 2px solid var(--line); border-radius: 8px; padding: 6px 12px; cursor: pointer; font-size: 13px; }
+  .refresh:disabled { opacity: .5; }
+  .notice { border-color: var(--warn); color: var(--warn); font-size: 13px; }
+  .notice p { margin: 0 0 8px; color: var(--text); }
+  .notice .refresh { margin-top: 4px; }
+  .loading { text-align: center; padding: 28px 14px; }
+  .loading .cursor { margin-left: 0; }
+  .refresh:focus-visible, .cmd button:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
+
+  .panel { display: none; }
+  .panel.on { display: block; animation: pop .25s ease; }
+  @keyframes pop { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+
+  /* PC：全部いっぺんに見せる */
+  @media (min-width: 960px) {
+    body { padding-block: 24px; padding-left: max(24px, env(safe-area-inset-left, 0px)); padding-right: max(24px, env(safe-area-inset-right, 0px)); }
+    .cmd { display: none; }
+    .grid { display: grid; grid-template-columns: 1.05fr 1fr 1fr; gap: 0 20px; align-items: start; }
+    .panel { display: block !important; animation: none; }
+    .msg { min-height: 0; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .bar > i, .mini > i { transition: none; }
+    .panel.on { animation: none; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div id="notice"></div>
+  <div class="win loading" id="loading" hidden>
+    <div class="win-title">よみこみ</div>
+    <p id="loading-text">ぼうけんの きろくを よみこんでいます……</p>
+    <span class="cursor">▼</span>
+  </div>
+  <div class="grid" id="main">
+    <section class="panel on" data-tab="status">
+      <div class="win">
+        <div class="win-title">つよさ</div>
+        <div class="hero">
+          <div>
+            <div class="name" id="name">―</div>
+            <div class="job" id="job">―</div>
+            <div class="muted" id="title" style="font-size:13px">―</div>
+          </div>
+          <div class="lv"><small>レベル</small><b id="lv">-</b></div>
+          <div class="bar" role="progressbar" aria-label="つぎのレベルまでの けいけんち" id="expbar"><i></i></div>
+          <div class="next"><span>E <b class="num" id="eff">0</b></span><span>つぎのレベルまで あと <b class="num" id="need">0</b></span></div>
+        </div>
+        <div class="stats">
+          <div class="stat"><small>有効EXP</small><span class="num" id="s-eff">0</span></div>
+          <div class="stat"><small>累計EXP</small><span class="num" id="s-cum">0</span></div>
+          <div class="stat lost"><small>失われたEXP</small><span class="num" id="s-lost">0</span></div>
+        </div>
+      </div>
+      <div class="win radar">
+        <div class="win-title">ぶいの バランス</div>
+        <div id="radar"></div>
+      </div>
+    </section>
+
+    <section class="panel" data-tab="parts">
+      <div class="win">
+        <div class="win-title">ぶいの ようす</div>
+        <ul class="parts" id="majors"></ul>
+      </div>
+      <div class="win">
+        <div class="win-title">こまかい ぶい（17）</div>
+        <div id="fines"></div>
+      </div>
+    </section>
+
+    <section class="panel" data-tab="log">
+      <div class="win">
+        <div class="win-title">たたかいの きろく</div>
+        <div class="msg" id="log"></div>
+      </div>
+      <div class="win">
+        <div class="win-title">このまま やすむと……</div>
+        <div class="forecast" id="forecast"></div>
+        <div class="rule" id="rule"></div>
+      </div>
+      <div class="win chart">
+        <div class="win-title">けいけんちの すいい（30日）</div>
+        <div id="trend"></div>
+      </div>
+      <div class="win" id="bodywin" hidden>
+        <div class="win-title">からだの じょうたい</div>
+        <div class="body-row" id="body"></div>
+      </div>
+      <div class="foot">
+        <span id="asof">―</span>
+        <button class="refresh" id="refresh" type="button">さいしんの じょうほう</button>
+      </div>
+    </section>
+  </div>
+</div>
+
+<nav class="cmd" role="tablist" aria-label="コマンド">
+  <button role="tab" aria-selected="true" data-go="status">つよさ</button>
+  <button role="tab" aria-selected="false" data-go="parts">ぶい</button>
+  <button role="tab" aria-selected="false" data-go="log">きろく</button>
+  <button role="tab" aria-selected="false" data-go="top">▲うえ</button>
+</nav>
+
+<script type="application/json" id="boot"><?!= boot ?></script>
+<script id="qs-compute">/*@@COMPUTE@@*/</script>
+<script>
+(function () {
+  var $ = function (id) { return document.getElementById(id); };
+  var fmt = function (n) { return Math.round(n || 0).toLocaleString('ja-JP'); };
+  var esc = function (s) { return String(s == null ? '' : s).replace(/[&<>"]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); };
+
+  // ---------- タブ ----------
+  var tabs = document.querySelectorAll('.cmd button');
+  tabs.forEach(function (b) {
+    b.addEventListener('click', function () {
+      var go = b.getAttribute('data-go');
+      if (go === 'top') { window.scrollTo({ top: 0, behavior: 'smooth' }); return; }
+      tabs.forEach(function (x) { x.setAttribute('aria-selected', x === b ? 'true' : 'false'); });
+      document.querySelectorAll('.panel').forEach(function (p) { p.classList.toggle('on', p.getAttribute('data-tab') === go); });
+      window.scrollTo({ top: 0 });
+      if (go === 'log') typeLog();
+    });
+  });
+
+  // ---------- 描画 ----------
+  var state = null;
+
+  function render(d) {
+    state = d;
+    $('notice').innerHTML = '';
+    $('loading').hidden = true;
+    $('main').hidden = false;
+    document.querySelector('.cmd').hidden = false;
+    if (d.error) {
+      $('notice').innerHTML = '<div class="win notice"><div class="win-title">エラー</div>じゅもんが ちがいます……<br>' + esc(d.error) + '</div>';
+      return;
+    }
+    (d.warnings || []).concat(d.demo ? ['これは見本データです。GASにデプロイすると、スプシの本当のデータが表示されます。'] : []).forEach(function (w) {
+      $('notice').innerHTML += '<div class="win notice">' + esc(w) + '</div>';
+    });
+    var t = d.total;
+    $('name').textContent = d.player;
+    $('job').innerHTML = esc(t.job) + (t.upperJob ? '<span class="badge">上級職</span>' : '');
+    $('title').textContent = '称号：' + t.title;
+    $('lv').textContent = t.lv;
+    $('eff').textContent = fmt(t.eff);
+    $('need').textContent = fmt(t.need);
+    $('s-eff').textContent = fmt(t.eff);
+    $('s-cum').textContent = fmt(t.cum);
+    $('s-lost').textContent = (t.lost > 0 ? '-' : '') + fmt(t.lost);
+    var bar = $('expbar');
+    bar.setAttribute('aria-valuenow', Math.round(t.progress * 100));
+    requestAnimationFrame(function () { bar.firstElementChild.style.width = (t.progress * 100).toFixed(1) + '%'; });
+
+    $('radar').innerHTML = radarSvg(d.majors);
+    renderMajors(d.majors);
+    renderFines(d.fines);
+    renderForecast(d);
+    $('trend').innerHTML = trendSvg(d.trend);
+    renderBody(d.body);
+    $('asof').textContent = '判定基準日 ' + d.asOf + (d.fetchedAt ? '（' + new Date(d.fetchedAt).toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit' }) + ' よみこみ）' : '');
+    typed = false;
+    if (window.matchMedia('(min-width: 960px)').matches) typeLog();
+  }
+
+  function renderMajors(majors) {
+    var max = Math.max.apply(null, majors.map(function (m) { return m.eff; }).concat([1]));
+    $('majors').innerHTML = majors.map(function (m) {
+      var sub = m.elapsed == null ? 'まだ きたえていない' :
+        (m.daysToDecay != null ? 'さいご ' + m.last + '（あと' + m.daysToDecay + '日で げんすい）' : 'さいご ' + m.last + '（' + m.elapsed + '日まえ・維持率' + m.retention + '%）');
+      return '<li>' +
+        '<span class="ic" aria-hidden="true">' + m.icon + '</span>' +
+        '<span class="nm">' + esc(m.key) + '<small>Lv.' + m.lv + '</small></span>' +
+        '<span class="cd c-' + m.cond + '">' + esc(m.condLabel) + '</span>' +
+        '<span class="meta"><span class="mini"><i class="b-' + m.cond + '" data-w="' + (m.eff / max * 100).toFixed(1) + '"></i></span><span class="num">' + fmt(m.eff) + ' EXP</span>' +
+        '<span style="grid-column:1/-1">' + sub + '</span></span>' +
+        '</li>';
+    }).join('');
+    requestAnimationFrame(function () {
+      document.querySelectorAll('#majors .mini i').forEach(function (i) { i.style.width = i.getAttribute('data-w') + '%'; });
+    });
+  }
+
+  function renderFines(fines) {
+    var max = Math.max.apply(null, fines.map(function (f) { return f.eff; }).concat([1]));
+    var groups = [];
+    fines.forEach(function (f) {
+      var g = groups.filter(function (x) { return x.k === f.major; })[0];
+      if (!g) { g = { k: f.major, items: [] }; groups.push(g); }
+      g.items.push(f);
+    });
+    $('fines').innerHTML = groups.map(function (g) {
+      return '<div class="group"><h3>' + esc(g.k) + '</h3>' + g.items.map(function (f) {
+        return '<div class="fine" title="' + esc(f.condLabel) + (f.last ? '／さいご ' + f.last : '') + '">' +
+          '<span><i class="dot b-' + f.cond + '"></i>' + esc(f.name) + '</span>' +
+          '<span class="l">Lv' + f.lv + '</span>' +
+          '<span class="mini"><i class="b-' + f.cond + '" data-w="' + (f.eff / max * 100).toFixed(1) + '"></i></span>' +
+          '<span class="e num">' + fmt(f.eff) + '</span></div>';
+      }).join('') + '</div>';
+    }).join('');
+    requestAnimationFrame(function () {
+      document.querySelectorAll('#fines .mini i').forEach(function (i) { i.style.width = i.getAttribute('data-w') + '%'; });
+    });
+  }
+
+  function renderForecast(d) {
+    var now = d.total.eff;
+    $('forecast').innerHTML = d.forecast.map(function (f) {
+      var diff = f.eff - now;
+      return '<div><small>' + f.days + '日後</small><b>Lv.' + f.lv + '</b><span class="num" style="font-size:12px">' + fmt(f.eff) + '</span><br>' +
+        '<em class="num">' + (diff < 0 ? '-' + fmt(-diff) : '±0') + '</em></div>';
+    }).join('');
+    var s = d.settings;
+    $('rule').textContent = '※ ' + s.keepDays + '日間は100%維持 → ' + (s.keepDays + 1) + '日目から1日' + s.decayPct + '%ずつ減る → ' + s.zeroDay + '日で0%';
+  }
+
+  function renderBody(b) {
+    if (!b) { $('bodywin').hidden = true; return; }
+    $('bodywin').hidden = false;
+    var delta = function (v, unit) {
+      if (v == null || isNaN(v)) return '';
+      var cls = v <= 0 ? 'delta-down' : 'delta-up';
+      return '<div class="' + cls + '">はじめから ' + (v > 0 ? '+' : '') + v.toFixed(1) + unit + '</div>';
+    };
+    $('body').innerHTML =
+      '<div><small>たいじゅう（' + esc(b.date) + '）</small><span class="num">' + (b.weight != null ? b.weight.toFixed(1) : '―') + '</span> kg' + delta(b.weightFromStart, 'kg') + '</div>' +
+      '<div><small>たいしぼうりつ</small><span class="num">' + (b.fat != null ? b.fat.toFixed(1) : '―') + '</span> %' + delta(b.fatFromStart, 'pt') + '</div>';
+  }
+
+  // ---------- レーダー（6大部位） ----------
+  function radarSvg(majors) {
+    var W = 320, cx = 160, cy = 156, R = 108, n = majors.length;
+    var maxLv = Math.max.apply(null, majors.map(function (m) { return m.lv; }).concat([10]));
+    var scale = Math.ceil(maxLv / 5) * 5;
+    var pt = function (i, r) {
+      var a = -Math.PI / 2 + i * 2 * Math.PI / n;
+      return [cx + r * Math.cos(a), cy + r * Math.sin(a)];
+    };
+    var poly = function (r) { return majors.map(function (_, i) { return pt(i, r).join(','); }).join(' '); };
+    var s = '<svg viewBox="0 0 ' + W + ' 312" role="img" aria-label="6大部位のレベルのレーダーチャート">';
+    [0.25, 0.5, 0.75, 1].forEach(function (k) {
+      s += '<polygon points="' + poly(R * k) + '" fill="none" stroke="#2a3366" stroke-width="1"/>';
+    });
+    majors.forEach(function (_, i) { var p = pt(i, R); s += '<line x1="' + cx + '" y1="' + cy + '" x2="' + p[0] + '" y2="' + p[1] + '" stroke="#2a3366"/>'; });
+    var vals = majors.map(function (m, i) { return pt(i, R * Math.min(1, m.lv / scale)).join(','); }).join(' ');
+    s += '<polygon points="' + vals + '" fill="rgba(255,215,94,.28)" stroke="#ffd75e" stroke-width="2.5" stroke-linejoin="round"/>';
+    majors.forEach(function (m, i) {
+      var p = pt(i, R * Math.min(1, m.lv / scale));
+      var col = { good: '#2fd39a', warn: '#ff9a3c', danger: '#ff5470', sleep: '#6c7393' }[m.cond];
+      s += '<circle cx="' + p[0] + '" cy="' + p[1] + '" r="4.5" fill="' + col + '" stroke="#04050c" stroke-width="1.5"/>';
+      var l = pt(i, R + 26);
+      var anchor = Math.abs(l[0] - cx) < 8 ? 'middle' : (l[0] > cx ? 'start' : 'end');
+      if (anchor !== 'middle') l[0] += (l[0] > cx ? -6 : 6);
+      s += '<text x="' + l[0] + '" y="' + (l[1] - 2) + '" text-anchor="' + anchor + '">' + esc(m.key) + '</text>';
+      s += '<text class="lvlabel" x="' + l[0] + '" y="' + (l[1] + 13) + '" text-anchor="' + anchor + '">Lv' + m.lv + '</text>';
+    });
+    return s + '</svg>';
+  }
+
+  // ---------- 推移 ----------
+  function trendSvg(tr) {
+    if (!tr || !tr.length) return '<p class="muted">データなし</p>';
+    var W = 340, H = 150, L = 36, Rr = 8, T = 10, B = 22;
+    var vals = tr.map(function (x) { return x.eff; });
+    var max = Math.max.apply(null, vals.concat([10])), min = 0;
+    var x = function (i) { return L + (W - L - Rr) * (tr.length === 1 ? 1 : i / (tr.length - 1)); };
+    var y = function (v) { return T + (H - T - B) * (1 - (v - min) / (max - min)); };
+    var line = tr.map(function (p, i) { return x(i).toFixed(1) + ',' + y(p.eff).toFixed(1); }).join(' ');
+    var s = '<svg viewBox="0 0 ' + W + ' ' + H + '" role="img" aria-label="有効EXPの30日推移">';
+    s += '<defs><linearGradient id="ga" x1="0" x2="0" y1="0" y2="1"><stop offset="0" stop-color="#ffd75e" stop-opacity=".35"/><stop offset="1" stop-color="#ffd75e" stop-opacity="0"/></linearGradient></defs>';
+    [0, 0.5, 1].forEach(function (k) {
+      var v = min + (max - min) * k, yy = y(v);
+      s += '<line x1="' + L + '" x2="' + (W - Rr) + '" y1="' + yy + '" y2="' + yy + '" stroke="#1f2650"/>';
+      s += '<text x="' + (L - 6) + '" y="' + (yy + 4) + '" text-anchor="end">' + (v >= 1000 ? (v / 1000).toFixed(1) + 'k' : Math.round(v)) + '</text>';
+    });
+    s += '<polygon points="' + x(0) + ',' + y(0) + ' ' + line + ' ' + x(tr.length - 1) + ',' + y(0) + '" fill="url(#ga)"/>';
+    s += '<polyline points="' + line + '" fill="none" stroke="#ffd75e" stroke-width="2.5" stroke-linejoin="round"/>';
+    var last = tr.length - 1;
+    s += '<circle cx="' + x(last) + '" cy="' + y(tr[last].eff) + '" r="4" fill="#ffd75e"/>';
+    [0, Math.floor(last / 2), last].forEach(function (i) {
+      s += '<text x="' + x(i) + '" y="' + (H - 6) + '" text-anchor="' + (i === 0 ? 'start' : i === last ? 'end' : 'middle') + '">' + tr[i].d + '</text>';
+    });
+    return s + '</svg>';
+  }
+
+  // ---------- メッセージ送り ----------
+  var typed = false, typing = null;
+  function typeLog() {
+    if (!state || state.error || typed) return;
+    typed = true;
+    var box = $('log');
+    box.innerHTML = '';
+    var lines = state.log || [];
+    var reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    if (reduce) {
+      box.innerHTML = lines.map(function (l) { return '<p class="t-' + l.type + '">' + esc(l.text) + '</p>'; }).join('') + '<span class="cursor">▼</span>';
+      return;
+    }
+    var li = 0, ci = 0, p = null;
+    clearInterval(typing);
+    typing = setInterval(function () {
+      if (li >= lines.length) { clearInterval(typing); box.insertAdjacentHTML('beforeend', '<span class="cursor">▼</span>'); return; }
+      if (!p) { p = document.createElement('p'); p.className = 't-' + lines[li].type; box.appendChild(p); }
+      ci += 2;
+      p.textContent = lines[li].text.slice(0, ci);
+      if (ci >= lines[li].text.length) { li++; ci = 0; p = null; }
+    }, 28);
+    box.onclick = function () {   // タップで全文表示
+      clearInterval(typing);
+      box.innerHTML = lines.map(function (l) { return '<p class="t-' + l.type + '">' + esc(l.text) + '</p>'; }).join('') + '<span class="cursor">▼</span>';
+    };
+  }
+
+  // ---------- データの取り方 ----------
+  // GAS で開いたとき：サーバーで計算した値（boot）＋「さいしんの じょうほう」で再計算
+  // claude.ai のページで開いたとき：閲覧者の Google Sheets 連携でスプシを読み、ブラウザで計算
+  // それ以外：見本データ
+  var SHEET_ID = '12XB0Ye3BNMW1jcXyGaBrtQHHczCjL5PHkMS5TxBTjOE';
+  var SERVER = 'Google Sheets';
+  var RANGES = {
+    status: "'ドラクエ風ステータス・EXP'!A1:K20",
+    master: "'経験値・部位負荷マスタ'!A1:X60",
+    log: "'トレーニング・運動ログ'!A1:Q1000",
+    body: "'体組成ログ'!A1:L1000"
+  };
+  var CACHE = { staleTime: 60 * 1000, gcTime: 7 * 24 * 3600 * 1000 };
+  var isGas = !!(window.google && google.script && google.script.run);
+  var mcp = null, watching = false, got = {}, stamps = {};
+
+  function showLoading(text) {
+    $('loading-text').textContent = text || 'ぼうけんの きろくを よみこんでいます……';
+    $('loading').hidden = false;
+    if (!state) { $('main').hidden = true; document.querySelector('.cmd').hidden = true; }
+  }
+  function showProblem(message, action) {
+    $('loading').hidden = true;
+    var box = $('notice');
+    box.innerHTML = '';
+    var w = document.createElement('div');
+    w.className = 'win notice';
+    w.innerHTML = '<div class="win-title">おしらせ</div>';
+    var p = document.createElement('p');
+    p.textContent = message;
+    w.appendChild(p);
+    if (action) {
+      var b = document.createElement('button');
+      b.type = 'button'; b.className = 'refresh'; b.textContent = action.label;
+      b.addEventListener('click', function () { b.disabled = true; action.run(); });
+      w.appendChild(b);
+    }
+    box.appendChild(w);
+  }
+  function retract() {   // 権限がなくなったときは、表示していた数字を消す
+    state = null;
+    $('main').hidden = true;
+    document.querySelector('.cmd').hidden = true;
+  }
+
+  function handleMcpError(err, fromWatch) {
+    var code = err && err.code;
+    if (code === 'server_not_connected' || code === 'selection_required' || code === 'server_not_found') {
+      retract();
+      showProblem('Google Sheets がつながっていません。claude.ai の 設定 → コネクタ で Google Sheets を追加（または選択）してから、このページを開き直してください。');
+    } else if (code === 'needs_reauth') {
+      retract();
+      showProblem('Google Sheets の接続が切れています。claude.ai の 設定 → コネクタ で Google Sheets をつなぎ直してください。');
+    } else if (code === 'not_in_manifest' || code === 'approval_required' || code === 'consent_required') {
+      retract();
+      showProblem('このページが スプシを読むには、Google Sheets の利用を許可する必要があります。', { label: 'スプシの読みこみを許可する', run: firstCall });
+    } else if (code === 'blocked_by_policy') {
+      retract();
+      showProblem('組織の設定で、このページから Google Sheets を読むことが止められています。');
+    } else if (code === 'tool_error') {
+      showProblem('スプシを読めませんでした。いまの Google アカウントで『食事・運動・体組成ログ_まとめ』を開けるか確かめてください。（' + (err.message || '').slice(0, 120) + '）',
+        { label: 'もういちど よみこむ', run: refreshAll });
+    } else if (code === 'not_granted' || code === 'capability_disabled' || code === 'capability_removed') {
+      render(demo());
+      showProblem('このページでは スプシを読めないため、見本データを表示しています。');
+    } else {   // server_unavailable / upstream_error / rate_limited など一時的なもの
+      if (fromWatch && state) return;   // 前のデータを出したまま、次の更新を待つ
+      showProblem('スプシに つながりにくい状態です。しばらくしてから もういちど よみこんでください。', { label: 'もういちど よみこむ', run: refreshAll });
+    }
+  }
+
+  function payloadValues(result) {
+    var p = result && result.payload;
+    if (typeof p === 'string') { try { p = JSON.parse(p); } catch (e) { p = null; } }
+    return (p && p.values) || [];
+  }
+  function tryRender() {
+    var keys = Object.keys(RANGES);
+    if (!keys.every(function (k) { return k in got; })) return;
+    var d;
+    try { d = QSWeb.compute(got); } catch (e) { showProblem('スプシの中身を読みとれませんでした（' + e.message + '）'); return; }
+    d.fetchedAt = Math.min.apply(null, keys.map(function (k) { return stamps[k]; }));
+    render(d);
+  }
+  function startWatches() {
+    if (watching) return;
+    watching = true;
+    Object.keys(RANGES).forEach(function (k) {
+      mcp.watchTool(SERVER, 'get_values', { spreadsheetId: SHEET_ID, range: RANGES[k] }, function (ev) {
+        if (ev.type === 'data') {
+          got[k] = payloadValues(ev.result);
+          stamps[k] = ev.result.cache ? ev.result.cache.storedAt : Date.now();
+          tryRender();
+        } else {
+          handleMcpError(ev.error, true);
+        }
+      }, { cache: CACHE });
+    });
+  }
+  // 最初の1回は callTool で読む（ここで Google Sheets の利用許可を聞かれる）。そのあと監視に切り替える
+  function firstCall() {
+    showLoading();
+    mcp.callTool(SERVER, 'get_values', { spreadsheetId: SHEET_ID, range: RANGES.status }, { cache: CACHE })
+      .then(function () { $('notice').innerHTML = ''; startWatches(); })
+      .catch(function (e) { handleMcpError(e, false); });
+  }
+  function refreshAll() {
+    var btn = $('refresh');
+    btn.disabled = true; btn.textContent = 'よみこみちゅう……';
+    var done = function () { btn.disabled = false; btn.textContent = 'さいしんの じょうほう'; };
+    if (!watching) { firstCall(); done(); return; }
+    mcp.invalidate(SERVER).then(done, function () {
+      Promise.all(Object.keys(RANGES).map(function (k) {
+        return mcp.callTool(SERVER, 'get_values', { spreadsheetId: SHEET_ID, range: RANGES[k] }, { cache: { staleTime: CACHE.staleTime, gcTime: CACHE.gcTime, refresh: true } })
+          .then(function (r) { got[k] = payloadValues(r); stamps[k] = Date.now(); });
+      })).then(function () { done(); tryRender(); }, function (e) { done(); handleMcpError(e, false); });
+    });
+  }
+
+  $('refresh').addEventListener('click', function () {
+    var btn = this;
+    if (isGas) {
+      btn.disabled = true; btn.textContent = 'よみこみちゅう……';
+      google.script.run
+        .withSuccessHandler(function (json) { btn.disabled = false; btn.textContent = 'さいしんの じょうほう'; render(JSON.parse(json)); })
+        .withFailureHandler(function (e) { btn.disabled = false; btn.textContent = 'さいしんの じょうほう'; render({ error: e && e.message || String(e) }); })
+        .getStatusJson();
+    } else if (mcp) {
+      refreshAll();
+    } else {
+      render(demo());
+    }
+  });
+
+  // ---------- 起動 ----------
+  if (isGas) {
+    var boot = null;
+    try { boot = JSON.parse($('boot').textContent); } catch (e) { boot = demo(); }
+    render(boot);
+  } else if (window.claude && typeof window.claude.use === 'function' && typeof QSWeb !== 'undefined') {
+    showLoading();
+    window.claude.use('mcp').then(function (m) {
+      if (!m) { render(demo()); showProblem('このページでは スプシを読めないため、見本データを表示しています。claude.ai で開くと、ご自身のスプシの数字が出ます。'); return; }
+      mcp = m;
+      firstCall();
+    }, function () { render(demo()); });
+  } else {
+    render(demo());
+  }
+
+  // ---------- 見本データ（GASの外で開いたとき用） ----------
+  function demo() {
+    var trend = [], base = [1650, 1700, 1780, 1780, 1930, 1990, 2010, 2010, 2105, 2150, 2150, 2230, 2300, 2300, 2290, 2350, 2420, 2440, 2440, 2520, 2560, 2560, 2600, 2650, 2680, 2690, 2720, 2740, 2760, 2786];
+    for (var i = 0; i < 30; i++) trend.push({ d: (i < 26 ? '10/' + (i + 6) : '11/' + (i - 25)), eff: base[i], lv: Math.floor(Math.pow(base[i] / 19.5, 1 / 1.5)) + 1 });
+    var M = function (key, kana, icon, lv, eff, cum, last, el, cond, label) {
+      var ret = el <= 7 ? 100 : Math.max(0, 100 - (el - 7) * 5);
+      return { key: key, kana: kana, icon: icon, lv: lv, eff: eff, cum: cum, last: last, elapsed: el, retention: ret, daysToDecay: el <= 7 ? 8 - el : null, cond: cond, condLabel: label };
+    };
+    var F = function (name, major, lv, eff, cond, last) { return { name: name, major: major, lv: lv, eff: eff, cond: cond, condLabel: '', last: last }; };
+    return {
+      demo: true, player: 'ちゃんズ', asOf: '2026/11/04',
+      settings: { keepDays: 7, decayPct: 5, zeroDay: 27 },
+      total: { lv: 28, title: '剛腕バトルマスター', job: '剛腕の剣士', upperJob: false, eff: 2786, cum: 3092, lost: 306, curLvExp: 2736, nextLvExp: 2994, need: 208, progress: 0.19 },
+      majors: [
+        M('肩', 'かた', '🛡️', 24, 512, 512, '11/3', 1, 'good', '🔥 絶好調'),
+        M('胸', 'むね', '💠', 25, 548, 548, '11/2', 2, 'good', '🔥 絶好調'),
+        M('背中', 'せなか', '🦅', 17, 290, 400, '10/24', 11, 'warn', '⚠️ EXP減少中'),
+        M('腕', 'うで', '⚔️', 27, 640, 640, '11/3', 1, 'good', '🔥 絶好調'),
+        M('脚', 'あし', '🦵', 23, 470, 500, '10/27', 6, 'good', '🔥 絶好調'),
+        M('腹筋', 'ふっきん', '🔥', 15, 236, 380, '10/20', 15, 'warn', '⚠️ EXP減少中'),
+      ],
+      fines: [
+        F('僧帽筋(上部)', '肩', 15, 92, 'good', '11/3'), F('三角筋(前部)', '肩', 17, 118, 'good', '11/3'), F('三角筋(中部)', '肩', 20, 196, 'good', '11/3'), F('三角筋(後部)', '肩', 13, 75, 'good', '11/3'),
+        F('大胸筋(上部)', '胸', 18, 160, 'good', '11/2'), F('大胸筋(中部)', '胸', 21, 238, 'good', '11/2'), F('大胸筋(下部)', '胸', 17, 150, 'good', '11/2'),
+        F('広背筋', '背中', 18, 190, 'warn', '10/24'), F('僧帽筋(中下部)/起立筋', '背中', 14, 100, 'warn', '10/24'),
+        F('上腕二頭筋', '腕', 21, 250, 'good', '11/3'), F('上腕三頭筋', '腕', 20, 230, 'good', '11/3'), F('前腕/腕橈骨筋', '腕', 15, 160, 'good', '11/3'),
+        F('大腿四頭筋', '脚', 17, 210, 'good', '10/27'), F('ハム/大臀筋', '脚', 15, 170, 'good', '10/27'), F('ふくらはぎ', '脚', 12, 90, 'good', '10/27'),
+        F('腹直筋', '腹筋', 14, 140, 'warn', '10/20'), F('腹斜筋/腹横筋', '腹筋', 12, 96, 'warn', '10/20'),
+      ],
+      trend: trend,
+      forecast: [{ days: 3, eff: 2786, lv: 28 }, { days: 7, eff: 2602, lv: 27 }, { days: 14, eff: 1980, lv: 23 }, { days: 20, eff: 1150, lv: 17 }],
+      log: [
+        { type: 'gain', text: 'ちゃんズは 11/3に かたと うでを きたえた！ 864ポイントの けいけんちを かくとく！' },
+        { type: 'levelup', text: 'ちゃんズの レベルが あがった！ Lv.26 → Lv.28' },
+        { type: 'warn', text: 'ちゃんズは 11日の あいだ せなかの きたえを おこたった！ 広背筋の けいけんちが 110ポイント へってしまった！' },
+        { type: 'warn', text: 'ちゃんズは 15日の あいだ ふっきんの きたえを おこたった！ 腹直筋の けいけんちが 88ポイント へってしまった！' },
+        { type: 'warn', text: 'あしの けいけんちが あと2日で へりはじめる！ はやく きたえよう！' },
+        { type: 'info', text: 'つぎの レベルまで あと 208ポイント！' },
+      ],
+      body: { date: '2026/11/04', weight: 72.4, fat: 18.6, weightFromStart: -2.1, fatFromStart: -1.8, startDate: '2026/09/01' },
+      warnings: [],
+    };
+  }
+})();
+</script>
+</body>
+</html>
