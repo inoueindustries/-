@@ -28,12 +28,13 @@ const QS_CONFIG = {
   DECAY_PER_DAY: 0.05,
 
   // レベル曲線：Lv n に必要な有効EXP = CURVE_A × (n-1)^CURVE_P
-  // 1.5乗にすると、Lvが上がるほど次のLvまでの必要EXPが増える（今のLv28前後はほぼそのまま）
-  CURVE_A: 19.5,
+  // 1.5乗にすると、Lvが上がるほど次のLvまでの必要EXPが増える
+  // （スプシの「100EXPごとに1Lv」で Lv42 だった約4,200EXP が、ほぼ Lv42 のまま残るように合わせています）
+  CURVE_A: 15.9,
   CURVE_P: 1.5,
   MAX_LV: 99,
-  MAJOR_CURVE_SCALE: 1 / 5,   // 大部位Lvは総合の1/5のEXPで同じLvになる
-  FINE_CURVE_SCALE: 1 / 12,   // 細かい部位Lvは総合の1/12のEXPで同じLvになる
+  MAJOR_CURVE_SCALE: 1,       // 大部位Lv：総合と同じ曲線（同じEXPなら同じLv）
+  FINE_CURVE_SCALE: 1,        // 17部位Lv：総合と同じ曲線
 
   TREND_DAYS: 30,             // 推移グラフに出す日数
   BACKFILL_DAYS: 90,
@@ -136,7 +137,7 @@ const QS = (() => {
     ['大胸筋(下部)', s => /胸/.test(s) && /下/.test(s)],
     ['広背筋', s => /広背/.test(s)],
     ['上腕二頭筋', s => /二頭/.test(s)],
-    ['上腕三頭筋', s => /三頭/.test(s)],
+    ['上腕三頭筋', s => /三頭/.test(s) && !/下腿/.test(s)],
     ['前腕/腕橈骨筋', s => /前腕|腕橈/.test(s)],
     ['大腿四頭筋', s => /四頭/.test(s)],
     ['ハム/大臀筋', s => /ハム|臀/.test(s)],
@@ -189,11 +190,12 @@ const QS = (() => {
     const sh = book.getSheetByName(C.SHEET_MASTER);
     const master = {};
     const multipliers = {};
-    if (!sh) return { master, multipliers, partCols: 0 };
+    const labels = {};   // 17部位の表示名（マスタの見出しをそのまま使う）
+    if (!sh) return { master, multipliers, labels, partCols: 0 };
     const v = sh.getDataRange().getValues();
     const hr = findHeaderRow(v, h => h.some(x => /種目/.test(x)) &&
       h.filter(x => FINE_MATCHERS.some(m => m[1](x))).length >= 5, 15);
-    if (hr < 0) return { master, multipliers, partCols: 0 };
+    if (hr < 0) return { master, multipliers, labels, partCols: 0 };
     const header = v[hr].map(norm);
     const exCol = findCol(header, /種目/, 0);
     const mulCol = findCol(header, /倍率/, -1);
@@ -207,6 +209,7 @@ const QS = (() => {
       const nums = v.slice(hr + 1).filter(row => row[i] !== '' && row[i] != null);
       if (nums.length && nums.filter(row => !isNaN(Number(row[i]))).length / nums.length < 0.8) return;
       used[hit[0]] = true;
+      labels[hit[0]] = String(v[hr][i]).trim();
       cols.push([i, hit[0]]);
     });
     v.slice(hr + 1).forEach(row => {
@@ -222,7 +225,7 @@ const QS = (() => {
       if (sum > 0) master[ex] = ratios;
       if (mulCol >= 0 && Number(row[mulCol]) > 0) multipliers[ex] = Number(row[mulCol]);
     });
-    return { master, multipliers, partCols: cols.length };
+    return { master, multipliers, labels, partCols: cols.length };
   }
 
   function loadLog(book, multipliers) {
@@ -289,7 +292,7 @@ const QS = (() => {
   function loadData() {
     const book = openBook();
     const m = loadMaster(book);
-    return { master: m.master, entries: loadLog(book, m.multipliers), body: loadBody(book), partCols: m.partCols };
+    return { master: m.master, labels: m.labels, entries: loadLog(book, m.multipliers), body: loadBody(book), partCols: m.partCols };
   }
 
   // ---------- 計算 ----------
@@ -372,7 +375,7 @@ const QS = (() => {
 
     const majors = MAJORS.map(m => Object.assign({ key: m.key, kana: m.kana, icon: m.icon },
       partView(s.major[m.key], t, AM)));
-    const fines = FINES.map(f => Object.assign({ name: f, major: FINE_TO_MAJOR[f] },
+    const fines = FINES.map(f => Object.assign({ name: (data.labels && data.labels[f]) || f, key: f, major: FINE_TO_MAJOR[f] },
       partView(s.fine[f], t, AF)));
 
     // 職業
@@ -447,7 +450,7 @@ const QS = (() => {
         const myFines = fines.filter(f => f.major === m.key);
         let worst = null, worstLoss = 0;
         myFines.forEach(f => {
-          const loss = peak.fine[f.name].eff - s.fine[f.name].eff;
+          const loss = peak.fine[f.key].eff - s.fine[f.key].eff;
           if (loss > worstLoss) { worstLoss = loss; worst = f.name; }
         });
         const majorLoss = peak.major[m.key].eff - s.major[m.key].eff;
