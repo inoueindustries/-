@@ -73,7 +73,7 @@ function doGet(e) {
   const t = HtmlService.createTemplateFromFile('index');
   t.boot = getStatusJson().replace(/</g, '\\u003c');
   return t.evaluate()
-    .setTitle('冒険者ステータス')
+    .setTitle('筋トレ冒険者ステータス')
     .addMetaTag('viewport', 'width=device-width, initial-scale=1, viewport-fit=cover')
     .addMetaTag('apple-mobile-web-app-capable', 'yes')
     .addMetaTag('mobile-web-app-capable', 'yes');
@@ -333,7 +333,7 @@ const QS = (() => {
     MAJORS.forEach(m => { s.major[m.key] = { eff: 0, cum: 0, last: null }; });
     data.entries.forEach(en => {
       if (en.day > day) return;
-      const eff = en.exp * retention(day - en.day);
+      const eff = Math.round(en.exp * retention(day - en.day));   // スプシのQ列と同じく1行ごとに四捨五入
       s.eff += eff; s.cum += en.exp;
       const ratios = data.master[en.ex];
       if (ratios) {

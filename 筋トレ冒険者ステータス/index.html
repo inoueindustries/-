@@ -5,7 +5,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#070b1f">
-<title>冒険者ステータス</title>
+<title>筋トレ冒険者ステータス</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=DotGothic16&display=swap" rel="stylesheet">
@@ -25,8 +25,10 @@
     --sleep: #6c7393;
     --cyan: #6fd6ff;
     --r: 12px;
+    color-scheme: dark;
   }
   * { box-sizing: border-box; }
+  [hidden] { display: none !important; }
   html, body { margin: 0; }
   body {
     background: radial-gradient(120% 80% at 50% 0%, var(--bg2) 0%, var(--bg) 60%) fixed, var(--bg);
@@ -35,8 +37,9 @@
     font-size: 15px;
     line-height: 1.6;
     -webkit-font-smoothing: none;
-    min-height: 100vh;
-    padding: 12px 12px calc(84px + env(safe-area-inset-bottom));
+    padding-block: 12px calc(84px + env(safe-area-inset-bottom, 0px));
+    padding-left: max(16px, env(safe-area-inset-left, 0px));
+    padding-right: max(16px, env(safe-area-inset-right, 0px));
   }
   .wrap { max-width: 1180px; margin: 0 auto; }
 
@@ -152,6 +155,11 @@
   .refresh { font: inherit; color: var(--text); background: var(--win); border: 2px solid var(--line); border-radius: 8px; padding: 6px 12px; cursor: pointer; font-size: 13px; }
   .refresh:disabled { opacity: .5; }
   .notice { border-color: var(--warn); color: var(--warn); font-size: 13px; }
+  .notice p { margin: 0 0 8px; color: var(--text); }
+  .notice .refresh { margin-top: 4px; }
+  .loading { text-align: center; padding: 28px 14px; }
+  .loading .cursor { margin-left: 0; }
+  .refresh:focus-visible, .cmd button:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
 
   .panel { display: none; }
   .panel.on { display: block; animation: pop .25s ease; }
@@ -159,7 +167,7 @@
 
   /* PC：全部いっぺんに見せる */
   @media (min-width: 960px) {
-    body { padding: 24px 24px 24px; }
+    body { padding-block: 24px; padding-left: max(24px, env(safe-area-inset-left, 0px)); padding-right: max(24px, env(safe-area-inset-right, 0px)); }
     .cmd { display: none; }
     .grid { display: grid; grid-template-columns: 1.05fr 1fr 1fr; gap: 0 20px; align-items: start; }
     .panel { display: block !important; animation: none; }
@@ -174,7 +182,12 @@
 <body>
 <div class="wrap">
   <div id="notice"></div>
-  <div class="grid">
+  <div class="win loading" id="loading" hidden>
+    <div class="win-title">よみこみ</div>
+    <p id="loading-text">ぼうけんの きろくを よみこんでいます……</p>
+    <span class="cursor">▼</span>
+  </div>
+  <div class="grid" id="main">
     <section class="panel on" data-tab="status">
       <div class="win">
         <div class="win-title">つよさ</div>
@@ -245,6 +258,7 @@
 </nav>
 
 <script type="application/json" id="boot"><?!= boot ?></script>
+<script id="qs-compute">/*@@COMPUTE@@*/</script>
 <script>
 (function () {
   var $ = function (id) { return document.getElementById(id); };
@@ -270,6 +284,9 @@
   function render(d) {
     state = d;
     $('notice').innerHTML = '';
+    $('loading').hidden = true;
+    $('main').hidden = false;
+    document.querySelector('.cmd').hidden = false;
     if (d.error) {
       $('notice').innerHTML = '<div class="win notice"><div class="win-title">エラー</div>じゅもんが ちがいます……<br>' + esc(d.error) + '</div>';
       return;
@@ -297,7 +314,7 @@
     renderForecast(d);
     $('trend').innerHTML = trendSvg(d.trend);
     renderBody(d.body);
-    $('asof').textContent = '判定基準日 ' + d.asOf;
+    $('asof').textContent = '判定基準日 ' + d.asOf + (d.fetchedAt ? '（' + new Date(d.fetchedAt).toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit' }) + ' よみこみ）' : '');
     typed = false;
     if (window.matchMedia('(min-width: 960px)').matches) typeLog();
   }
@@ -450,21 +467,155 @@
     };
   }
 
-  // ---------- 更新 ----------
+  // ---------- データの取り方 ----------
+  // GAS で開いたとき：サーバーで計算した値（boot）＋「さいしんの じょうほう」で再計算
+  // claude.ai のページで開いたとき：閲覧者の Google Sheets 連携でスプシを読み、ブラウザで計算
+  // それ以外：見本データ
+  var SHEET_ID = '12XB0Ye3BNMW1jcXyGaBrtQHHczCjL5PHkMS5TxBTjOE';
+  var SERVER = 'Google Sheets';
+  var RANGES = {
+    status: "'ドラクエ風ステータス・EXP'!A1:K20",
+    master: "'経験値・部位負荷マスタ'!A1:X60",
+    log: "'トレーニング・運動ログ'!A1:Q1000",
+    body: "'体組成ログ'!A1:L1000"
+  };
+  var CACHE = { staleTime: 60 * 1000, gcTime: 7 * 24 * 3600 * 1000 };
+  var isGas = !!(window.google && google.script && google.script.run);
+  var mcp = null, watching = false, got = {}, stamps = {};
+
+  function showLoading(text) {
+    $('loading-text').textContent = text || 'ぼうけんの きろくを よみこんでいます……';
+    $('loading').hidden = false;
+    if (!state) { $('main').hidden = true; document.querySelector('.cmd').hidden = true; }
+  }
+  function showProblem(message, action) {
+    $('loading').hidden = true;
+    var box = $('notice');
+    box.innerHTML = '';
+    var w = document.createElement('div');
+    w.className = 'win notice';
+    w.innerHTML = '<div class="win-title">おしらせ</div>';
+    var p = document.createElement('p');
+    p.textContent = message;
+    w.appendChild(p);
+    if (action) {
+      var b = document.createElement('button');
+      b.type = 'button'; b.className = 'refresh'; b.textContent = action.label;
+      b.addEventListener('click', function () { b.disabled = true; action.run(); });
+      w.appendChild(b);
+    }
+    box.appendChild(w);
+  }
+  function retract() {   // 権限がなくなったときは、表示していた数字を消す
+    state = null;
+    $('main').hidden = true;
+    document.querySelector('.cmd').hidden = true;
+  }
+
+  function handleMcpError(err, fromWatch) {
+    var code = err && err.code;
+    if (code === 'server_not_connected' || code === 'selection_required' || code === 'server_not_found') {
+      retract();
+      showProblem('Google Sheets がつながっていません。claude.ai の 設定 → コネクタ で Google Sheets を追加（または選択）してから、このページを開き直してください。');
+    } else if (code === 'needs_reauth') {
+      retract();
+      showProblem('Google Sheets の接続が切れています。claude.ai の 設定 → コネクタ で Google Sheets をつなぎ直してください。');
+    } else if (code === 'not_in_manifest' || code === 'approval_required' || code === 'consent_required') {
+      retract();
+      showProblem('このページが スプシを読むには、Google Sheets の利用を許可する必要があります。', { label: 'スプシの読みこみを許可する', run: firstCall });
+    } else if (code === 'blocked_by_policy') {
+      retract();
+      showProblem('組織の設定で、このページから Google Sheets を読むことが止められています。');
+    } else if (code === 'tool_error') {
+      showProblem('スプシを読めませんでした。いまの Google アカウントで『食事・運動・体組成ログ_まとめ』を開けるか確かめてください。（' + (err.message || '').slice(0, 120) + '）',
+        { label: 'もういちど よみこむ', run: refreshAll });
+    } else if (code === 'not_granted' || code === 'capability_disabled' || code === 'capability_removed') {
+      render(demo());
+      showProblem('このページでは スプシを読めないため、見本データを表示しています。');
+    } else {   // server_unavailable / upstream_error / rate_limited など一時的なもの
+      if (fromWatch && state) return;   // 前のデータを出したまま、次の更新を待つ
+      showProblem('スプシに つながりにくい状態です。しばらくしてから もういちど よみこんでください。', { label: 'もういちど よみこむ', run: refreshAll });
+    }
+  }
+
+  function payloadValues(result) {
+    var p = result && result.payload;
+    if (typeof p === 'string') { try { p = JSON.parse(p); } catch (e) { p = null; } }
+    return (p && p.values) || [];
+  }
+  function tryRender() {
+    var keys = Object.keys(RANGES);
+    if (!keys.every(function (k) { return k in got; })) return;
+    var d;
+    try { d = QSWeb.compute(got); } catch (e) { showProblem('スプシの中身を読みとれませんでした（' + e.message + '）'); return; }
+    d.fetchedAt = Math.min.apply(null, keys.map(function (k) { return stamps[k]; }));
+    render(d);
+  }
+  function startWatches() {
+    if (watching) return;
+    watching = true;
+    Object.keys(RANGES).forEach(function (k) {
+      mcp.watchTool(SERVER, 'get_values', { spreadsheetId: SHEET_ID, range: RANGES[k] }, function (ev) {
+        if (ev.type === 'data') {
+          got[k] = payloadValues(ev.result);
+          stamps[k] = ev.result.cache ? ev.result.cache.storedAt : Date.now();
+          tryRender();
+        } else {
+          handleMcpError(ev.error, true);
+        }
+      }, { cache: CACHE });
+    });
+  }
+  // 最初の1回は callTool で読む（ここで Google Sheets の利用許可を聞かれる）。そのあと監視に切り替える
+  function firstCall() {
+    showLoading();
+    mcp.callTool(SERVER, 'get_values', { spreadsheetId: SHEET_ID, range: RANGES.status }, { cache: CACHE })
+      .then(function () { $('notice').innerHTML = ''; startWatches(); })
+      .catch(function (e) { handleMcpError(e, false); });
+  }
+  function refreshAll() {
+    var btn = $('refresh');
+    btn.disabled = true; btn.textContent = 'よみこみちゅう……';
+    var done = function () { btn.disabled = false; btn.textContent = 'さいしんの じょうほう'; };
+    if (!watching) { firstCall(); done(); return; }
+    mcp.invalidate(SERVER).then(done, function () {
+      Promise.all(Object.keys(RANGES).map(function (k) {
+        return mcp.callTool(SERVER, 'get_values', { spreadsheetId: SHEET_ID, range: RANGES[k] }, { cache: { staleTime: CACHE.staleTime, gcTime: CACHE.gcTime, refresh: true } })
+          .then(function (r) { got[k] = payloadValues(r); stamps[k] = Date.now(); });
+      })).then(function () { done(); tryRender(); }, function (e) { done(); handleMcpError(e, false); });
+    });
+  }
+
   $('refresh').addEventListener('click', function () {
     var btn = this;
-    if (!(window.google && google.script && google.script.run)) { render(demo()); return; }
-    btn.disabled = true; btn.textContent = 'よみこみちゅう……';
-    google.script.run
-      .withSuccessHandler(function (json) { btn.disabled = false; btn.textContent = 'さいしんの じょうほう'; render(JSON.parse(json)); })
-      .withFailureHandler(function (e) { btn.disabled = false; btn.textContent = 'さいしんの じょうほう'; render({ error: e && e.message || String(e) }); })
-      .getStatusJson();
+    if (isGas) {
+      btn.disabled = true; btn.textContent = 'よみこみちゅう……';
+      google.script.run
+        .withSuccessHandler(function (json) { btn.disabled = false; btn.textContent = 'さいしんの じょうほう'; render(JSON.parse(json)); })
+        .withFailureHandler(function (e) { btn.disabled = false; btn.textContent = 'さいしんの じょうほう'; render({ error: e && e.message || String(e) }); })
+        .getStatusJson();
+    } else if (mcp) {
+      refreshAll();
+    } else {
+      render(demo());
+    }
   });
 
   // ---------- 起動 ----------
-  var boot = null;
-  try { boot = JSON.parse($('boot').textContent); } catch (e) { boot = demo(); }
-  render(boot);
+  if (isGas) {
+    var boot = null;
+    try { boot = JSON.parse($('boot').textContent); } catch (e) { boot = demo(); }
+    render(boot);
+  } else if (window.claude && typeof window.claude.use === 'function' && typeof QSWeb !== 'undefined') {
+    showLoading();
+    window.claude.use('mcp').then(function (m) {
+      if (!m) { render(demo()); showProblem('このページでは スプシを読めないため、見本データを表示しています。claude.ai で開くと、ご自身のスプシの数字が出ます。'); return; }
+      mcp = m;
+      firstCall();
+    }, function () { render(demo()); });
+  } else {
+    render(demo());
+  }
 
   // ---------- 見本データ（GASの外で開いたとき用） ----------
   function demo() {
