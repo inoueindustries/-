@@ -134,22 +134,50 @@
   .body-row div span { font-size: 22px; }
   .delta-down { color: var(--good); font-size: 12px; } .delta-up { color: var(--warn); font-size: 12px; }
 
+  /* けいけんち（スプシと同じ表） */
+  .kv { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0 14px; font-size: 13px; }
+  .kv div { display: flex; justify-content: space-between; gap: 8px; padding: 6px 0; border-bottom: 1px dashed #262d55; }
+  .kv dt { color: var(--muted); }
+  .kv dd { margin: 0; text-align: right; }
+  .tbl-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; margin: 0 -6px; padding: 0 6px; }
+  .tbl { border-collapse: collapse; width: 100%; font-size: 13px; white-space: nowrap; }
+  .tbl th { color: var(--gold); font-weight: normal; font-size: 12px; text-align: right; padding: 6px 8px; border-bottom: 2px solid #2a3366; position: sticky; top: 0; background: var(--win); }
+  .tbl td { padding: 6px 8px; border-bottom: 1px dashed #262d55; text-align: right; }
+  .tbl th.l, .tbl td.l { text-align: left; }
+  .tbl .stick { position: sticky; left: 0; background: var(--win); z-index: 1; }
+  .tbl tr.sum td { border-top: 2px solid #2a3366; border-bottom: 0; color: var(--gold); }
+  .tbl td.tip > div { width: 25em; }
+  .tbl td.tip { white-space: normal; text-align: left; color: var(--muted); font-size: 12px; line-height: 1.5; }
+  .tbl td.tip b { color: var(--text); font-weight: normal; }
+  .tbl .gauge { width: 72px; }
+  .tbl tr.cur td { color: var(--gold); }
+  .tbl tr.cur td:first-child::before { content: "▶ "; }
+  .tbl .lvc { color: var(--gold); }
+  .tbl tr.grp td { color: var(--gold); font-size: 12px; text-align: left; padding-top: 10px; border-bottom: 1px solid #2a3366; }
+  .scroll-hint { font-size: 11px; color: var(--muted); margin: 6px 0 0; }
+  .sim { display: grid; grid-template-columns: repeat(8, 1fr); gap: 6px; align-items: end; height: 120px; margin-top: 6px; }
+  .sim div { display: flex; flex-direction: column; justify-content: flex-end; align-items: center; height: 100%; font-size: 11px; }
+  .sim i { display: block; width: 70%; border-radius: 3px 3px 0 0; min-height: 2px; }
+  .sim b { font-weight: normal; font-size: 12px; }
+  .sim small { color: var(--muted); }
+  @media (min-width: 640px) { .scroll-hint { display: none; } }
+
   /* コマンドメニュー（スマホ） */
   .cmd {
     position: fixed; left: 50%; transform: translateX(-50%);
     bottom: calc(10px + env(safe-area-inset-bottom));
     width: min(560px, calc(100% - 20px));
-    display: grid; grid-template-columns: repeat(4, 1fr);
+    display: grid; grid-template-columns: repeat(4, 1fr) .6fr;
     background: var(--win); border: 3px solid var(--line); border-radius: var(--r);
     box-shadow: 0 0 0 3px var(--win), 0 6px 20px rgba(0,0,0,.6);
     z-index: 10;
   }
   .cmd button {
     font: inherit; color: var(--text); background: none; border: 0;
-    padding: 11px 4px 10px; font-size: 15px; cursor: pointer; position: relative;
+    padding: 11px 2px 10px; font-size: 14px; cursor: pointer; position: relative;
   }
   .cmd button[aria-selected="true"] { color: var(--gold); }
-  .cmd button[aria-selected="true"]::before { content: "▶"; position: absolute; left: 6px; font-size: 11px; top: 14px; animation: blink 1s steps(1) infinite; }
+  .cmd button[aria-selected="true"]::before { content: "▶"; position: absolute; left: 2px; font-size: 10px; top: 14px; animation: blink 1s steps(1) infinite; }
 
   .foot { display: flex; justify-content: space-between; align-items: center; gap: 8px; font-size: 12px; color: var(--muted); padding: 4px 4px 0; }
   .refresh { font: inherit; color: var(--text); background: var(--win); border: 2px solid var(--line); border-radius: 8px; padding: 6px 12px; cursor: pointer; font-size: 13px; }
@@ -172,6 +200,8 @@
     .grid { display: grid; grid-template-columns: 1.05fr 1fr 1fr; gap: 0 20px; align-items: start; }
     .panel { display: block !important; animation: none; }
     .msg { min-height: 0; }
+    .panel[data-tab="exp"] { grid-column: 1 / -1; }
+    .exp-side { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0 20px; align-items: start; }
   }
   @media (prefers-reduced-motion: reduce) {
     .bar > i, .mini > i { transition: none; }
@@ -247,14 +277,46 @@
         <button class="refresh" id="refresh" type="button">さいしんの じょうほう</button>
       </div>
     </section>
+
+    <section class="panel" data-tab="exp">
+      <div>
+        <div class="exp-side">
+          <div class="win">
+            <div class="win-title">げんすいの ルール</div>
+            <dl class="kv" id="x-rule"></dl>
+          </div>
+          <div class="win">
+            <div class="win-title">やすんだ日数と 維持率</div>
+            <div class="sim" id="x-sim"></div>
+          </div>
+          <div class="win">
+            <div class="win-title">しょうごう いちらん</div>
+            <div class="tbl-wrap"><table class="tbl" id="x-titles"></table></div>
+          </div>
+        </div>
+        <div>
+          <div class="win">
+            <div class="win-title">大部位の けいけんち</div>
+            <div class="tbl-wrap"><table class="tbl" id="x-majors"></table></div>
+            <p class="scroll-hint">← 表は よこに スクロールできます →</p>
+          </div>
+          <div class="win">
+            <div class="win-title">17部位の けいけんち</div>
+            <div class="tbl-wrap"><table class="tbl" id="x-fines"></table></div>
+            <p class="scroll-hint">← 表は よこに スクロールできます →</p>
+          </div>
+        </div>
+      </div>
+    </section>
   </div>
 </div>
 
 <nav class="cmd" role="tablist" aria-label="コマンド">
   <button role="tab" aria-selected="true" data-go="status">つよさ</button>
   <button role="tab" aria-selected="false" data-go="parts">ぶい</button>
+  <button role="tab" aria-selected="false" data-go="exp">けいけん</button>
   <button role="tab" aria-selected="false" data-go="log">きろく</button>
-  <button role="tab" aria-selected="false" data-go="top">▲うえ</button>
+  <button role="tab" aria-selected="false" data-go="top" aria-label="いちばん うえへ">▲</button>
 </nav>
 
 <script type="application/json" id="boot"><?!= boot ?></script>
@@ -314,6 +376,7 @@
     renderForecast(d);
     $('trend').innerHTML = trendSvg(d.trend);
     renderBody(d.body);
+    renderExp(d);
     $('asof').textContent = '判定基準日 ' + d.asOf + (d.fetchedAt ? '（' + new Date(d.fetchedAt).toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit' }) + ' よみこみ）' : '');
     typed = false;
     if (window.matchMedia('(min-width: 960px)').matches) typeLog();
@@ -381,6 +444,79 @@
     $('body').innerHTML =
       '<div><small>たいじゅう（' + esc(b.date) + '）</small><span class="num">' + (b.weight != null ? b.weight.toFixed(1) : '―') + '</span> kg' + delta(b.weightFromStart, 'kg') + '</div>' +
       '<div><small>たいしぼうりつ</small><span class="num">' + (b.fat != null ? b.fat.toFixed(1) : '―') + '</span> %' + delta(b.fatFromStart, 'pt') + '</div>';
+  }
+
+  // ---------- けいけんち（スプシの表と同じ並び） ----------
+  function renderExp(d) {
+    var s = d.settings || {}, t = d.total, lt = d.latest;
+    var A = s.curveA || 15.9, P = s.curveP || 1.5, MAX = s.maxLv || 999;
+    var need = function (lv) { return Math.ceil(A * Math.pow(lv - 1, P) - 1e-9); };
+    var nextOf = function (v) { return v.next != null ? v.next : (v.lv >= MAX ? 0 : Math.max(0, need(v.lv + 1) - v.eff)); };
+    var progOf = function (v) {
+      if (v.progress != null) return v.progress;
+      var a = need(v.lv), b = need(Math.min(v.lv + 1, MAX));
+      return v.lv >= MAX ? 1 : Math.max(0, Math.min(1, (v.eff - a) / (b - a)));
+    };
+    var gauge = function (p, cls) { return '<span class="mini gauge" style="display:inline-block;vertical-align:middle"><i class="' + cls + '" data-w="' + (p * 100).toFixed(1) + '"></i></span>'; };
+    var days = function (n) { return n == null ? '―' : n + '日'; };
+    var cond = lt ? (lt.elapsed <= s.keepDays ? { c: 'good', l: '🔥 絶好調（100%維持）' } : { c: 'warn', l: '⚠️ 減衰中' }) : { c: 'sleep', l: '💤 未修行' };
+    var kv = [
+      ['判定基準日', esc(d.asOf)], ['最新トレ日', lt ? esc(lt.last) : '―'],
+      ['100%維持期間', s.keepDays + '日間'], ['経過日数', lt ? lt.elapsed + '日' : '―'],
+      [(s.keepDays + 1) + '日目からの減衰', s.decayPct + '% / 日'], ['コンディション', '<span class="c-' + cond.c + '">' + cond.l + '</span>'],
+      ['完全減衰日数', s.zeroDay + '日'], ['完全減衰まで', lt ? lt.toZero + '日' : '―'],
+      ['Lv曲線 係数', A], ['Lv曲線 乗数', P]
+    ];
+    $('x-rule').innerHTML = kv.map(function (x) { return '<div><dt>' + x[0] + '</dt><dd class="num">' + x[1] + '</dd></div>'; }).join('');
+
+    // 経過日数ごとの維持率
+    var ret = function (el) { return el <= s.keepDays ? 1 : Math.max(0, 1 - (el - s.keepDays) * s.decayPct / 100); };
+    $('x-sim').innerHTML = [0, 3, s.keepDays, 10, 14, 17, 21, s.zeroDay].map(function (el) {
+      var r = ret(el), c = r >= 1 ? 'good' : r >= 0.5 ? 'warn' : r > 0 ? 'danger' : 'sleep';
+      return '<div><b class="num c-' + c + '">' + Math.round(r * 100) + '%</b><i class="b-' + c + '" style="height:' + Math.max(2, r * 80).toFixed(0) + 'px"></i><small>' + el + '日</small></div>';
+    }).join('');
+
+    // 称号
+    var titles = d.titles || [];
+    var curTitle = titles.filter(function (x) { return t.lv >= x.lv; }).pop();
+    $('x-titles').innerHTML = '<thead><tr><th class="l">必要Lv</th><th class="l">称号</th><th>必要な有効EXP</th></tr></thead><tbody>' +
+      titles.map(function (x) {
+        return '<tr class="' + (x === curTitle ? 'cur' : '') + '"><td class="l num">Lv.' + x.lv + '</td><td class="l">' + esc(x.name) + '</td><td class="num">' + fmt(x.exp) + '</td></tr>';
+      }).join('') + '</tbody>';
+
+    // 大部位
+    var head = '<thead><tr><th class="l stick">大部位</th><th>Lv</th><th>有効EXP<br>(減衰後)</th><th>累計EXP<br>(減衰前)</th><th>失われた<br>EXP</th><th>最終トレ日</th><th>経過</th><th class="l">コンディション</th><th class="l">ゲージ</th><th>次のLvまで</th></tr></thead>';
+    var rows = d.majors.map(function (m) {
+      var lost = m.lost != null ? m.lost : Math.max(0, (m.cum || 0) - m.eff);
+      return '<tr><td class="l stick">' + esc(m.icon || '') + ' ' + esc(m.key) + '</td><td class="lvc num">Lv.' + m.lv + '</td><td class="num">' + fmt(m.eff) + '</td><td class="num">' + (m.cum != null ? fmt(m.cum) : '―') + '</td>' +
+        '<td class="num' + (lost > 0 ? ' c-danger' : '') + '">' + fmt(lost) + '</td><td class="num">' + esc(m.last || '―') + '</td><td class="num">' + days(m.elapsed) + '</td>' +
+        '<td class="l c-' + m.cond + '">' + esc(m.condLabel) + (m.elapsed != null ? '（' + m.retention + '%）' : '') + '</td><td class="l">' + gauge(progOf(m), 'b-' + m.cond) + '</td><td class="num">' + fmt(nextOf(m)) + '</td></tr>';
+    }).join('');
+    var keep = t.cum > 0 ? (t.eff / t.cum * 100).toFixed(1) + '% 維持' : '―';
+    rows += '<tr class="sum"><td class="l stick">合計</td><td class="num">Lv.' + t.lv + '</td><td class="num">' + fmt(t.eff) + '</td><td class="num">' + fmt(t.cum) + '</td><td class="num">' + fmt(t.lost) + '</td>' +
+      '<td class="num">' + (lt ? esc(lt.last.replace(/^\d{4}\/0?(\d+)\/0?(\d+)$/, '$1/$2')) : '―') + '</td><td class="num">' + (lt ? days(lt.elapsed) : '―') + '</td><td class="l">' + keep + '</td><td class="l">' + gauge(t.progress, 'b-good') + '</td><td class="num">' + fmt(t.need) + '</td></tr>';
+    $('x-majors').innerHTML = head + '<tbody>' + rows + '</tbody>';
+
+    // 17部位
+    var tips = d.tips || {};
+    head = '<thead><tr><th class="l stick">部位</th><th>Lv</th><th>有効EXP</th><th>累計EXP</th><th>最終刺激日</th><th>経過</th><th>維持率</th><th class="l">状態</th><th class="l">ゲージ</th><th class="l">主に経験値が入る種目と目安</th></tr></thead>';
+    var se = 0, sc = 0, prevMajor = null;
+    rows = d.fines.map(function (f) {
+      var grp = f.major !== prevMajor ? '<tr class="grp"><td class="stick" colspan="1">' + esc(f.major) + '</td><td colspan="9"></td></tr>' : '';
+      prevMajor = f.major;
+      var eff = f.effRaw != null ? f.effRaw : f.eff, cum = f.cumRaw != null ? f.cumRaw : f.cum;
+      se += eff || 0; sc += cum || 0;
+      var keepPct = cum > 0 ? (eff / cum * 100).toFixed(1) + '%' : '―';
+      var tip = (tips[f.key] || []).map(function (x, i) { return '<b>' + esc(x.ex) + '</b>' + (i === 0 && x.guide ? '（' + esc(x.guide) + '）' : ''); }).join('、');
+      return grp + '<tr><td class="l stick">' + esc(f.name) + '</td><td class="lvc num">Lv.' + f.lv + '</td><td class="num">' + (eff != null ? eff.toFixed(1) : '―') + '</td><td class="num">' + (cum != null ? cum.toFixed(1) : '―') + '</td>' +
+        '<td class="num">' + esc(f.last || '―') + '</td><td class="num">' + days(f.elapsed) + '</td><td class="num">' + keepPct + '</td>' +
+        '<td class="l c-' + f.cond + '">' + esc(f.condLabel || '') + (f.elapsed != null && f.retention != null ? '（' + f.retention + '%）' : '') + '</td><td class="l">' + gauge(progOf(f), 'b-' + f.cond) + '</td><td class="tip"><div>' + (tip || '―') + '</div></td></tr>';
+    }).join('');
+    rows += '<tr class="sum"><td class="l stick">全17部位 合計</td><td></td><td class="num">' + se.toFixed(1) + '</td><td class="num">' + sc.toFixed(1) + '</td><td></td><td></td><td class="num">' + (sc > 0 ? (se / sc * 100).toFixed(1) + '%' : '―') + '</td><td></td><td></td><td></td></tr>';
+    $('x-fines').innerHTML = head + '<tbody>' + rows + '</tbody>';
+    requestAnimationFrame(function () {
+      document.querySelectorAll('[data-tab="exp"] .mini i').forEach(function (i) { i.style.width = i.getAttribute('data-w') + '%'; });
+    });
   }
 
   // ---------- レーダー（6大部位） ----------
@@ -629,6 +765,8 @@
     return {
       demo: true, player: 'ちゃんズ', asOf: '2026/11/04',
       settings: { keepDays: 7, decayPct: 5, zeroDay: 27 },
+      titles: [{ lv: 1, name: 'みならい冒険者', exp: 0 }, { lv: 10, name: 'かけだし武闘家', exp: 430 }, { lv: 20, name: '歴戦の戦士', exp: 1317 }, { lv: 30, name: '剛腕バトルマスター', exp: 2484 }, { lv: 40, name: '無敵のパラディン', exp: 3873 }, { lv: 50, name: '神域のゴッドハンド', exp: 5454 }],
+      latest: { last: '2026/11/03', elapsed: 1, toZero: 26 },
       total: { lv: 28, title: '剛腕バトルマスター', job: '剛腕の剣士', upperJob: false, eff: 2786, cum: 3092, lost: 306, curLvExp: 2736, nextLvExp: 2994, need: 208, progress: 0.19 },
       majors: [
         M('肩', 'かた', '🛡️', 24, 512, 512, '11/3', 1, 'good', '🔥 絶好調'),
