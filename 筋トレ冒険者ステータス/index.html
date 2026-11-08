@@ -62,7 +62,9 @@
   .num { font-variant-numeric: tabular-nums; }
 
   /* ヘッダー */
-  .hero { display: grid; grid-template-columns: 1fr auto; gap: 4px 12px; align-items: end; }
+  .hero { display: grid; grid-template-columns: auto 1fr auto; gap: 4px 12px; align-items: end; }
+  .avatar { width: 96px; height: 96px; display: block; margin: -6px 0 -2px -4px; filter: drop-shadow(0 0 10px rgba(111,214,255,.25)); }
+  @media (min-width: 960px) { .avatar { width: 112px; height: 112px; } }
   .name { font-size: 22px; letter-spacing: .06em; }
   .job { color: var(--cyan); font-size: 14px; }
   .job .badge { display: inline-block; border: 1px solid var(--gold); color: var(--gold); border-radius: 4px; font-size: 11px; padding: 0 5px; margin-left: 6px; vertical-align: 2px; }
@@ -222,6 +224,7 @@
       <div class="win">
         <div class="win-title">つよさ</div>
         <div class="hero">
+          <img class="avatar" id="avatar" src="https://raw.githubusercontent.com/inoueindustries/-/main/%E7%AD%8B%E3%83%88%E3%83%AC%E5%86%92%E9%99%BA%E8%80%85%E3%82%B9%E3%83%86%E3%83%BC%E3%82%BF%E3%82%B9/images/chanz.gif" alt="ちゃんズの ドット絵" width="96" height="96">
           <div>
             <div class="name" id="name">―</div>
             <div class="job" id="job">―</div>
