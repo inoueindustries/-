@@ -82,6 +82,18 @@
   .stat span { font-size: 19px; }
   .stat.lost span { color: var(--danger); }
 
+  /* きょうの しゅぎょう（Codex が作ったドット絵のアニメ） */
+  .stage { position: relative; height: 200px; border-radius: 8px; overflow: hidden;
+    background: linear-gradient(180deg, #0b1236 0%, #141d4a 62%, #1f2a5c 62%, #10173a 100%); }
+  .stage::after { content: ""; position: absolute; left: 0; right: 0; top: 62%; height: 2px; background: #2f3b7a; }
+  .stage img { position: absolute; left: 50%; bottom: 4px; transform: translateX(-50%); width: 176px; height: auto; image-rendering: pixelated; z-index: 1; }
+  .pose-text { margin: 10px 0 8px; font-size: 14px; color: var(--good); }
+  .pose-text::before { content: "＊ "; color: var(--muted); }
+  .pose-tabs { display: flex; gap: 6px; }
+  .pose-tabs button { flex: 1; font: inherit; font-size: 13px; color: var(--muted); background: none; border: 1px solid #2a3366; border-radius: 6px; padding: 6px 2px; cursor: pointer; }
+  .pose-tabs button[aria-pressed="true"] { color: var(--gold); border-color: var(--gold); }
+  .pose-tabs button:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
+
   /* レーダー */
   .radar svg { width: 100%; max-width: 360px; display: block; margin: 0 auto; }
   .radar text { fill: var(--text); font-family: inherit; font-size: 13px; }
@@ -240,6 +252,16 @@
           <div class="stat lost"><small>失われたEXP</small><span class="num" id="s-lost">0</span></div>
         </div>
       </div>
+      <div class="win" id="posewin">
+        <div class="win-title">きょうの しゅぎょう</div>
+        <div class="stage"><img id="pose" alt="" width="176" height="193"></div>
+        <p class="pose-text" id="pose-text">―</p>
+        <div class="pose-tabs" role="group" aria-label="しゅぎょうの しゅるい">
+          <button type="button" data-pose="pullup" aria-pressed="false">けんすい</button>
+          <button type="button" data-pose="pushup" aria-pressed="false">うでたて</button>
+          <button type="button" data-pose="squat" aria-pressed="false">スクワット</button>
+        </div>
+      </div>
       <div class="win radar">
         <div class="win-title">ぶいの バランス</div>
         <div id="radar"></div>
@@ -373,6 +395,7 @@
     bar.setAttribute('aria-valuenow', Math.round(t.progress * 100));
     requestAnimationFrame(function () { bar.firstElementChild.style.width = (t.progress * 100).toFixed(1) + '%'; });
 
+    renderPose(d);
     $('radar').innerHTML = radarSvg(d.majors);
     renderMajors(d.majors);
     renderFines(d.fines);
@@ -448,6 +471,50 @@
       '<div><small>たいじゅう（' + esc(b.date) + '）</small><span class="num">' + (b.weight != null ? b.weight.toFixed(1) : '―') + '</span> kg' + delta(b.weightFromStart, 'kg') + '</div>' +
       '<div><small>たいしぼうりつ</small><span class="num">' + (b.fat != null ? b.fat.toFixed(1) : '―') + '</span> %' + delta(b.fatFromStart, 'pt') + '</div>';
   }
+
+  // ---------- きょうの しゅぎょう ----------
+  // 画像：images/workout/（Codex が作ったドット絵。公開ページでは build_claude_page.py が data URI に置きかえる）
+  var SPRITE_BASE = 'https://raw.githubusercontent.com/inoueindustries/-/main/%E7%AD%8B%E3%83%88%E3%83%AC%E5%86%92%E9%99%BA%E8%80%85%E3%82%B9%E3%83%86%E3%83%BC%E3%82%BF%E3%82%B9/images/workout/';
+  var SPRITES = /*@@SPRITES@@*/null;
+  var POSES = {
+    pullup: { name: 'けんすい', ms: [220, 220, 320, 220] },
+    pushup: { name: 'うでたてふせ', ms: [220, 220, 320, 220] },
+    squat: { name: 'スクワット', ms: [220, 220, 320, 220] }
+  };
+  var poseTimer = null, poseKey = null, poseManual = false;
+  function spriteUrl(k, i) { return SPRITES ? SPRITES[k][i] : SPRITE_BASE + k + '-' + i + '.png'; }
+  // いちばん最近 きたえた大部位から えらぶ（同じ日なら EXP の多い部位）
+  function poseFor(d) {
+    var trained = d.majors.filter(function (m) { return m.elapsed != null; });
+    if (!trained.length) return { key: 'squat', part: null };
+    var minEl = Math.min.apply(null, trained.map(function (m) { return m.elapsed; }));
+    var m = trained.filter(function (x) { return x.elapsed === minEl; }).sort(function (a, b) { return b.eff - a.eff; })[0];
+    var key = m.key === '脚' ? 'squat' : (m.key === '背中' || m.key === '腕') ? 'pullup' : 'pushup';
+    return { key: key, part: m };
+  }
+  function playPose(key, part) {
+    poseKey = key;
+    clearTimeout(poseTimer);
+    document.querySelectorAll('.pose-tabs button').forEach(function (b) { b.setAttribute('aria-pressed', b.getAttribute('data-pose') === key ? 'true' : 'false'); });
+    var P = POSES[key], img = $('pose'), i = 0;
+    img.alt = 'ちゃんズが ' + P.name + 'を している ドット絵';
+    $('pose-text').textContent = state && state.player ? state.player + 'は ' + P.name + (part ? 'で ' + part.kana + 'を きたえている！' : 'の しゅぎょう中！') : P.name;
+    for (var k = 0; k < 4; k++) { var pre = new Image(); pre.src = spriteUrl(key, k); }
+    var reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    (function step() {
+      img.src = spriteUrl(key, i);
+      if (reduce) return;
+      poseTimer = setTimeout(function () { i = (i + 1) % 4; step(); }, P.ms[i]);
+    })();
+  }
+  function renderPose(d) {
+    var pick = poseFor(d);
+    if (poseManual && poseKey) { playPose(poseKey, null); return; }
+    playPose(pick.key, pick.part);
+  }
+  document.querySelectorAll('.pose-tabs button').forEach(function (b) {
+    b.addEventListener('click', function () { poseManual = true; playPose(b.getAttribute('data-pose'), null); });
+  });
 
   // ---------- けいけんち（スプシの表と同じ並び） ----------
   function renderExp(d) {
