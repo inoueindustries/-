@@ -186,19 +186,21 @@ const QS = (() => {
     const multipliers = {};
     const labels = {};   // 17部位の表示名（マスタの見出しをそのまま使う）
     const guides = {};   // 種目ごとの推奨負荷の目安
-    if (!sh) return { master, multipliers, labels, guides, partCols: 0 };
+    const hows = {};     // 種目ごとのフォームのコツ
+    if (!sh) return { master, multipliers, labels, guides, hows, partCols: 0 };
     const v = sh.getDataRange().getValues();
     const hr = findHeaderRow(v, h => h.some(x => /種目/.test(x)) &&
       h.filter(x => FINE_MATCHERS.some(m => m[1](x))).length >= 5, 15);
-    if (hr < 0) return { master, multipliers, labels, guides, partCols: 0 };
+    if (hr < 0) return { master, multipliers, labels, guides, hows, partCols: 0 };
     const header = v[hr].map(norm);
     const exCol = findCol(header, /種目/, 0);
     const mulCol = findCol(header, /倍率/, -1);
     const guideCol = findCol(header, /目安/, -1);
+    const howCol = findCol(header, /コツ/, -1);
     const cols = [];   // [colIndex, fineName]
     const used = {};
     header.forEach((h, i) => {
-      if (i === exCol || i === mulCol || i === guideCol || !h) return;
+      if (i === exCol || i === mulCol || i === guideCol || i === howCol || !h) return;
       const hit = FINE_MATCHERS.find(m => !used[m[0]] && m[1](h));
       if (!hit) return;
       // 中身が数字の列だけを配分列として扱う
@@ -221,8 +223,9 @@ const QS = (() => {
       if (sum > 0) master[ex] = ratios;
       if (mulCol >= 0 && Number(row[mulCol]) > 0) multipliers[ex] = Number(row[mulCol]);
       if (guideCol >= 0 && String(row[guideCol] || '').trim()) guides[ex] = String(row[guideCol]).trim();
+      if (howCol >= 0 && String(row[howCol] || '').trim()) hows[ex] = String(row[howCol]).trim();
     });
-    return { master, multipliers, labels, guides, partCols: cols.length };
+    return { master, multipliers, labels, guides, hows, partCols: cols.length };
   }
 
   function loadLog(book, multipliers) {
@@ -324,7 +327,7 @@ const QS = (() => {
     const book = openBook();
     loadSettings(book);
     const m = loadMaster(book);
-    return { master: m.master, labels: m.labels, guides: m.guides, entries: loadLog(book, m.multipliers), body: loadBody(book), partCols: m.partCols };
+    return { master: m.master, labels: m.labels, guides: m.guides, hows: m.hows, entries: loadLog(book, m.multipliers), body: loadBody(book), partCols: m.partCols };
   }
 
   // ---------- 計算 ----------
@@ -401,7 +404,7 @@ const QS = (() => {
     FINES.forEach(f => {
       out[f] = Object.keys(data.master).filter(ex => (data.master[ex][f] || 0) >= 0.3)
         .sort((x, y) => data.master[y][f] - data.master[x][f]).slice(0, 3)
-        .map(ex => ({ ex, guide: ((data.guides || {})[ex] || '').replace(/\s*[×x]\s*[\d〜~\-]+\s*セット.*$/, '').replace(/\s+/g, '') }));
+        .map(ex => ({ ex, ratio: data.master[ex][f], plan: (data.guides || {})[ex] || '', how: (data.hows || {})[ex] || '', guide: ((data.guides || {})[ex] || '').replace(/\s*[×x]\s*[\d〜~\-]+\s*セット.*$/, '').replace(/\s+/g, '') }));
     });
     return out;
   }

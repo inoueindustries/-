@@ -82,17 +82,100 @@
   .stat span { font-size: 19px; }
   .stat.lost span { color: var(--danger); }
 
-  /* きょうの しゅぎょう（Codex が作ったドット絵のアニメ） */
-  .stage { position: relative; height: 200px; border-radius: 8px; overflow: hidden;
-    background: linear-gradient(180deg, #0b1236 0%, #141d4a 62%, #1f2a5c 62%, #10173a 100%); }
-  .stage::after { content: ""; position: absolute; left: 0; right: 0; top: 62%; height: 2px; background: #2f3b7a; }
-  .stage img { position: absolute; left: 50%; bottom: 4px; transform: translateX(-50%); width: 176px; height: auto; image-rendering: pixelated; z-index: 1; }
-  .pose-text { margin: 10px 0 8px; font-size: 14px; color: var(--good); }
-  .pose-text::before { content: "＊ "; color: var(--muted); }
-  .pose-tabs { display: flex; gap: 6px; }
-  .pose-tabs button { flex: 1; font: inherit; font-size: 13px; color: var(--muted); background: none; border: 1px solid #2a3366; border-radius: 6px; padding: 6px 2px; cursor: pointer; }
+  /* ホーム */
+  .home { padding: 12px 12px 10px; }
+  .banner { text-align: center; margin: 2px 0 10px; }
+  .banner small { display: block; font-size: 11px; letter-spacing: .3em; color: var(--muted); }
+  .banner b { display: inline-block; font-weight: normal; font-size: 18px; padding: 4px 18px; border-radius: 4px;
+    color: #2a1600; background: linear-gradient(180deg, #fff1b0, var(--gold) 45%, var(--gold2)); box-shadow: 0 0 0 2px #5a3a00, 0 0 14px rgba(255,215,94,.35); }
+  .idrow { display: grid; grid-template-columns: auto 1fr; gap: 8px; align-items: center; margin-bottom: 8px; }
+  .rank { font-size: 12px; color: var(--muted); letter-spacing: .1em; }
+  .rank b { font-weight: normal; font-size: 26px; color: var(--gold); margin-left: 4px; text-shadow: 0 0 10px rgba(255,215,94,.35); }
+  .nameplate { border: 2px solid #2a3366; border-radius: 6px; padding: 3px 10px; font-size: 18px; letter-spacing: .08em; background: #0a1030; }
+  .heroart { position: relative; height: 160px; border: 2px solid #2a3366; border-radius: 8px; overflow: hidden;
+    background: repeating-linear-gradient(115deg, transparent 0 22px, rgba(255,215,94,.16) 22px 26px, transparent 26px 46px),
+      radial-gradient(120% 120% at 50% 40%, #1f2f73 0%, #0b1236 60%, #050914 100%); }
+  .heroart .avatar { position: absolute; left: 50%; top: 4px; transform: translateX(-50%); width: 150px; height: 150px; margin: 0; filter: drop-shadow(0 0 14px rgba(111,214,255,.35)); }
+  .heroart .job { position: absolute; left: 8px; bottom: 6px; font-size: 13px; color: var(--cyan); background: rgba(4,5,12,.7); padding: 0 6px; border-radius: 4px; }
+  .heroart .job .badge { display: inline-block; border: 1px solid var(--gold); color: var(--gold); border-radius: 4px; font-size: 10px; padding: 0 4px; margin-left: 4px; }
+  .heroart .cap { position: absolute; right: 8px; bottom: 6px; font-size: 9px; letter-spacing: .15em; color: var(--muted); }
+  .statgrid { display: grid; grid-template-columns: minmax(0, 1fr) 96px; gap: 8px; margin-top: 10px; }
+  .power { border: 2px solid #2a3366; border-radius: 8px; padding: 6px 10px 4px; background: #070b22; }
+  .pw-head { display: flex; justify-content: space-between; align-items: center; }
+  .pw-head small { font-size: 11px; color: var(--muted); }
+  .bonus { font-size: 10px; color: #2a1600; background: var(--gold); border-radius: 3px; padding: 0 4px; }
+  .pw-num { display: block; font-weight: normal; font-size: 30px; line-height: 1.2; color: var(--gold); text-shadow: 0 2px 0 #5a3a00, 0 0 12px rgba(255,215,94,.3); }
+  .slist { margin: 4px 0 0; font-size: 12px; }
+  .slist div { display: flex; justify-content: space-between; gap: 6px; padding: 2px 0; border-top: 1px dashed #262d55; }
+  .slist dt { color: var(--muted); }
+  .slist dd { margin: 0; text-align: right; }
+  .slist dd.lost { color: var(--danger); }
+  .side { display: grid; gap: 8px; align-content: start; }
+  .cond { border: 2px solid #2a3366; border-radius: 8px; padding: 6px 4px; text-align: center; background: #070b22; }
+  .cond small { display: block; font-size: 10px; color: var(--muted); }
+  .cond b { display: block; font-weight: normal; font-size: 22px; color: var(--good); }
+  .cond span { font-size: 11px; color: var(--good); }
+  .sidebtn { font: inherit; font-size: 12px; color: var(--gold); background: #0a1030; border: 2px solid var(--gold); border-radius: 8px; padding: 8px 2px; cursor: pointer; display: grid; gap: 2px; justify-items: center; }
+  .sidebtn span { font-size: 20px; }
+  .training { margin-top: 12px; }
+  .tr-head { display: inline-block; font-size: 11px; color: var(--gold); background: #0a1030; border: 1px solid #2a3366; border-bottom: 0; border-radius: 6px 6px 0 0; padding: 1px 10px; }
+  .stage { position: relative; aspect-ratio: 16 / 9; border: 2px solid var(--gold); border-radius: 0 8px 8px 8px; overflow: hidden; background: #0b1236; }
+  .scene { position: absolute; inset: 0; background-size: cover; background-position: center; image-rendering: pixelated; transition: opacity .6s ease; }
+  .stage #pose { position: absolute; left: 50%; bottom: 3%; transform: translateX(-50%); height: 82%; width: auto; image-rendering: pixelated; z-index: 1; filter: drop-shadow(0 3px 0 rgba(0,0,0,.35)); }
+  .gift { position: absolute; right: 6px; bottom: 6px; z-index: 2; width: 38px; height: 38px; border-radius: 50%; border: 2px solid var(--gold); background: rgba(4,5,12,.75); font-size: 18px; cursor: pointer; }
+  .tr-foot { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 2px 8px; align-items: center; margin-top: 6px; font-size: 13px; }
+  .tr-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .tr-lv { color: var(--muted); font-size: 12px; text-align: right; }
+  .tr-lv b { color: var(--gold); font-weight: normal; font-size: 15px; }
+  .tr-foot .bar { grid-column: 1; margin-top: 0; height: 10px; }
+  .tr-exp { font-size: 11px; color: var(--muted); text-align: right; }
+  .pose-tabs { display: flex; gap: 6px; margin-top: 8px; }
+  .pose-tabs button { flex: 1; font: inherit; font-size: 12px; color: var(--muted); background: none; border: 1px solid #2a3366; border-radius: 6px; padding: 5px 2px; cursor: pointer; }
   .pose-tabs button[aria-pressed="true"] { color: var(--gold); border-color: var(--gold); }
-  .pose-tabs button:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
+  .ticker { display: grid; grid-template-columns: auto 1fr; gap: 8px; align-items: center; margin-top: 10px; border: 2px solid var(--gold2); border-radius: 8px; padding: 6px 8px; background: linear-gradient(180deg, #2a1400, #120800); }
+  .tk-ic { font-size: 16px; }
+  .tk-track { overflow: hidden; white-space: nowrap; font-size: 13px; color: #ffe6b0; }
+  .tk-track span { display: inline-block; padding-left: 100%; animation: tick 22s linear infinite; }
+  @keyframes tick { to { transform: translateX(-100%); } }
+  .replay { display: block; margin: 8px auto 0; font: inherit; font-size: 11px; color: var(--muted); background: none; border: 0; cursor: pointer; text-decoration: underline dotted; }
+  .gift:focus-visible, .sidebtn:focus-visible, .pose-tabs button:focus-visible, .replay:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
+
+  /* レベルアップの演出 */
+  .tc { position: absolute; left: 0; right: 0; top: 0; z-index: 2; padding: 6px 10px; font-size: clamp(14px, 4.6vw, 20px); letter-spacing: .06em;
+    color: #f2d27a; background: linear-gradient(180deg, rgba(20,40,40,.92), rgba(20,40,40,.6)); border-bottom: 2px solid #c9a227; animation: slidein .35s ease-out; }
+  @keyframes slidein { from { transform: translateY(-100%); } to { transform: none; } }
+  .tr-foot .bar.charge > i { transition: width 1.1s ease-in; background: linear-gradient(90deg, #e8b830, #fff1b0); }
+  .lvup { position: absolute; inset: 0; z-index: 3; display: grid; place-items: center; align-content: center; gap: 6px;
+    background: radial-gradient(90% 90% at 50% 50%, #0d2a5a 0%, #061230 55%, #02060f 100%); }
+  .lvup::before { content: ""; position: absolute; inset: 0; background: #fff; opacity: 0; pointer-events: none; }
+  .lvup.play::before { animation: flash .45s ease-out; }
+  @keyframes flash { 0% { opacity: .95; } 100% { opacity: 0; } }
+  .lv-grid { position: absolute; inset: 0; opacity: 0;
+    background-image: linear-gradient(rgba(111,214,255,.22) 1px, transparent 1px), linear-gradient(90deg, rgba(111,214,255,.22) 1px, transparent 1px);
+    background-size: 12px 12px; -webkit-mask: radial-gradient(70% 70% at 50% 50%, transparent 30%, #000 75%); mask: radial-gradient(70% 70% at 50% 50%, transparent 30%, #000 75%); }
+  .lvup.play .lv-grid { animation: gridin 1.2s ease-out forwards; }
+  @keyframes gridin { 0% { opacity: 0; background-size: 30px 30px; } 60% { opacity: 1; } 100% { opacity: .55; background-size: 12px 12px; } }
+  .lv-lines { position: absolute; inset: 0; width: 100%; height: 100%; }
+  .lv-lines polyline { fill: none; stroke: #6fd6ff; stroke-width: 2; stroke-dasharray: 160; stroke-dashoffset: 160; opacity: .8; }
+  .lvup.play .lv-lines polyline { animation: draw .9s .25s ease-out forwards; }
+  @keyframes draw { to { stroke-dashoffset: 0; } }
+  .lv-box { position: relative; border: 3px solid #6fd6ff; border-radius: 6px; padding: 4px 16px; background: rgba(2,8,24,.85); box-shadow: 0 0 0 2px #02060f, 0 0 18px rgba(111,214,255,.55); transform: scale(0); }
+  .lvup.play .lv-box { animation: pop .55s .2s cubic-bezier(.2,1.6,.4,1) forwards; }
+  @keyframes pop { to { transform: scale(1); } }
+  .lv-word { display: block; font-weight: normal; font-size: clamp(26px, 9vw, 40px); letter-spacing: .08em; line-height: 1.15;
+    background: linear-gradient(180deg, #fff6c8 0%, #ffd75e 45%, #ff8a1e 55%, #ff5a1e 100%); -webkit-background-clip: text; background-clip: text; color: transparent;
+    -webkit-text-stroke: 1px #3a1400; filter: drop-shadow(0 2px 0 #3a1400); }
+  .lv-sub { position: relative; margin: 0; font-size: 13px; color: #e8f6ff; text-align: center; opacity: 0; padding: 0 8px; }
+  .lvup.play .lv-sub { animation: fadein .4s 1s forwards; }
+  @keyframes fadein { to { opacity: 1; } }
+  .lvup.out { animation: fadeout .5s forwards; }
+  @keyframes fadeout { to { opacity: 0; } }
+
+  .dlg { max-width: min(420px, calc(100vw - 32px)); width: 100%; color: var(--text); padding-top: 20px; }
+  .dlg::backdrop { background: rgba(2,4,12,.7); }
+  .dlg-next { font-size: 13px; margin: 4px 0 8px; color: var(--gold); }
+  .dlg form { text-align: center; margin-top: 10px; }
+  .tbl tr.got td { color: var(--muted); }
 
   /* レーダー */
   .radar svg { width: 100%; max-width: 360px; display: block; margin: 0 auto; }
@@ -116,7 +199,21 @@
   /* 17部位 */
   .group { margin-bottom: 12px; }
   .group h3 { font-size: 14px; font-weight: normal; color: var(--gold); margin: 6px 0 4px; }
-  .fine { display: grid; grid-template-columns: 11.5em 2.6em 1fr 3.2em; gap: 8px; align-items: center; font-size: 13px; padding: 4px 0; }
+  .fine { display: grid; grid-template-columns: 11.5em 2.6em 1fr 3.2em; gap: 8px; align-items: center; font-size: 13px; padding: 4px 0;
+    width: 100%; font-family: inherit; color: inherit; background: none; border: 0; text-align: left; cursor: pointer; border-radius: 4px; }
+  .fine:hover, .fine-row.open .fine { background: #0d1440; }
+  .fine:focus-visible { outline: 2px solid var(--gold); outline-offset: 1px; }
+  .fine .caret { color: var(--muted); font-size: 10px; margin-left: 4px; display: inline-block; transition: transform .2s; }
+  .fine-row.open .caret { transform: rotate(90deg); color: var(--gold); }
+  .fine-tip { margin: 2px 0 8px 14px; padding: 8px 10px; border-left: 2px solid var(--gold); background: #080d2c; border-radius: 0 6px 6px 0; font-size: 12px; animation: pop2 .18s ease-out; }
+  @keyframes pop2 { from { opacity: 0; transform: translateY(-3px); } to { opacity: 1; transform: none; } }
+  .fine-tip .ft-head { margin: 0 0 6px; color: var(--gold); }
+  .fine-tip ol { margin: 0; padding-left: 1.3em; }
+  .fine-tip li { margin-bottom: 6px; }
+  .fine-tip li b { font-weight: normal; color: var(--text); font-size: 13px; }
+  .fine-tip .pct { margin-left: 6px; font-size: 11px; color: var(--cyan); }
+  .fine-tip .plan, .fine-tip .how { display: block; color: var(--muted); line-height: 1.5; }
+  .fine-tip .plan { color: #cfd6f0; }
   .fine .dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 6px; vertical-align: 1px; }
   .fine .l { color: var(--gold); text-align: right; }
   .fine .e { text-align: right; color: var(--muted); }
@@ -219,6 +316,8 @@
   }
   @media (prefers-reduced-motion: reduce) {
     .bar > i, .mini > i { transition: none; }
+    .tk-track span { animation: none; padding-left: 0; }
+    .lvup.play *, .lvup.play::before { animation-duration: .01s !important; animation-delay: 0s !important; }
     .panel.on { animation: none; }
   }
 </style>
@@ -233,42 +332,80 @@
   </div>
   <div class="grid" id="main">
     <section class="panel on" data-tab="status">
-      <div class="win">
-        <div class="win-title">つよさ</div>
-        <div class="hero">
-          <img class="avatar" id="avatar" src="https://raw.githubusercontent.com/inoueindustries/-/main/%E7%AD%8B%E3%83%88%E3%83%AC%E5%86%92%E9%99%BA%E8%80%85%E3%82%B9%E3%83%86%E3%83%BC%E3%82%BF%E3%82%B9/images/chanz.gif" alt="ちゃんズの ドット絵" width="96" height="96">
-          <div>
-            <div class="name" id="name">―</div>
-            <div class="job" id="job">―</div>
-            <div class="muted" id="title" style="font-size:13px">―</div>
+      <div class="win home">
+        <div class="banner"><small>MY STATUS</small><b id="title">―</b></div>
+        <div class="idrow">
+          <span class="rank">Lv<b class="num" id="lv">-</b></span>
+          <span class="nameplate" id="name">―</span>
+        </div>
+        <div class="heroart">
+          <img class="avatar" id="avatar" src="https://raw.githubusercontent.com/inoueindustries/-/main/%E7%AD%8B%E3%83%88%E3%83%AC%E5%86%92%E9%99%BA%E8%80%85%E3%82%B9%E3%83%86%E3%83%BC%E3%82%BF%E3%82%B9/images/chanz.gif" alt="ちゃんズの ドット絵" width="150" height="150">
+          <span class="job" id="job">―</span>
+          <small class="cap">MAIN CHARACTER</small>
+        </div>
+        <div class="statgrid">
+          <div class="power">
+            <div class="pw-head"><small>ちから（有効EXP）</small><span class="bonus" id="s-keep">―</span></div>
+            <b class="pw-num num" id="s-eff">0</b>
+            <dl class="slist">
+              <div><dt>累計EXP</dt><dd class="num" id="s-cum">0</dd></div>
+              <div><dt>失われたEXP</dt><dd class="num lost" id="s-lost">0</dd></div>
+              <div><dt>つぎのLvまで</dt><dd class="num" id="need">0</dd></div>
+              <div><dt>いちばん強い部位</dt><dd id="s-top">―</dd></div>
+              <div><dt>さいごの修行</dt><dd id="s-last">―</dd></div>
+            </dl>
           </div>
-          <div class="lv"><small>レベル</small><b id="lv">-</b></div>
-          <div class="bar" role="progressbar" aria-label="つぎのレベルまでの けいけんち" id="expbar"><i></i></div>
-          <div class="next"><span>E <b class="num" id="eff">0</b></span><span>つぎのレベルまで あと <b class="num" id="need">0</b></span></div>
+          <div class="side">
+            <div class="cond"><small>コンディション</small><b class="num" id="s-cond">―</b><span id="s-cond-l">絶好調</span></div>
+            <button type="button" class="sidebtn" id="open-titles"><span aria-hidden="true">🏅</span>しょうごう</button>
+          </div>
         </div>
-        <div class="stats">
-          <div class="stat"><small>有効EXP</small><span class="num" id="s-eff">0</span></div>
-          <div class="stat"><small>累計EXP</small><span class="num" id="s-cum">0</span></div>
-          <div class="stat lost"><small>失われたEXP</small><span class="num" id="s-lost">0</span></div>
+        <div class="training">
+          <div class="tr-head">▶ しゅぎょう期間 <span class="num" id="tr-period">―</span></div>
+          <div class="stage" id="stage">
+            <div class="scene" id="scene"></div>
+            <img id="pose" alt="" width="150" height="164">
+            <div class="tc" id="tc" hidden>TRAINING COMPLETE</div>
+            <button type="button" class="gift" id="gift" aria-label="しょうごうの ごほうびを みる">🎁</button>
+            <div class="lvup" id="lvup" hidden aria-live="polite">
+              <div class="lv-grid"></div>
+              <svg class="lv-lines" viewBox="0 0 320 180" preserveAspectRatio="none" aria-hidden="true">
+                <polyline points="0,40 60,40 80,60 120,60"/><polyline points="320,40 260,40 240,60 200,60"/>
+                <polyline points="0,140 50,140 70,120 110,120"/><polyline points="320,140 270,140 250,120 210,120"/>
+                <polyline points="160,0 160,30"/><polyline points="160,180 160,150"/>
+              </svg>
+              <div class="lv-box"><b class="lv-word">LEVEL UP!</b></div>
+              <p class="lv-sub" id="lvup-sub"></p>
+            </div>
+          </div>
+          <div class="tr-foot">
+            <span class="tr-name" id="pose-text">―</span>
+            <span class="tr-lv">Lv.<b class="num" id="lv2">-</b></span>
+            <div class="bar" role="progressbar" aria-label="つぎのレベルまでの けいけんち" id="expbar"><i></i></div>
+            <span class="tr-exp num" id="eff">0</span>
+          </div>
+          <div class="pose-tabs" role="group" aria-label="しゅぎょうの しゅるい">
+            <button type="button" data-pose="pullup" aria-pressed="false">けんすい</button>
+            <button type="button" data-pose="pushup" aria-pressed="false">うでたて</button>
+            <button type="button" data-pose="squat" aria-pressed="false">スクワット</button>
+          </div>
         </div>
+        <div class="ticker"><span class="tk-ic" aria-hidden="true">📜</span><div class="tk-track"><span id="ticker">―</span></div></div>
+        <button type="button" class="replay" id="replay">▶ レベルアップの えんしゅつを みる</button>
       </div>
-      <div class="win" id="posewin">
-        <div class="win-title">きょうの しゅぎょう</div>
-        <div class="stage"><img id="pose" alt="" width="176" height="193"></div>
-        <p class="pose-text" id="pose-text">―</p>
-        <div class="pose-tabs" role="group" aria-label="しゅぎょうの しゅるい">
-          <button type="button" data-pose="pullup" aria-pressed="false">けんすい</button>
-          <button type="button" data-pose="pushup" aria-pressed="false">うでたて</button>
-          <button type="button" data-pose="squat" aria-pressed="false">スクワット</button>
-        </div>
-      </div>
+      <dialog class="win dlg" id="titles-dlg">
+        <div class="win-title">しょうごうの ごほうび</div>
+        <p class="dlg-next" id="dlg-next"></p>
+        <div class="tbl-wrap"><table class="tbl" id="dlg-titles"></table></div>
+        <form method="dialog"><button class="refresh" type="submit">とじる</button></form>
+      </dialog>
+    </section>
+
+    <section class="panel" data-tab="parts">
       <div class="win radar">
         <div class="win-title">ぶいの バランス</div>
         <div id="radar"></div>
       </div>
-    </section>
-
-    <section class="panel" data-tab="parts">
       <div class="win">
         <div class="win-title">ぶいの ようす</div>
         <ul class="parts" id="majors"></ul>
@@ -384,18 +521,28 @@
     var t = d.total;
     $('name').textContent = d.player;
     $('job').innerHTML = esc(t.job) + (t.upperJob ? '<span class="badge">上級職</span>' : '');
-    $('title').textContent = '称号：' + t.title;
+    $('title').textContent = t.title;
     $('lv').textContent = t.lv;
-    $('eff').textContent = fmt(t.eff);
+    $('lv2').textContent = t.lv;
+    $('eff').textContent = fmt(t.eff) + ' / ' + fmt(t.nextLvExp);
     $('need').textContent = fmt(t.need);
     $('s-eff').textContent = fmt(t.eff);
     $('s-cum').textContent = fmt(t.cum);
     $('s-lost').textContent = (t.lost > 0 ? '-' : '') + fmt(t.lost);
-    var bar = $('expbar');
-    bar.setAttribute('aria-valuenow', Math.round(t.progress * 100));
-    requestAnimationFrame(function () { bar.firstElementChild.style.width = (t.progress * 100).toFixed(1) + '%'; });
-
+    $('s-keep').textContent = t.cum > 0 ? '維持 ' + (t.eff / t.cum * 100).toFixed(1) + '%' : '―';
+    var top = d.majors.slice().sort(function (a, b) { return b.eff - a.eff; })[0];
+    $('s-top').textContent = top && top.eff > 0 ? top.key + ' Lv.' + top.lv : '―';
+    var lt = d.latest;
+    $('s-last').textContent = lt ? lt.last.replace(/^\d{4}\/0?(\d+)\/0?(\d+)$/, '$1/$2') + (lt.elapsed ? '（' + lt.elapsed + '日前）' : '（きょう）') : '―';
+    var good = d.majors.filter(function (m) { return m.cond === 'good'; }).length;
+    $('s-cond').textContent = good + '/' + d.majors.length;
+    $('s-cond-l').textContent = good === d.majors.length ? '絶好調' : '部位が絶好調';
+    var ym = String(d.asOf).match(/^(\d{4})\/(\d{1,2})/);
+    if (ym) { var last = new Date(+ym[1], +ym[2], 0).getDate(); $('tr-period').textContent = ym[1] + '/' + ('0' + ym[2]).slice(-2) + '/01〜' + ('0' + ym[2]).slice(-2) + '/' + last; }
+    $('ticker').textContent = (d.log || []).map(function (l) { return '＊ ' + l.text; }).join('　　');
     renderPose(d);
+    setBar(t.progress);
+    checkLevelUp(d);
     $('radar').innerHTML = radarSvg(d.majors);
     renderMajors(d.majors);
     renderFines(d.fines);
@@ -426,8 +573,10 @@
     });
   }
 
+  // 17部位：タップ（PCはカーソルを当てる／クリック）で、その部位を きたえる しゅぎょうを ひらく
   function renderFines(fines) {
     var max = Math.max.apply(null, fines.map(function (f) { return f.eff; }).concat([1]));
+    var tips = (state && state.tips) || {};
     var groups = [];
     fines.forEach(function (f) {
       var g = groups.filter(function (x) { return x.k === f.major; })[0];
@@ -435,16 +584,36 @@
       g.items.push(f);
     });
     $('fines').innerHTML = groups.map(function (g) {
-      return '<div class="group"><h3>' + esc(g.k) + '</h3>' + g.items.map(function (f) {
-        return '<div class="fine" title="' + esc(f.condLabel) + (f.last ? '／さいご ' + f.last : '') + '">' +
-          '<span><i class="dot b-' + f.cond + '"></i>' + esc(f.name) + '</span>' +
+      return '<div class="group"><h3>' + esc(g.k) + '</h3>' + g.items.map(function (f, n) {
+        var id = 'ft-' + esc(f.key).replace(/[^\w]/g, '') + n + g.k.length;
+        var list = tips[f.key] || [];
+        var body = list.length ? '<ol>' + list.map(function (x) {
+          return '<li><b>' + esc(x.ex) + '</b>' + (x.ratio ? '<span class="pct">この部位に ' + Math.round(x.ratio * 100) + '%</span>' : '') +
+            (x.plan || x.guide ? '<span class="plan">' + esc(x.plan || x.guide) + '</span>' : '') +
+            (x.how ? '<span class="how">コツ：' + esc(x.how) + '</span>' : '') + '</li>';
+        }).join('') + '</ol>' : '<p class="muted">この部位に 経験値が入る種目が マスタに ありません</p>';
+        var head = (f.next != null && f.lv < 999 ? 'あと ' + fmt(f.next) + ' EXP で Lv.' + (f.lv + 1) + '！' : '') + (f.last ? '（さいご ' + esc(f.last) + '）' : '（まだ きたえていない）');
+        return '<div class="fine-row">' +
+          '<button type="button" class="fine" aria-expanded="false" aria-controls="' + id + '">' +
+          '<span><i class="dot b-' + f.cond + '"></i>' + esc(f.name) + '<span class="caret" aria-hidden="true">▸</span></span>' +
           '<span class="l">Lv' + f.lv + '</span>' +
           '<span class="mini"><i class="b-' + f.cond + '" data-w="' + (f.eff / max * 100).toFixed(1) + '"></i></span>' +
-          '<span class="e num">' + fmt(f.eff) + '</span></div>';
+          '<span class="e num">' + fmt(f.eff) + '</span></button>' +
+          '<div class="fine-tip" id="' + id + '" hidden><p class="ft-head">' + head + '</p>' + body + '</div></div>';
       }).join('') + '</div>';
     }).join('');
     requestAnimationFrame(function () {
       document.querySelectorAll('#fines .mini i').forEach(function (i) { i.style.width = i.getAttribute('data-w') + '%'; });
+    });
+    var hover = window.matchMedia('(hover: hover) and (pointer: fine)').matches;
+    document.querySelectorAll('#fines .fine-row').forEach(function (row) {
+      var btn = row.querySelector('.fine'), tip = row.querySelector('.fine-tip'), pinned = false;
+      var show = function (on) { tip.hidden = !on; btn.setAttribute('aria-expanded', on ? 'true' : 'false'); row.classList.toggle('open', on); };
+      btn.addEventListener('click', function () { pinned = !pinned || tip.hidden; show(pinned); });
+      if (hover) {
+        row.addEventListener('mouseenter', function () { show(true); });
+        row.addEventListener('mouseleave', function () { if (!pinned) show(false); });
+      }
     });
   }
 
@@ -498,7 +667,7 @@
     document.querySelectorAll('.pose-tabs button').forEach(function (b) { b.setAttribute('aria-pressed', b.getAttribute('data-pose') === key ? 'true' : 'false'); });
     var P = POSES[key], img = $('pose'), i = 0;
     img.alt = 'ちゃんズが ' + P.name + 'を している ドット絵';
-    $('pose-text').textContent = state && state.player ? state.player + 'は ' + P.name + (part ? 'で ' + part.kana + 'を きたえている！' : 'の しゅぎょう中！') : P.name;
+    $('pose-text').textContent = (state && state.player ? state.player : '') + '（' + P.name + '）';
     for (var k = 0; k < 4; k++) { var pre = new Image(); pre.src = spriteUrl(key, k); }
     var reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     (function step() {
@@ -507,6 +676,75 @@
       poseTimer = setTimeout(function () { i = (i + 1) % 4; step(); }, P.ms[i]);
     })();
   }
+  // ---------- 修行の場面とレベルアップの演出 ----------
+  // 背景：images/scenes/（Codex が作ったドット絵。公開ページでは data URI に置きかえる）。Lv ごとに場面が かわる
+  var SCENE_BASE = 'https://raw.githubusercontent.com/inoueindustries/-/main/%E7%AD%8B%E3%83%88%E3%83%AC%E5%86%92%E9%99%BA%E8%80%85%E3%82%B9%E3%83%86%E3%83%BC%E3%82%BF%E3%82%B9/images/scenes/';
+  var SCENES = /*@@SCENES@@*/null;
+  var SCENE_KEYS = ['mountain', 'waterfall', 'sunset', 'night'];
+  function sceneUrl(lv) { var k = SCENE_KEYS[lv % SCENE_KEYS.length]; return SCENES ? SCENES[k] : SCENE_BASE + k + '.webp'; }
+  function setScene(lv) { $('scene').style.backgroundImage = 'url("' + sceneUrl(lv) + '")'; }
+  function setBar(p) {
+    var bar = $('expbar');
+    bar.setAttribute('aria-valuenow', Math.round(p * 100));
+    requestAnimationFrame(function () { bar.firstElementChild.style.width = (p * 100).toFixed(1) + '%'; });
+  }
+  var LV_KEY = 'qs.lastLv', lvTimers = [];
+  function readLastLv() { try { var v = parseInt(localStorage.getItem(LV_KEY), 10); return isNaN(v) ? null : v; } catch (e) { return null; } }
+  function saveLastLv(v) { try { localStorage.setItem(LV_KEY, String(v)); } catch (e) {} }
+  function titleOfLv(d, lv) { var n = ''; (d.titles || []).forEach(function (x) { if (lv >= x.lv) n = x.name; }); return n; }
+  function checkLevelUp(d) {
+    var lv = d.total.lv, prev = readLastLv();
+    if (!d.demo) saveLastLv(lv);
+    if (prev != null && lv > prev && !d.demo) playLevelUp(prev, lv, d); else setScene(lv);
+  }
+  // 1) TRAINING COMPLETE（立ち姿で止まり、EXPバーが満タンまで伸びる）→ 2) LEVEL UP! → 3) 次の場面へ、Lv が上がる
+  function playLevelUp(from, to, d) {
+    lvTimers.forEach(clearTimeout); lvTimers = [];
+    clearTimeout(poseTimer);
+    var box = $('lvup'), tc = $('tc'), bar = $('expbar'), t = d.total, resumeKey = poseKey;
+    var newTitle = titleOfLv(d, to), oldTitle = titleOfLv(d, from);
+    $('lvup-sub').textContent = 'Lv.' + from + ' → Lv.' + to + (newTitle && newTitle !== oldTitle ? '　しょうごう「' + newTitle + '」を てにいれた！' : '');
+    setScene(from);
+    $('lv2').textContent = from;
+    $('pose').src = spriteUrl('squat', 0);
+    tc.hidden = false;
+    bar.classList.add('charge');
+    setBar(Math.min(0.85, t.progress));
+    lvTimers.push(setTimeout(function () { setBar(1); }, 250));
+    lvTimers.push(setTimeout(function () {
+      tc.hidden = true;
+      box.hidden = false; box.classList.remove('play', 'out'); void box.offsetWidth; box.classList.add('play');
+    }, 1700));
+    lvTimers.push(setTimeout(function () { setScene(to); $('lv2').textContent = to; bar.classList.remove('charge'); setBar(0); }, 3000));
+    lvTimers.push(setTimeout(function () { box.classList.add('out'); }, 4200));
+    lvTimers.push(setTimeout(function () {
+      box.hidden = true; box.classList.remove('play', 'out');
+      setBar(t.progress);
+      playPose(resumeKey || 'squat', null);
+    }, 4700));
+  }
+  $('replay').addEventListener('click', function () { if (state && !state.error) playLevelUp(Math.max(1, state.total.lv - 1), state.total.lv, state); });
+  // しょうごうの ごほうび（つぎの称号まで）
+  function openTitles() {
+    if (!state || state.error) return;
+    var d = state, t = d.total, list = d.titles || [];
+    var next = list.filter(function (x) { return x.lv > t.lv; })[0];
+    $('dlg-next').textContent = next ? 'つぎの しょうごう：Lv.' + next.lv + '「' + next.name + '」（あと ' + fmt(Math.max(0, next.exp - t.eff)) + ' EXP）' : 'すべての しょうごうを てにいれた！';
+    $('dlg-titles').innerHTML = '<thead><tr><th class="l">必要Lv</th><th class="l">称号</th><th>必要EXP</th></tr></thead><tbody>' + list.map(function (x) {
+      var cur = x.name === t.title;
+      return '<tr class="' + (cur ? 'cur' : t.lv >= x.lv ? 'got' : '') + '"><td class="l num">Lv.' + x.lv + '</td><td class="l">' + (t.lv >= x.lv && !cur ? '✓ ' : '') + esc(x.name) + '</td><td class="num">' + fmt(x.exp) + '</td></tr>';
+    }).join('') + '</tbody>';
+    var dlg = $('titles-dlg');
+    if (dlg.showModal) dlg.showModal(); else dlg.setAttribute('open', '');
+  }
+  $('open-titles').addEventListener('click', openTitles);
+  $('gift').addEventListener('click', openTitles);
+  $('stage').addEventListener('click', function (e) {   // 場面をタップすると 修行の しゅるいが かわる
+    if (e.target.closest('button') || !$('lvup').hidden) return;
+    var keys = Object.keys(POSES), i = keys.indexOf(poseKey);
+    poseManual = true; playPose(keys[(i + 1) % keys.length], null);
+  });
+
   function renderPose(d) {
     var pick = poseFor(d);
     if (poseManual && poseKey) { playPose(poseKey, null); return; }

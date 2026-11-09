@@ -104,16 +104,16 @@ var QSWeb = (function () {
   }
 
   function loadMaster(v) {
-    var master = {}, multipliers = {}, labels = {}, guides = {};
+    var master = {}, multipliers = {}, labels = {}, guides = {}, hows = {};
     var hr = findHeaderRow(v, function (h) {
       return h.some(function (x) { return /種目/.test(x); }) &&
         h.filter(function (x) { return FINE_MATCHERS.some(function (m) { return m[1](x); }); }).length >= 5;
     }, 15);
-    if (hr < 0) return { master: master, multipliers: multipliers, labels: labels, guides: guides, partCols: 0 };
-    var header = v[hr].map(norm), exCol = findCol(header, /種目/, 0), mulCol = findCol(header, /倍率/, -1), guideCol = findCol(header, /目安/, -1);
+    if (hr < 0) return { master: master, multipliers: multipliers, labels: labels, guides: guides, hows: hows, partCols: 0 };
+    var header = v[hr].map(norm), exCol = findCol(header, /種目/, 0), mulCol = findCol(header, /倍率/, -1), guideCol = findCol(header, /目安/, -1), howCol = findCol(header, /コツ/, -1);
     var cols = [], used = {};
     header.forEach(function (h, i) {
-      if (i === exCol || i === mulCol || i === guideCol || !h) return;
+      if (i === exCol || i === mulCol || i === guideCol || i === howCol || !h) return;
       var hit = null;
       for (var k = 0; k < FINE_MATCHERS.length; k++) if (!used[FINE_MATCHERS[k][0]] && FINE_MATCHERS[k][1](h)) { hit = FINE_MATCHERS[k]; break; }
       if (!hit) return;
@@ -130,8 +130,9 @@ var QSWeb = (function () {
       var mul = num(cell(row, mulCol));
       if (mulCol >= 0 && mul > 0) multipliers[ex] = mul;
       if (guideCol >= 0 && String(cell(row, guideCol)).trim()) guides[ex] = String(cell(row, guideCol)).trim();
+      if (howCol >= 0 && String(cell(row, howCol)).trim()) hows[ex] = String(cell(row, howCol)).trim();
     });
-    return { master: master, multipliers: multipliers, labels: labels, guides: guides, partCols: cols.length };
+    return { master: master, multipliers: multipliers, labels: labels, guides: guides, hows: hows, partCols: cols.length };
   }
 
   function loadLog(v, multipliers) {
@@ -219,7 +220,7 @@ var QSWeb = (function () {
     FINES.forEach(function (f) {
       out[f] = Object.keys(m.master).filter(function (ex) { return (m.master[ex][f] || 0) >= 0.3; })
         .sort(function (a, b) { return m.master[b][f] - m.master[a][f]; }).slice(0, 3)
-        .map(function (ex) { return { ex: ex, guide: (m.guides[ex] || '').replace(/\s*[×x]\s*[\d〜~\-]+\s*セット.*$/, '').replace(/\s+/g, '') }; });
+        .map(function (ex) { return { ex: ex, ratio: m.master[ex][f], plan: m.guides[ex] || '', how: (m.hows || {})[ex] || '', guide: (m.guides[ex] || '').replace(/\s*[×x]\s*[\d〜~\-]+\s*セット.*$/, '').replace(/\s+/g, '') }; });
     });
     return out;
   }

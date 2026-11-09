@@ -2,7 +2,7 @@
 """index.html（GAS用）から claude.ai 公開ページ用の claude-page.html を作る。
 - <!DOCTYPE>/<html>/<head>/<body> を外す（claude.ai が自分で付けるため）
 - ブラウザ側の計算 web-compute.js を埋め込む
-- キャラのドット絵（images/chanz.gif）と筋トレのアニメ（images/workout/*.png）を data URI で埋め込む（公開ページは外部の画像を読めないため）
+- キャラのドット絵（images/chanz.gif）と筋トレのアニメ（images/workout/*.png）、修行の背景（images/scenes/*.webp）を data URI で埋め込む（公開ページは外部の画像を読めないため）
 """
 import base64
 import json
@@ -23,6 +23,10 @@ assert AVATAR_URL in s
 s = s.replace(AVATAR_URL, "data:image/gif;base64," + base64.b64encode((here / "images" / "chanz.gif").read_bytes()).decode())
 sprites = {k: ["data:image/png;base64," + base64.b64encode((here / "images" / "workout" / f"{k}-{i}.png").read_bytes()).decode() for i in range(4)]
            for k in ("pullup", "pushup", "squat")}
+scenes = {k: "data:image/webp;base64," + base64.b64encode((here / "images" / "scenes" / f"{k}.webp").read_bytes()).decode()
+          for k in ("mountain", "waterfall", "sunset", "night")}
+assert "/*@@SCENES@@*/null" in s
+s = s.replace("/*@@SCENES@@*/null", json.dumps(scenes))
 assert "/*@@SPRITES@@*/null" in s
 s = s.replace("/*@@SPRITES@@*/null", json.dumps(sprites))
 (here / "claude-page.html").write_text(s, encoding="utf-8")
