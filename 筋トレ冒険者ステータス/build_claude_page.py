@@ -41,6 +41,10 @@ outfits = {k: "data:image/png;base64," + base64.b64encode((here / "images" / "ou
            for k in ("white_tank", "business_suit", "orange_gi", "hero_cape", "running")}
 assert "/*@@OUTFITS@@*/null" in s
 s = s.replace("/*@@OUTFITS@@*/null", json.dumps(outfits))
+osprites = {o: {k: ["data:image/png;base64," + base64.b64encode((here / "images" / "workout" / o / f"{k}-{i}.png").read_bytes()).decode() for i in range(4)]
+                for k in ("pullup", "pushup", "squat")} for o in outfits}
+assert "/*@@OSPRITES@@*/null" in s
+s = s.replace("/*@@OSPRITES@@*/null", json.dumps(osprites))
 assert "/*@@SPRITES@@*/null" in s
 s = s.replace("/*@@SPRITES@@*/null", json.dumps(sprites))
 (here / "claude-page.html").write_text(s, encoding="utf-8")
