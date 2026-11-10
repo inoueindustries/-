@@ -339,9 +339,9 @@
   @keyframes pop { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
 
   /* PC：全部いっぺんに見せる */
-  /* ふつうの解像度の画面（PCの外付けモニターなど）では、ドット文字の小さい字が つぶれるので、
+  /* PCの広い画面と、ふつうの解像度の画面（外付けモニターなど）では、ドット文字の小さい字が つぶれるので、
      小さい字は ふつうのゴシック体に する。大きい字（Lv・数字・名前・見出しの演出）だけ ドット文字の まま */
-  @media (max-resolution: 1.5dppx) {
+  @media (max-resolution: 1.5dppx), (min-width: 960px) {
     body { font-family: "Hiragino Kaku Gothic ProN", "Hiragino Sans", "Yu Gothic", "Meiryo", "Noto Sans JP", sans-serif; -webkit-font-smoothing: auto; }
     .rank b, .pw-num, .nameplate, .tc, .lv-word, .body-row div span, .tr-lv b, .cmd button { font-family: "DotGothic16", "Hiragino Kaku Gothic ProN", "Yu Gothic", monospace; }
   }
