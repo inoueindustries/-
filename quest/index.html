@@ -1388,15 +1388,28 @@
     $('loading').hidden = true;
     var box = $('notice'); box.innerHTML = '';
     var w = document.createElement('div'); w.className = 'win notice';
+    var st = 'width:100%;font:inherit;font-size:13px;padding:8px;border-radius:6px;border:2px solid var(--line);background:#0a1030;color:var(--text);margin:2px 0 10px';
     w.innerHTML = '<div class="win-title">さいしょの せってい</div><p></p>' +
-      '<input id="api-in" type="url" inputmode="url" autocomplete="off" placeholder="https://script.google.com/macros/s/…/exec?format=json&key=…" style="width:100%;font:inherit;font-size:13px;padding:8px;border-radius:6px;border:2px solid var(--line);background:#0a1030;color:var(--text);margin-bottom:8px">' +
+      '<label style="display:block;font-size:12px">① ウェブアプリの URL（Apps Script の「デプロイ → デプロイを管理」に出る、/exec で おわる URL）' +
+      '<input id="api-in" type="url" inputmode="url" autocomplete="off" placeholder="https://script.google.com/macros/s/…/exec" style="' + st + '"></label>' +
+      '<label style="display:block;font-size:12px">② あいことば（setupAppKey の 実行ログに 出た URL を そのまま はっても OK）' +
+      '<input id="key-in" type="text" autocomplete="off" placeholder="…key=…" style="' + st + '"></label>' +
       '<button type="button" class="refresh" id="api-save">ほぞんして よみこむ</button>';
-    w.querySelector('p').textContent = msg || 'Apps Script の setupAppKey で出た「合言葉つきURL」を はりつけてください。';
+    w.querySelector('p').textContent = msg || 'スプシの Apps Script と つなぎます。下の 2つを はりつけてください。';
     box.appendChild(w);
-    $('api-in').value = getApi();
+    var cur = getApi(), cm = cur.match(/[?&]key=([\w-]+)/);
+    $('api-in').value = cur.split('?')[0];
+    $('key-in').value = cm ? cm[1] : '';
     $('api-save').addEventListener('click', function () {
-      var v = $('api-in').value.trim();
-      if (!/^https:\/\/script\.google\.com\/macros\/s\/[\w-]+\/exec\?/.test(v) || v.indexOf('key=') < 0) { w.querySelector('p').textContent = 'URLの形が ちがうようです。「https://script.google.com/macros/s/…/exec?format=json&key=…」を まるごと はりつけてください。'; return; }
+      var u = $('api-in').value.trim(), k = $('key-in').value.trim();
+      var say = function (t) { w.querySelector('p').textContent = t; };
+      var km = (k || u).match(/[?&]key=([\w-]+)/);
+      var key = km ? km[1] : (/^[\w-]{8,}$/.test(k) ? k : '');
+      var um = u.match(/^https:\/\/script\.google\.com\/macros\/s\/[\w-]+\/(exec|dev)/);
+      if (!um) { say('① の URL の形が ちがうようです。「https://script.google.com/macros/s/…/exec」を はりつけてください。'); return; }
+      if (um[1] === 'dev') { say('① が /dev で おわる URL に なっています。Apps Script の「デプロイ → デプロイを管理」に 出る、/exec で おわる URL を はりつけてください。'); return; }
+      if (!key) { say('② の あいことばが 見つかりません。setupAppKey の 実行ログに 出た URL を はりつけてください。'); return; }
+      var v = um[0] + '?format=json&key=' + key;
       try { localStorage.setItem(API_KEY, v); } catch (e) {}
       box.innerHTML = ''; loadApi();
     });
