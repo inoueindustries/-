@@ -1137,10 +1137,10 @@ if (typeof module !== 'undefined') module.exports = QSWeb;
     } else if (mcp) {
       if (action === 'add') saveViaMcp(rec, ok, ng); else changeViaMcp(action, rec, ok, ng);
     } else if (window.QS_STANDALONE && getApi()) {
-      var q = '&action=' + action;
+      var q = '&action=' + action + '&lite=1';
       ['date', 'ex', 'w', 'r', 's', 'memo', 'row', 'ex0', 'date0'].forEach(function (k) { if (rec[k] != null) q += '&' + k + '=' + encodeURIComponent(rec[k]); });
       fetch(getApi() + q, { redirect: 'follow' }).then(function (r) { return r.json(); })
-        .then(function (d) { if (d && d.error) return ng(d.error); ok(); d.fetchedAt = Date.now(); render(d); }, function () { ng('つながりませんでした。', true); });
+        .then(function (d) { if (d && d.error) return ng(d.error); ok(); if (d && d.ok) loadApi(); else { d.fetchedAt = Date.now(); render(d); } }, function () { ng('つながりませんでした。', true); });
     } else {
       ng('見本データでは きろくできません。');
     }
@@ -1860,7 +1860,18 @@ if (typeof module !== 'undefined') module.exports = QSWeb;
     var api = getApi();
     if (!api) { if (!state) { $('main').hidden = true; document.querySelector('.cmd').hidden = true; } askApi(); if (done) done(); return; }
     if (!state) showLoading();
-    fetch(api, { redirect: 'follow' }).then(function (r) { return r.json(); }).then(function (d) {
+    // スプシの生の値を もらって、このページで計算する（アプリの機能を足しても Apps Script の再デプロイが いらない）。
+    // 古い Apps Script（生の値を返せない版）のときは、いままで通り 計算ずみの結果を もらう
+    var keys = ['status', 'master', 'log', 'body'];
+    var raw = api.replace('format=json', 'format=ranges') + keys.map(function (k) { return '&r=' + encodeURIComponent(RANGES[k]); }).join('');
+    var old = function () { return fetch(api, { redirect: 'follow' }).then(function (r) { return r.json(); }); };
+    var first = (typeof QSWeb === 'undefined') ? old() : fetch(raw, { redirect: 'follow' }).then(function (r) { return r.json(); }).then(function (j) {
+      if (j && j.error) return j;
+      if (!j || !j.ranges) return old();
+      var got = {}; keys.forEach(function (k, i) { got[k] = j.ranges[i] || []; });
+      return QSWeb.compute(got);
+    }, old);
+    first.then(function (d) {
       if (done) done();
       if (d && d.error) { if (!state) retract(); askApi('よみこめませんでした（' + d.error + '）。URLを たしかめてください。'); return; }
       d.fetchedAt = Date.now(); render(d);

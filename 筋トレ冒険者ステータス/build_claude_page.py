@@ -52,7 +52,7 @@ print("claude-page.html", len(s.encode()), "bytes")
 
 # ---- 専用アプリ版（GitHub Pages の quest/ に置く。ホーム画面に置くと全画面で開く） ----
 q = (here / "index.html").read_text(encoding="utf-8")
-q = q.replace("<?!= boot ?>", "").replace("/*@@COMPUTE@@*/", "")
+q = q.replace("<?!= boot ?>", "").replace("/*@@COMPUTE@@*/", (here / "web-compute.js").read_text(encoding="utf-8"))   # 計算もアプリ側で行う
 head = """<title>筋トレクエスト</title>
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" href="icon-192.png">
