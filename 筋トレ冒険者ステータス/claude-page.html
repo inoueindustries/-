@@ -277,7 +277,6 @@
   .body-row div span { font-size: 22px; }
   .bodychart { margin-top: 10px; display: grid; gap: 10px; }
   .bodychart h3 { margin: 0 0 2px; font-size: 12px; font-weight: normal; color: var(--muted); }
-  @media (min-width: 560px) { .bodychart { grid-template-columns: 1fr 1fr; } }
   .delta-down { color: var(--good); font-size: 12px; } .delta-up { color: var(--warn); font-size: 12px; }
 
   /* けいけんち（スプシと同じ表） */
@@ -340,7 +339,19 @@
   @keyframes pop { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
 
   /* PC：全部いっぺんに見せる */
+  /* ふつうの解像度の画面（PCの外付けモニターなど）では、ドット文字の小さい字が つぶれるので、
+     小さい字は ふつうのゴシック体に する。大きい字（Lv・数字・名前・見出しの演出）だけ ドット文字の まま */
+  @media (max-resolution: 1.5dppx) {
+    body { font-family: "Hiragino Kaku Gothic ProN", "Hiragino Sans", "Yu Gothic", "Meiryo", "Noto Sans JP", sans-serif; -webkit-font-smoothing: auto; }
+    .rank b, .pw-num, .nameplate, .tc, .lv-word, .body-row div span, .tr-lv b, .cmd button { font-family: "DotGothic16", "Hiragino Kaku Gothic ProN", "Yu Gothic", monospace; }
+  }
+  /* 広い画面では 全体を 大きく見せる */
+  @media (min-width: 1500px) { .wrap { zoom: 1.2; } }
   @media (min-width: 960px) {
+    .pw-head small, .bonus, .heroart .job { font-size: 12px; }
+    .chip small { font-size: 11px; }
+    .slist, .chip, .chipbtn, .tr-head, .rule, .forecast small, .forecast em, .stat small, .body-row div small, .delta-down, .delta-up { font-size: 13px; }
+    .chart text { font-size: 12px; }
     body { padding-block: 24px; padding-left: max(24px, env(safe-area-inset-left, 0px)); padding-right: max(24px, env(safe-area-inset-right, 0px)); }
     .cmd { display: none; }
     .pose-tabs { display: flex; }
