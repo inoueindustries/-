@@ -83,41 +83,39 @@
   .stat.lost span { color: var(--danger); }
 
   /* ホーム */
-  .home { padding: 12px 12px 10px; }
-  .banner { text-align: center; margin: 2px 0 10px; }
-  .banner small { display: block; font-size: 11px; letter-spacing: .3em; color: var(--muted); }
-  .banner b { display: inline-block; font-weight: normal; font-size: 18px; padding: 4px 18px; border-radius: 4px;
-    color: #2a1600; background: linear-gradient(180deg, #fff1b0, var(--gold) 45%, var(--gold2)); box-shadow: 0 0 0 2px #5a3a00, 0 0 14px rgba(255,215,94,.35); }
+  .home { padding: 10px 10px 8px; margin-bottom: 8px; }
+  /* スマホ：ホームを1画面に おさめる（背の低い画面では 場面を ちぢめる） */
+  @media (max-width: 959px) { .stage { width: 100%; max-height: max(120px, calc(100dvh - 450px)); } }
   .idrow { display: grid; grid-template-columns: auto 1fr; gap: 8px; align-items: center; margin-bottom: 8px; }
-  .rank { font-size: 12px; color: var(--muted); letter-spacing: .1em; }
-  .rank b { font-weight: normal; font-size: 26px; color: var(--gold); margin-left: 4px; text-shadow: 0 0 10px rgba(255,215,94,.35); }
-  .nameplate { border: 2px solid #2a3366; border-radius: 6px; padding: 3px 10px; font-size: 18px; letter-spacing: .08em; background: #0a1030; }
-  .heroart { position: relative; height: 160px; border: 2px solid #2a3366; border-radius: 8px; overflow: hidden;
-    background: repeating-linear-gradient(115deg, transparent 0 22px, rgba(255,215,94,.16) 22px 26px, transparent 26px 46px),
+  .rank { font-size: 11px; color: var(--muted); letter-spacing: .1em; }
+  .rank b { font-weight: normal; font-size: 26px; line-height: 1; color: var(--gold); margin-left: 3px; text-shadow: 0 0 10px rgba(255,215,94,.35); }
+  .nameplate { display: flex; align-items: center; justify-content: space-between; gap: 6px; border: 2px solid #2a3366; border-radius: 6px; padding: 3px 6px 3px 10px; font-size: 17px; letter-spacing: .06em; background: #0a1030; min-width: 0; }
+  .titlechip { font-weight: normal; font-size: 12px; letter-spacing: 0; padding: 1px 8px; border-radius: 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    color: #2a1600; background: linear-gradient(180deg, #fff1b0, var(--gold) 45%, var(--gold2)); box-shadow: 0 0 0 1px #5a3a00; }
+  .statgrid { display: grid; grid-template-columns: 112px minmax(0, 1fr); gap: 8px; }
+  .heroart { position: relative; border: 2px solid #2a3366; border-radius: 8px; overflow: hidden; min-height: 112px;
+    background: repeating-linear-gradient(115deg, transparent 0 16px, rgba(255,215,94,.16) 16px 19px, transparent 19px 34px),
       radial-gradient(120% 120% at 50% 40%, #1f2f73 0%, #0b1236 60%, #050914 100%); }
-  .heroart .avatar { position: absolute; left: 50%; top: 4px; transform: translateX(-50%); width: 150px; height: 150px; margin: 0; filter: drop-shadow(0 0 14px rgba(111,214,255,.35)); }
-  .heroart .job { position: absolute; left: 8px; bottom: 6px; font-size: 13px; color: var(--cyan); background: rgba(4,5,12,.7); padding: 0 6px; border-radius: 4px; }
-  .heroart .job .badge { display: inline-block; border: 1px solid var(--gold); color: var(--gold); border-radius: 4px; font-size: 10px; padding: 0 4px; margin-left: 4px; }
-  .heroart .cap { position: absolute; right: 8px; bottom: 6px; font-size: 9px; letter-spacing: .15em; color: var(--muted); }
-  .statgrid { display: grid; grid-template-columns: minmax(0, 1fr) 96px; gap: 8px; margin-top: 10px; }
-  .power { border: 2px solid #2a3366; border-radius: 8px; padding: 6px 10px 4px; background: #070b22; }
+  .heroart .avatar { position: absolute; left: 50%; top: 0; transform: translateX(-50%); width: 104px; height: 104px; margin: 0; filter: drop-shadow(0 0 10px rgba(111,214,255,.35)); }
+  .heroart .job { position: absolute; left: 0; right: 0; bottom: 0; text-align: center; font-size: 11px; color: var(--cyan); background: rgba(4,5,12,.78); padding: 1px 2px; white-space: nowrap; overflow: hidden; }
+  .heroart .job .badge { display: inline-block; border: 1px solid var(--gold); color: var(--gold); border-radius: 3px; font-size: 9px; padding: 0 3px; margin-left: 3px; }
+  .power { border: 2px solid #2a3366; border-radius: 8px; padding: 4px 10px 2px; background: #070b22; }
   .pw-head { display: flex; justify-content: space-between; align-items: center; }
-  .pw-head small { font-size: 11px; color: var(--muted); }
+  .pw-head small { font-size: 10px; color: var(--muted); }
   .bonus { font-size: 10px; color: #2a1600; background: var(--gold); border-radius: 3px; padding: 0 4px; }
-  .pw-num { display: block; font-weight: normal; font-size: 30px; line-height: 1.2; color: var(--gold); text-shadow: 0 2px 0 #5a3a00, 0 0 12px rgba(255,215,94,.3); }
-  .slist { margin: 4px 0 0; font-size: 12px; }
-  .slist div { display: flex; justify-content: space-between; gap: 6px; padding: 2px 0; border-top: 1px dashed #262d55; }
+  .pw-num { display: block; font-weight: normal; font-size: 26px; line-height: 1.15; color: var(--gold); text-shadow: 0 2px 0 #5a3a00, 0 0 12px rgba(255,215,94,.3); }
+  .slist { margin: 2px 0 0; font-size: 12px; line-height: 1.45; }
+  .slist div { display: flex; justify-content: space-between; gap: 6px; padding: 1px 0; border-top: 1px dashed #262d55; }
   .slist dt { color: var(--muted); }
   .slist dd { margin: 0; text-align: right; }
   .slist dd.lost { color: var(--danger); }
-  .side { display: grid; gap: 8px; align-content: start; }
-  .cond { border: 2px solid #2a3366; border-radius: 8px; padding: 6px 4px; text-align: center; background: #070b22; }
-  .cond small { display: block; font-size: 10px; color: var(--muted); }
-  .cond b { display: block; font-weight: normal; font-size: 22px; color: var(--good); }
-  .cond span { font-size: 11px; color: var(--good); }
-  .sidebtn { font: inherit; font-size: 12px; color: var(--gold); background: #0a1030; border: 2px solid var(--gold); border-radius: 8px; padding: 8px 2px; cursor: pointer; display: grid; gap: 2px; justify-items: center; }
-  .sidebtn span { font-size: 20px; }
-  .training { margin-top: 12px; }
+  .chips { display: grid; grid-template-columns: .8fr 1.35fr 1fr auto; gap: 6px; margin-top: 8px; }
+  .chip { border: 1px solid #2a3366; border-radius: 6px; background: #070b22; padding: 2px 6px; font-size: 12px; display: flex; align-items: baseline; justify-content: space-between; gap: 4px; min-width: 0; white-space: nowrap; }
+  .chip small { font-size: 9px; color: var(--muted); }
+  .chip b { font-weight: normal; overflow: hidden; text-overflow: ellipsis; }
+  #s-cond { color: var(--good); }
+  .chipbtn { font: inherit; font-size: 12px; color: var(--gold); border-color: var(--gold); cursor: pointer; align-items: center; }
+  .training { margin-top: 8px; }
   .tr-head { display: inline-block; font-size: 11px; color: var(--gold); background: #0a1030; border: 1px solid #2a3366; border-bottom: 0; border-radius: 6px 6px 0 0; padding: 1px 10px; }
   .stage { position: relative; aspect-ratio: 16 / 9; border: 2px solid var(--gold); border-radius: 0 8px 8px 8px; overflow: hidden; background: #0b1236; }
   .scene { position: absolute; inset: 0; background-size: cover; background-position: center; image-rendering: pixelated; transition: opacity .6s ease; }
@@ -129,16 +127,15 @@
   .tr-lv b { color: var(--gold); font-weight: normal; font-size: 15px; }
   .tr-foot .bar { grid-column: 1; margin-top: 0; height: 10px; }
   .tr-exp { font-size: 11px; color: var(--muted); text-align: right; }
-  .pose-tabs { display: flex; gap: 6px; margin-top: 8px; }
+  .pose-tabs { display: none; gap: 6px; margin-top: 8px; }
   .pose-tabs button { flex: 1; font: inherit; font-size: 12px; color: var(--muted); background: none; border: 1px solid #2a3366; border-radius: 6px; padding: 5px 2px; cursor: pointer; }
   .pose-tabs button[aria-pressed="true"] { color: var(--gold); border-color: var(--gold); }
-  .ticker { display: grid; grid-template-columns: auto 1fr; gap: 8px; align-items: center; margin-top: 10px; border: 2px solid var(--gold2); border-radius: 8px; padding: 6px 8px; background: linear-gradient(180deg, #2a1400, #120800); }
+  .ticker { display: grid; grid-template-columns: auto 1fr; gap: 8px; align-items: center; margin-top: 8px; border: 2px solid var(--gold2); border-radius: 8px; padding: 6px 8px; background: linear-gradient(180deg, #2a1400, #120800); }
   .tk-ic { font-size: 16px; }
   .tk-track { overflow: hidden; white-space: nowrap; font-size: 13px; color: #ffe6b0; }
   .tk-track span { display: inline-block; padding-left: 100%; animation: tick 22s linear infinite; }
   @keyframes tick { to { transform: translateX(-100%); } }
-  .replay { display: block; margin: 8px auto 0; font: inherit; font-size: 11px; color: var(--muted); background: none; border: 0; cursor: pointer; text-decoration: underline dotted; }
-  .gift:focus-visible, .sidebtn:focus-visible, .pose-tabs button:focus-visible, .replay:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
+  .gift:focus-visible, .chipbtn:focus-visible, .pose-tabs button:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
 
   /* レベルアップの演出 */
   .tc { position: absolute; left: 0; right: 0; top: 0; z-index: 2; padding: 6px 10px; font-size: clamp(14px, 4.6vw, 20px); letter-spacing: .06em;
@@ -308,6 +305,7 @@
   @media (min-width: 960px) {
     body { padding-block: 24px; padding-left: max(24px, env(safe-area-inset-left, 0px)); padding-right: max(24px, env(safe-area-inset-right, 0px)); }
     .cmd { display: none; }
+    .pose-tabs { display: flex; }
     .grid { display: grid; grid-template-columns: 1.05fr 1fr 1fr; gap: 0 20px; align-items: start; }
     .panel { display: block !important; animation: none; }
     .msg { min-height: 0; }
@@ -333,17 +331,15 @@
   <div class="grid" id="main">
     <section class="panel on" data-tab="status">
       <div class="win home">
-        <div class="banner"><small>MY STATUS</small><b id="title">―</b></div>
         <div class="idrow">
           <span class="rank">Lv<b class="num" id="lv">-</b></span>
-          <span class="nameplate" id="name">―</span>
-        </div>
-        <div class="heroart">
-          <img class="avatar" id="avatar" src="https://raw.githubusercontent.com/inoueindustries/-/main/%E7%AD%8B%E3%83%88%E3%83%AC%E5%86%92%E9%99%BA%E8%80%85%E3%82%B9%E3%83%86%E3%83%BC%E3%82%BF%E3%82%B9/images/chanz.gif" alt="ちゃんズの ドット絵" width="150" height="150">
-          <span class="job" id="job">―</span>
-          <small class="cap">MAIN CHARACTER</small>
+          <span class="nameplate"><span id="name">―</span><b class="titlechip" id="title">―</b></span>
         </div>
         <div class="statgrid">
+          <div class="heroart">
+            <img class="avatar" id="avatar" src="https://raw.githubusercontent.com/inoueindustries/-/main/%E7%AD%8B%E3%83%88%E3%83%AC%E5%86%92%E9%99%BA%E8%80%85%E3%82%B9%E3%83%86%E3%83%BC%E3%82%BF%E3%82%B9/images/chanz.gif" alt="ちゃんズの ドット絵" width="104" height="104">
+            <span class="job" id="job">―</span>
+          </div>
           <div class="power">
             <div class="pw-head"><small>ちから（有効EXP）</small><span class="bonus" id="s-keep">―</span></div>
             <b class="pw-num num" id="s-eff">0</b>
@@ -351,14 +347,14 @@
               <div><dt>累計EXP</dt><dd class="num" id="s-cum">0</dd></div>
               <div><dt>失われたEXP</dt><dd class="num lost" id="s-lost">0</dd></div>
               <div><dt>つぎのLvまで</dt><dd class="num" id="need">0</dd></div>
-              <div><dt>いちばん強い部位</dt><dd id="s-top">―</dd></div>
-              <div><dt>さいごの修行</dt><dd id="s-last">―</dd></div>
             </dl>
           </div>
-          <div class="side">
-            <div class="cond"><small>コンディション</small><b class="num" id="s-cond">―</b><span id="s-cond-l">絶好調</span></div>
-            <button type="button" class="sidebtn" id="open-titles"><span aria-hidden="true">🏅</span>しょうごう</button>
-          </div>
+        </div>
+        <div class="chips">
+          <span class="chip"><small>調子</small><b class="num" id="s-cond">―</b><i id="s-cond-l" hidden></i></span>
+          <span class="chip"><small>最強</small><b id="s-top">―</b></span>
+          <span class="chip"><small>修行</small><b id="s-last">―</b></span>
+          <button type="button" class="chip chipbtn" id="open-titles"><span aria-hidden="true">🏅</span>称号</button>
         </div>
         <div class="training">
           <div class="tr-head">▶ しゅぎょう期間 <span class="num" id="tr-period">―</span></div>
@@ -391,13 +387,12 @@
           </div>
         </div>
         <div class="ticker"><span class="tk-ic" aria-hidden="true">📜</span><div class="tk-track"><span id="ticker">―</span></div></div>
-        <button type="button" class="replay" id="replay">▶ レベルアップの えんしゅつを みる</button>
       </div>
       <dialog class="win dlg" id="titles-dlg">
         <div class="win-title">しょうごうの ごほうび</div>
         <p class="dlg-next" id="dlg-next"></p>
         <div class="tbl-wrap"><table class="tbl" id="dlg-titles"></table></div>
-        <form method="dialog"><button class="refresh" type="submit">とじる</button></form>
+        <form method="dialog"><button class="refresh" type="button" id="replay">▶ レベルアップの えんしゅつ</button> <button class="refresh" type="submit">とじる</button></form>
       </dialog>
     </section>
 
@@ -533,7 +528,7 @@
     var top = d.majors.slice().sort(function (a, b) { return b.eff - a.eff; })[0];
     $('s-top').textContent = top && top.eff > 0 ? top.key + ' Lv.' + top.lv : '―';
     var lt = d.latest;
-    $('s-last').textContent = lt ? lt.last.replace(/^\d{4}\/0?(\d+)\/0?(\d+)$/, '$1/$2') + (lt.elapsed ? '（' + lt.elapsed + '日前）' : '（きょう）') : '―';
+    $('s-last').textContent = lt ? (lt.elapsed ? lt.elapsed + '日前' : 'きょう') : '―';
     var good = d.majors.filter(function (m) { return m.cond === 'good'; }).length;
     $('s-cond').textContent = good + '/' + d.majors.length;
     $('s-cond-l').textContent = good === d.majors.length ? '絶好調' : '部位が絶好調';
@@ -692,10 +687,18 @@
   function readLastLv() { try { var v = parseInt(localStorage.getItem(LV_KEY), 10); return isNaN(v) ? null : v; } catch (e) { return null; } }
   function saveLastLv(v) { try { localStorage.setItem(LV_KEY, String(v)); } catch (e) {} }
   function titleOfLv(d, lv) { var n = ''; (d.titles || []).forEach(function (x) { if (lv >= x.lv) n = x.name; }); return n; }
+  // 画面を開いたとき、前回みたときより Lv が上がっていたら 演出を出す。
+  // 前回の記録がない（はじめて開く・保存できない）ときは、さいごの修行の前の日の Lv と くらべる（修行の当日と翌日だけ）
+  var lvPlayedFor = null;
   function checkLevelUp(d) {
     var lv = d.total.lv, prev = readLastLv();
+    if (prev == null && d.latest && d.latest.elapsed <= 1 && d.trend) {
+      var before = d.trend[d.trend.length - 2 - d.latest.elapsed];
+      if (before) prev = before.lv;
+    }
     if (!d.demo) saveLastLv(lv);
-    if (prev != null && lv > prev && !d.demo) playLevelUp(prev, lv, d); else setScene(lv);
+    if (prev != null && lv > prev && !d.demo && lvPlayedFor !== lv) { lvPlayedFor = lv; playLevelUp(prev, lv, d); }
+    else if ($('lvup').hidden && $('tc').hidden) setScene(lv);
   }
   // 1) TRAINING COMPLETE（立ち姿で止まり、EXPバーが満タンまで伸びる）→ 2) LEVEL UP! → 3) 次の場面へ、Lv が上がる
   function playLevelUp(from, to, d) {
@@ -723,7 +726,7 @@
       playPose(resumeKey || 'squat', null);
     }, 4700));
   }
-  $('replay').addEventListener('click', function () { if (state && !state.error) playLevelUp(Math.max(1, state.total.lv - 1), state.total.lv, state); });
+  $('replay').addEventListener('click', function () { $('titles-dlg').close(); if (state && !state.error) playLevelUp(Math.max(1, state.total.lv - 1), state.total.lv, state); });
   // しょうごうの ごほうび（つぎの称号まで）
   function openTitles() {
     if (!state || state.error) return;
