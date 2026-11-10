@@ -454,7 +454,7 @@
       <dialog class="win dlg" id="outfit-dlg">
         <div class="win-title">きせかえ</div>
         <div class="outfits" id="outfits"></div>
-        <p class="rule">えらんだ ふくは、この たんまつに おぼえます。しゅぎょう中の うごく絵は いまの ままです。</p>
+        <p class="rule">えらんだ ふくは、この たんまつに おぼえます。しゅぎょうの 絵も きがえます。</p>
         <form method="dialog"><button class="refresh" type="submit">とじる</button></form>
       </dialog>
       <dialog class="win dlg" id="titles-dlg">
@@ -895,7 +895,13 @@
     squat: { name: 'スクワット', ms: [220, 220, 320, 220] }
   };
   var poseTimer = null, poseKey = null, poseManual = false;
-  function spriteUrl(k, i) { return SPRITES ? SPRITES[k][i] : SPRITE_BASE + k + '-' + i + '.png'; }
+  // きせかえで えらんだ ふくの コマ（images/workout/<衣装ID>/）。赤いよろいは images/workout/ の直下
+  var OSPRITES = /*@@OSPRITES@@*/null;
+  function spriteUrl(k, i) {
+    var o = (typeof outfitId === 'string' && outfitId !== 'armor') ? outfitId : null;
+    if (o) return OSPRITES ? OSPRITES[o][k][i] : SPRITE_BASE + o + '/' + k + '-' + i + '.png';
+    return SPRITES ? SPRITES[k][i] : SPRITE_BASE + k + '-' + i + '.png';
+  }
   // いちばん最近 きたえた大部位から えらぶ（同じ日なら EXP の多い部位）
   function poseFor(d) {
     var trained = d.majors.filter(function (m) { return m.elapsed != null; });
@@ -957,6 +963,7 @@
     try { localStorage.setItem(OUTFIT_KEY, outfitId); } catch (err) {}
     document.querySelectorAll('#outfits button').forEach(function (x) { x.setAttribute('aria-pressed', x === b ? 'true' : 'false'); });
     applyOutfit();
+    if (poseKey && $('lvup').hidden && $('tc').hidden) playPose(poseKey, null);   // 修行の絵も きがえる
   });
   applyOutfit();
   // ---------- 修行の場面とレベルアップの演出 ----------
