@@ -106,16 +106,32 @@ function addLogEntry(p) {
     const num = v => (v === '' || v == null || isNaN(Number(v)) ? '' : Number(v));
     const w = num(p.w), r = num(p.r), s = num(p.s);
     if ((w !== '' && (w < 0 || w > 500)) || (r !== '' && (r < 0 || r > 1000)) || (s !== '' && (s < 1 || s > 50))) throw new Error('数字が大きすぎます');
-    // 日付(B)と種目(D)が空の最初の行に書く。式の入った列（E・I〜K・M〜Q）には さわらない
+    // 種目(D)が入っている最後の行の、次の行に書く。式の入った列（E・I〜K・M〜Q）には さわらない
     const bd = sh.getRange(2, 2, sh.getMaxRows() - 1, 3).getValues();
-    let row = -1;
-    for (let i = 0; i < bd.length; i++) if (bd[i][0] === '' && bd[i][2] === '') { row = i + 2; break; }
-    if (row < 0) throw new Error('ログの行が いっぱいです');
+    let last = -1;
+    for (let i = 0; i < bd.length; i++) if (String(bd[i][2]).trim() !== '') last = i;
+    const row = last + 3;
+    if (row > sh.getMaxRows()) throw new Error('ログの行が いっぱいです');
+    // 入力規則（プルダウン）で はじかれたら、そのセルだけ 規則を いったん外して書き、すぐ もどす。
+    // 種目のプルダウンは「部位」を書いたあとに 中身が決まるので、同時に書くと はじかれることがある
+    const put = (r, c, v) => {
+      const cell = sh.getRange(r, c);
+      try { cell.setValue(v); } catch (e) {
+        const rule = cell.getDataValidation();
+        cell.clearDataValidations();
+        try { cell.setValue(v); } finally { if (rule) cell.setDataValidation(rule); }
+      }
+    };
     const lock = LockService.getScriptLock(); lock.waitLock(10000);
     try {
-      sh.getRange(row, 2, 1, 3).setValues([[new Date(+m[1], +m[2] - 1, +m[3]), data.parts[key] || '', ex]]);
-      sh.getRange(row, 6, 1, 3).setValues([[w === '' ? 0 : w, r, s === '' ? 1 : s]]);
-      if (p.memo) sh.getRange(row, 12).setValue(String(p.memo).slice(0, 100));
+      put(row, 2, new Date(+m[1], +m[2] - 1, +m[3]));
+      put(row, 3, data.parts[key] || '');
+      SpreadsheetApp.flush();   // 部位を先に確定させてから 種目を書く
+      put(row, 4, ex);
+      put(row, 6, w === '' ? 0 : w);
+      put(row, 7, r);
+      put(row, 8, s === '' ? 1 : s);
+      if (p.memo) put(row, 12, String(p.memo).slice(0, 100));
       SpreadsheetApp.flush();
     } finally { lock.releaseLock(); }
     return getStatusJson();
