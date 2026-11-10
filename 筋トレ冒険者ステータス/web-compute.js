@@ -143,14 +143,17 @@ var QSWeb = (function () {
     var col = {
       date: findCol(header, /日付/, 1), part: findCol(header, /^(大)?部位$|^部位/, 2), ex: findCol(header, /種目/, 3),
       vol: findCol(header, /総ボリューム/, 10), exp: findCol(header, /基礎.*EXP|獲得EXP/, 13),
-      w: findCol(header, /^重量/, 5), r: findCol(header, /^回数/, 6), s: findCol(header, /^セット/, 7)
+      w: findCol(header, /^重量/, 5), r: findCol(header, /^回数/, 6), s: findCol(header, /^セット/, 7),
+      memo: findCol(header, /時間|距離/, 11)
     };
+    var recent = [];   // シートの行番号つきの きろく（アプリで なおす・けす ために使う）
     var entries = [];
     entries.last = {};   // 種目ごとの さいごの記録（記録フォームの初期値に使う）
-    v.slice(hr + 1).forEach(function (row) {
+    v.slice(hr + 1).forEach(function (row, i) {
       var day = toDayNum(cell(row, col.date));
       if (day == null) return;
       var exn = norm(cell(row, col.ex)), prev = entries.last[exn];
+      if (exn) recent.push({ row: hr + i + 2, date: fmt(day, true), part: norm(cell(row, col.part)), ex: exn, w: num(cell(row, col.w)) || 0, r: num(cell(row, col.r)) || null, s: num(cell(row, col.s)) || 1, memo: norm(cell(row, col.memo)) });
       if (exn && (!prev || day >= prev.day)) entries.last[exn] = { day: day, date: fmt(day), w: num(cell(row, col.w)) || 0, r: num(cell(row, col.r)) || null, s: num(cell(row, col.s)) || 1 };
       var ex = norm(cell(row, col.ex)), exp = num(cell(row, col.exp)), vol = num(cell(row, col.vol));
       if (!(exp > 0) && multipliers[ex] && vol > 0) exp = vol * multipliers[ex];
@@ -160,6 +163,7 @@ var QSWeb = (function () {
     var last = entries.last;
     entries.sort(function (a, b) { return a.day - b.day; });
     entries.last = last;
+    entries.recent = recent.slice(-15).reverse();
     return entries;
   }
 
@@ -321,6 +325,7 @@ var QSWeb = (function () {
       settings: { keepDays: C.KEEP_DAYS, decayPct: Math.round(C.DECAY_PER_DAY * 100), zeroDay: C.KEEP_DAYS + Math.ceil(1 / C.DECAY_PER_DAY),
         curveA: C.CURVE_A, curveP: C.CURVE_P, maxLv: C.MAX_LV },
       latest: latest,
+      recent: data.entries.recent || [],
       titles: C.TITLES.map(function (x) { return { lv: x[0], name: x[1], exp: Math.max(0, expForLv(x[0])) || 0 }; }),
       tips: tipsOf(m),
       exercises: Object.keys(m.names).map(function (k) {
