@@ -258,6 +258,15 @@
   .fld3 { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
   .rec-plan { font-size: 12px; color: #cfd6f0; margin: -2px 0 8px; }
   .rec-msg { font-size: 12px; min-height: 1.4em; margin: 0 0 6px; color: var(--warn); }
+  .rc-row { display: grid; grid-template-columns: minmax(0, 1fr) auto auto; gap: 6px; align-items: center; padding: 6px 0; border-top: 1px dashed #262d55; }
+  .rc-row:first-child { border-top: 0; }
+  .rc-main b { display: block; font-weight: normal; font-size: 14px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .rc-main small { display: block; font-size: 12px; color: var(--muted); }
+  .rc-main .dup { color: var(--warn); }
+  .rc-row button { font: inherit; font-size: 12px; color: var(--text); background: #0a1030; border: 1px solid #2a3366; border-radius: 6px; padding: 6px 8px; min-height: 36px; cursor: pointer; white-space: nowrap; }
+  .rc-row button.sure { color: #fff; background: #7a1f2b; border-color: var(--danger); }
+  .rc-row button:disabled { opacity: .5; }
+  .rc-row button:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
   .rec-btns { display: flex; gap: 8px; justify-content: center; }
   .refresh.rec-save { color: #2a1600; background: var(--gold); border-color: var(--gold); }
   .toast { position: fixed; left: 50%; transform: translateX(-50%); bottom: calc(84px + env(safe-area-inset-bottom, 0px)); z-index: 20; max-width: calc(100% - 32px);
@@ -494,7 +503,7 @@
         <button type="button" class="refresh recopen" id="rec-open">＋ きんトレを きろくする</button>
       </div>
       <dialog class="win dlg" id="rec-dlg">
-        <div class="win-title">きんトレの きろく</div>
+        <div class="win-title" id="rec-title">きんトレの きろく</div>
         <form id="rec-form" novalidate>
           <img class="rec-img" id="rec-img" alt="" hidden>
           <label class="fld">しゅもく<select id="rec-ex" required></select></label>
@@ -520,6 +529,11 @@
       <div class="win">
         <div class="win-title">たたかいの きろく</div>
         <div class="msg" id="log"></div>
+      </div>
+      <div class="win" id="recentwin" hidden>
+        <div class="win-title">さいきんの きろく</div>
+        <div id="recent"></div>
+        <p class="rule">まちがえた きろくは「なおす」「けす」で なおせます。</p>
       </div>
       <div class="win">
         <div class="win-title">このまま やすむと……</div>
@@ -674,6 +688,7 @@
     renderMajors(d.majors);
     renderFines(d.fines);
     renderForecast(d);
+    renderRecent(d);
     $('trend').innerHTML = trendSvg(d.trend);
     renderBody(d.body);
     renderExp(d);
@@ -723,8 +738,13 @@
     $('rec-s').value = e && e.last ? e.last.s : 2;
     $('rec-msg').textContent = '';
   }
-  function openRec(name) {
+  // きろくの入力画面と おしらせは、どの画面（ぶい・きろく）からでも 出せるように、画面の外がわへ うつす
+  ['rec-dlg', 'toast'].forEach(function (id) { document.querySelector('.wrap').appendChild($(id)); });
+  var editing = null, dupOk = null;   // editing：なおしている きろく（なければ 新しい きろく）
+  function recKey(x) { return [x.date, x.ex, x.w || 0, x.r || '', x.s || 1, x.memo || ''].join('|'); }
+  function openRec(name, item) {
     if (!state || state.error) return;
+    editing = item || null; dupOk = null;
     var list = state.exercises || [];
     if (!list.length) { toast('しゅもくの いちらんを よみこめませんでした'); return; }
     var groups = {}, order = [];
@@ -735,11 +755,18 @@
     var n = new Date(), pad = function (x) { return ('0' + x).slice(-2); };
     $('rec-date').value = n.getFullYear() + '-' + pad(n.getMonth() + 1) + '-' + pad(n.getDate());
     fillRec(name);
+    if (editing) {   // なおすとき：その きろくの 中身を 入れておく
+      $('rec-date').value = editing.date.replace(/\//g, '-');
+      $('rec-w').value = editing.w || 0; $('rec-r').value = editing.r || ''; $('rec-s').value = editing.s || 1; $('rec-memo').value = editing.memo || '';
+    }
+    $('rec-title').textContent = editing ? 'きろくを なおす' : 'きんトレの きろく';
+    $('rec-save').textContent = editing ? 'なおして ほぞん' : 'きろくする';
+    $('rec-msg').textContent = '';
     $('rec-save').disabled = false;
     var dlg = $('rec-dlg'); if (dlg.showModal) dlg.showModal(); else dlg.setAttribute('open', '');
   }
   $('rec-ex').addEventListener('change', function () { fillRec(this.value); });
-  ['rec-w', 'rec-r', 'rec-s'].forEach(function (id) { $(id).addEventListener('input', function () { $('rec-msg').textContent = ''; }); });
+  ['rec-w', 'rec-r', 'rec-s', 'rec-date', 'rec-memo', 'rec-ex'].forEach(function (id) { $(id).addEventListener('input', function () { $('rec-msg').textContent = ''; dupOk = null; }); });
   $('rec-open').addEventListener('click', function () { openRec(null); });
   $('rec-close').addEventListener('click', function () { $('rec-dlg').close(); });
   $('rec-form').addEventListener('submit', function (ev) {
@@ -754,22 +781,89 @@
       if (!(rec.r >= 1 && rec.r <= 1000)) { msg.textContent = '回数を いれてください。'; return; }
       if (!(rec.w >= 0 && rec.w <= 500) || !(rec.s >= 1 && rec.s <= 50)) { msg.textContent = '重量は 0〜500kg、セットは 1〜50 で いれてください。'; return; }
     }
+    // 二重きろくの よぼう：同じ日・種目・重量・回数・セットの きろくが もう あれば、いちど 止めて たしかめる
+    var key = recKey(rec);
+    if (!editing && dupOk !== key && (state.recent || []).some(function (x) { return recKey(x) === key; })) {
+      dupOk = key;
+      msg.textContent = 'おなじ きろくが もう 入っています。それでも きろくするなら、もういちど おしてください。';
+      return;
+    }
     var btn = $('rec-save'); btn.disabled = true; msg.textContent = 'かきこみちゅう……';
-    var ok = function () { introState = 0; $('rec-dlg').close(); toast(name + ' を きろくした！ けいけんちを けいさんしています……'); };
+    var was = editing;
+    var ok = function () { introState = was ? 2 : 0; $('rec-dlg').close(); toast(was ? name + ' の きろくを なおした！' : name + ' を きろくした！ けいけんちを けいさんしています……'); };
     var ng = function (text, unsure) { btn.disabled = false; msg.textContent = text + (unsure ? ' もういちど おす前に、スプシに 行が ふえていないか たしかめてください。' : ''); };
+    if (was) { rec.row = was.row; rec.ex0 = was.ex; rec.date0 = was.date; }
+    sendLog(was ? 'update' : 'add', rec, ok, ng);
+  });
+  // きろくを 足す（add）・なおす（update）・とりけす（delete）。開き方ごとに 送り先が ちがう
+  function sendLog(action, rec, ok, ng) {
     if (isGas) {
+      var fn = action === 'add' ? 'addLogEntry' : action === 'update' ? 'updateLogEntry' : 'deleteLogEntry';
       google.script.run.withSuccessHandler(function (json) { var d = JSON.parse(json); if (d.error) return ng(d.error); ok(); render(d); })
-        .withFailureHandler(function (er) { ng('かきこめませんでした（' + (er && er.message || er) + '）', true); }).addLogEntry(rec);
+        .withFailureHandler(function (er) { ng('かきこめませんでした（' + (er && er.message || er) + '）', true); })[fn](rec);
     } else if (mcp) {
-      saveViaMcp(rec, ok, ng);
+      if (action === 'add') saveViaMcp(rec, ok, ng); else changeViaMcp(action, rec, ok, ng);
     } else if (window.QS_STANDALONE && getApi()) {
-      var q = '&action=add&date=' + encodeURIComponent(rec.date) + '&ex=' + encodeURIComponent(rec.ex) + '&w=' + rec.w + '&r=' + rec.r + '&s=' + rec.s + '&memo=' + encodeURIComponent(rec.memo);
+      var q = '&action=' + action;
+      ['date', 'ex', 'w', 'r', 's', 'memo', 'row', 'ex0', 'date0'].forEach(function (k) { if (rec[k] != null) q += '&' + k + '=' + encodeURIComponent(rec[k]); });
       fetch(getApi() + q, { redirect: 'follow' }).then(function (r) { return r.json(); })
         .then(function (d) { if (d && d.error) return ng(d.error); ok(); d.fetchedAt = Date.now(); render(d); }, function () { ng('つながりませんでした。', true); });
     } else {
       ng('見本データでは きろくできません。');
     }
+  }
+  // さいきんの きろく（なおす・けす）
+  function renderRecent(d) {
+    var list = d.recent || [];
+    $('recentwin').hidden = !list.length;
+    var count = {};
+    list.forEach(function (x) { var k = recKey(x); count[k] = (count[k] || 0) + 1; });
+    $('recent').innerHTML = list.map(function (x, i) {
+      var what = x.r ? x.w + 'kg × ' + x.r + '回 × ' + x.s + 'セット' : (x.memo || 'きろくあり');
+      var dup = (x.r || x.memo) && count[recKey(x)] > 1 ? ' <span class="dup">⚠ おなじ きろくが あります</span>' : '';
+      return '<div class="rc-row"><div class="rc-main"><b>' + esc(x.date.slice(5)) + '　' + esc(x.ex) + '</b><small>' + esc(what) + dup + '</small></div>' +
+        (d.demo ? '' : '<button type="button" data-edit="' + i + '">なおす</button><button type="button" data-del="' + i + '">けす</button>') + '</div>';
+    }).join('');
+  }
+  var delTimer = null;
+  $('recent').addEventListener('click', function (ev) {
+    var b = ev.target.closest('button'); if (!b || !state) return;
+    var list = state.recent || [];
+    if (b.hasAttribute('data-edit')) { var it = list[+b.getAttribute('data-edit')]; if (it) openRec(it.ex, it); return; }
+    var x = list[+b.getAttribute('data-del')]; if (!x) return;
+    if (!b.classList.contains('sure')) {   // 1回めは たしかめるだけ。もういちど おすと けす
+      b.classList.add('sure'); b.textContent = 'ほんとうに けす';
+      clearTimeout(delTimer); delTimer = setTimeout(function () { b.classList.remove('sure'); b.textContent = 'けす'; }, 4000);
+      return;
+    }
+    clearTimeout(delTimer);
+    document.querySelectorAll('#recent button').forEach(function (q) { q.disabled = true; });
+    b.textContent = 'けしています……';
+    sendLog('delete', { row: x.row, ex0: x.ex, date0: x.date }, function () { introState = 2; toast(x.ex + ' の きろくを けした'); },
+      function (text) { toast(text); renderRecent(state); });
   });
+  function mcpErr(er, ng) {
+    var c = er && er.code;
+    if (c === 'not_in_manifest' || c === 'approval_required' || c === 'consent_required' || c === 'blocked_by_policy') ng('スプシへの 書きこみが 許可されていません。許可してから もういちど おしてください。');
+    else if (c === 'needs_reauth' || c === 'server_not_connected') ng('Google Sheets の接続が 切れています。claude.ai の 設定 → コネクタ で つなぎ直してください。');
+    else if (c === 'tool_error') ng('かきこめませんでした。スプシを 編集できる アカウントか たしかめてください。');
+    else ng('かきこみの 結果が わかりませんでした。', true);
+  }
+  // claude.ai のページ：その行が 見ていた きろくと 同じか たしかめてから、なおす・空にする
+  function changeViaMcp(action, rec, ok, ng) {
+    var rng = LOG_SHEET + '!B' + rec.row + ':D' + rec.row;
+    mcp.callTool(SERVER, 'get_values', { spreadsheetId: SHEET_ID, range: rng }, { cache: false }).then(function (res) {
+      var cur = payloadValues(res)[0] || [];
+      var digits = function (t) { return String(t == null ? '' : t).split(/\D+/).filter(Boolean).map(Number).join('/'); };
+      if (String(cur[2] == null ? '' : cur[2]).trim() !== rec.ex0 || digits(cur[0]) !== digits(rec.date0)) { ng('きろくが かわっています。よみこみ直してから もういちど ためしてください。'); return null; }
+      var vals = action === 'delete' ? ['', '', '', null, '', '', '', null, null, null, '']
+        : [rec.date, rec.part, rec.ex, null, rec.w, rec.r === '' ? '' : rec.r, rec.s, null, null, null, rec.memo || ''];
+      return mcp.callTool(SERVER, 'update_values', { spreadsheetId: SHEET_ID, range: LOG_SHEET + '!B' + rec.row + ':L' + rec.row, values: [vals] }, { cache: false }).then(function () {
+        ok();
+        mcp.invalidate(SERVER).catch(function () {});
+      }, function (er) { mcpErr(er, ng); });
+    }, function () { ng('スプシを よみこめませんでした。すこし まってから もういちど おしてください。'); });
+  }
   // claude.ai のページ：閲覧者の Google Sheets 連携で、ログの最初の空き行に書く（式の列には さわらない）
   var LOG_SHEET = "'トレーニング・運動ログ'";
   function saveViaMcp(rec, ok, ng) {

@@ -71,6 +71,10 @@ function doGet(e) {
     if (!appKey) return ContentService.createTextOutput(JSON.stringify({ error: '先に setupAppKey を実行してください' })).setMimeType(ContentService.MimeType.JSON);
     return ContentService.createTextOutput(addLogEntry(p)).setMimeType(ContentService.MimeType.JSON);
   }
+  if (p.action === 'update' || p.action === 'delete') {   // 専用アプリからの なおし・とりけし（合言葉つきURLのときだけ）
+    if (!appKey) return ContentService.createTextOutput(JSON.stringify({ error: '先に setupAppKey を実行してください' })).setMimeType(ContentService.MimeType.JSON);
+    return ContentService.createTextOutput(p.action === 'update' ? updateLogEntry(p) : deleteLogEntry(p)).setMimeType(ContentService.MimeType.JSON);
+  }
   if (p.format === 'json') {
     return ContentService.createTextOutput(getStatusJson())
       .setMimeType(ContentService.MimeType.JSON);
@@ -93,51 +97,91 @@ function setupAppKey() {
     '\n\n① に貼るURLは「デプロイ → デプロイを管理」に出る、/exec で終わる「ウェブアプリ URL」です');
 }
 
-/** トレーニングログに1行足す。{date:'2026/11/10', ex:'種目名', w:重量, r:回数, s:セット数, memo:'時間・距離'}。足したあとの最新ステータスを返す */
-function addLogEntry(p) {
+/** ---- トレーニングログへの書きこみ（足す・なおす・とりけす）。式の入った列（E・I〜K・M〜Q）には さわらない ---- */
+function logSheet_() {
+  return SpreadsheetApp.openById(QS_CONFIG.SPREADSHEET_ID).getSheetByName(QS_CONFIG.SHEET_LOG);
+}
+// 入力規則（プルダウン）で はじかれたら、そのセルだけ 規則を いったん外して書き、すぐ もどす
+function putCell_(sh, r, c, v) {
+  const cell = sh.getRange(r, c);
+  try { cell.setValue(v); } catch (e) {
+    const rule = cell.getDataValidation();
+    cell.clearDataValidations();
+    try { cell.setValue(v); } finally { if (rule) cell.setDataValidation(rule); }
+  }
+}
+function parseRec_(p) {
+  const ex = String(p.ex || '').trim();
+  const m = String(p.date || '').match(/^(\d{4})[\/-](\d{1,2})[\/-](\d{1,2})$/);
+  if (!ex || !m) throw new Error('日付か種目が正しくありません');
+  const data = QS.loadData();
+  const key = Object.keys(data.names).filter(k => data.names[k] === ex)[0];
+  if (!key) throw new Error('マスタにない種目です：' + ex);
+  const num = v => (v === '' || v == null || isNaN(Number(v)) ? '' : Number(v));
+  const w = num(p.w), r = num(p.r), s = num(p.s);
+  if ((w !== '' && (w < 0 || w > 500)) || (r !== '' && (r < 0 || r > 1000)) || (s !== '' && (s < 1 || s > 50))) throw new Error('数字が大きすぎます');
+  return { date: new Date(+m[1], +m[2] - 1, +m[3]), part: data.parts[key] || '', ex, w: w === '' ? 0 : w, r, s: s === '' ? 1 : s, memo: String(p.memo || '').slice(0, 100) };
+}
+// 種目のプルダウンは「部位」を書いたあとに 中身が決まるので、部位を先に確定させてから 種目を書く
+function writeLogRow_(sh, row, rec) {
+  putCell_(sh, row, 2, rec.date);
+  putCell_(sh, row, 3, rec.part);
+  SpreadsheetApp.flush();
+  putCell_(sh, row, 4, rec.ex);
+  putCell_(sh, row, 6, rec.w);
+  putCell_(sh, row, 7, rec.r);
+  putCell_(sh, row, 8, rec.s);
+  putCell_(sh, row, 12, rec.memo);
+  SpreadsheetApp.flush();
+}
+// なおす・とりけす行が、アプリで見ていた きろくと 同じか たしかめる（行が ずれていたら 何もしない）
+function checkLogRow_(sh, row, p) {
+  if (!(row >= 2 && row <= sh.getMaxRows())) throw new Error('行が正しくありません');
+  const v = sh.getRange(row, 2, 1, 3).getValues()[0];
+  const tz = sh.getParent().getSpreadsheetTimeZone();
+  const d = v[0] instanceof Date ? Utilities.formatDate(v[0], tz, 'yyyy/MM/dd') : String(v[0]);
+  if (String(v[2]).trim() !== String(p.ex0 || '').trim() || d !== String(p.date0 || '')) throw new Error('きろくが かわっています。よみこみ直してから もういちど ためしてください');
+}
+function withLogLock_(fn) {
   try {
-    const sh = SpreadsheetApp.openById(QS_CONFIG.SPREADSHEET_ID).getSheetByName(QS_CONFIG.SHEET_LOG);
-    const ex = String(p.ex || '').trim();
-    const m = String(p.date || '').match(/^(\d{4})[\/-](\d{1,2})[\/-](\d{1,2})$/);
-    if (!ex || !m) throw new Error('日付か種目が正しくありません');
-    const data = QS.loadData();
-    const key = Object.keys(data.names).filter(k => data.names[k] === ex)[0];
-    if (!key) throw new Error('マスタにない種目です：' + ex);
-    const num = v => (v === '' || v == null || isNaN(Number(v)) ? '' : Number(v));
-    const w = num(p.w), r = num(p.r), s = num(p.s);
-    if ((w !== '' && (w < 0 || w > 500)) || (r !== '' && (r < 0 || r > 1000)) || (s !== '' && (s < 1 || s > 50))) throw new Error('数字が大きすぎます');
-    // 種目(D)が入っている最後の行の、次の行に書く。式の入った列（E・I〜K・M〜Q）には さわらない
+    const lock = LockService.getScriptLock(); lock.waitLock(10000);
+    try { fn(logSheet_()); } finally { lock.releaseLock(); }
+    return getStatusJson();
+  } catch (err) {
+    return JSON.stringify({ error: String(err && err.message || err) });
+  }
+}
+/** 1行足す。{date:'2026/11/10', ex:'種目名', w:重量, r:回数, s:セット数, memo:'時間・距離'}。足したあとの最新ステータスを返す */
+function addLogEntry(p) {
+  return withLogLock_(sh => {
+    const rec = parseRec_(p);
+    // 種目(D)が入っている最後の行の、次の行に書く
     const bd = sh.getRange(2, 2, sh.getMaxRows() - 1, 3).getValues();
     let last = -1;
     for (let i = 0; i < bd.length; i++) if (String(bd[i][2]).trim() !== '') last = i;
     const row = last + 3;
     if (row > sh.getMaxRows()) throw new Error('ログの行が いっぱいです');
-    // 入力規則（プルダウン）で はじかれたら、そのセルだけ 規則を いったん外して書き、すぐ もどす。
-    // 種目のプルダウンは「部位」を書いたあとに 中身が決まるので、同時に書くと はじかれることがある
-    const put = (r, c, v) => {
-      const cell = sh.getRange(r, c);
-      try { cell.setValue(v); } catch (e) {
-        const rule = cell.getDataValidation();
-        cell.clearDataValidations();
-        try { cell.setValue(v); } finally { if (rule) cell.setDataValidation(rule); }
-      }
-    };
-    const lock = LockService.getScriptLock(); lock.waitLock(10000);
-    try {
-      put(row, 2, new Date(+m[1], +m[2] - 1, +m[3]));
-      put(row, 3, data.parts[key] || '');
-      SpreadsheetApp.flush();   // 部位を先に確定させてから 種目を書く
-      put(row, 4, ex);
-      put(row, 6, w === '' ? 0 : w);
-      put(row, 7, r);
-      put(row, 8, s === '' ? 1 : s);
-      if (p.memo) put(row, 12, String(p.memo).slice(0, 100));
-      SpreadsheetApp.flush();
-    } finally { lock.releaseLock(); }
-    return getStatusJson();
-  } catch (err) {
-    return JSON.stringify({ error: String(err && err.message || err) });
-  }
+    writeLogRow_(sh, row, rec);
+  });
+}
+/** 1行なおす。addLogEntry の中身に加えて {row:行番号, ex0:もとの種目名, date0:'もとの日付 yyyy/MM/dd'} */
+function updateLogEntry(p) {
+  return withLogLock_(sh => {
+    const rec = parseRec_(p), row = Number(p.row);
+    checkLogRow_(sh, row, p);
+    writeLogRow_(sh, row, rec);
+  });
+}
+/** 1行とりけす（入力した列だけ 空にする）。{row, ex0, date0} */
+function deleteLogEntry(p) {
+  return withLogLock_(sh => {
+    const row = Number(p.row);
+    checkLogRow_(sh, row, p);
+    sh.getRange(row, 2, 1, 3).clearContent();
+    sh.getRange(row, 6, 1, 3).clearContent();
+    sh.getRange(row, 12).clearContent();
+    SpreadsheetApp.flush();
+  });
 }
 
 function getStatusJson() {
@@ -314,13 +358,16 @@ const QS = (() => {
       vol: findCol(header, /総ボリューム/, 10),
       exp: findCol(header, /基礎.*EXP|獲得EXP/, 13),
       w: findCol(header, /^重量/, 5), r: findCol(header, /^回数/, 6), s: findCol(header, /^セット/, 7),
+      memo: findCol(header, /時間|距離/, 11),
     };
+    const recent = [];   // シートの行番号つきの きろく（アプリで なおす・けす ために使う）
     const entries = [];
     const last = {};   // 種目ごとの さいごの記録（記録フォームの初期値に使う）
-    v.slice(hr + 1).forEach(row => {
+    v.slice(hr + 1).forEach((row, i) => {
       const day = toDayNum(row[col.date]);
       if (day == null) return;
       const exn = norm(row[col.ex]);
+      if (exn) recent.push({ row: hr + i + 2, date: fmt(day, true), part: norm(row[col.part]), ex: exn, w: Number(row[col.w]) || 0, r: Number(row[col.r]) || null, s: Number(row[col.s]) || 1, memo: norm(row[col.memo]) });
       if (exn && (!last[exn] || day >= last[exn].day)) last[exn] = { day, date: fmt(day), w: Number(row[col.w]) || 0, r: Number(row[col.r]) || null, s: Number(row[col.s]) || 1 };
       const ex = norm(row[col.ex]);
       let exp = Number(row[col.exp]);
@@ -332,6 +379,7 @@ const QS = (() => {
     });
     entries.sort((a, b) => a.day - b.day);
     entries.last = last;
+    entries.recent = recent.slice(-15).reverse();
     return entries;
   }
 
@@ -541,6 +589,7 @@ const QS = (() => {
       settings: { keepDays: C.KEEP_DAYS, decayPct: Math.round(C.DECAY_PER_DAY * 100), zeroDay: C.KEEP_DAYS + Math.ceil(1 / C.DECAY_PER_DAY),
         curveA: A, curveP: C.CURVE_P, maxLv: C.MAX_LV },
       latest,
+      recent: data.entries.recent || [],
       titles: C.TITLES.map(([lvl, name]) => ({ lv: lvl, name, exp: Math.max(0, expForLv(lvl, A)) || 0 })),
       tips: tipsOf(data),
       exercises: Object.keys(data.names || {}).map(k => {
