@@ -1,0 +1,132 @@
+{
+  "schema_version": 1,
+  "default_outfit": "white_tank",
+  "canvas": {
+    "width": 420,
+    "height": 460
+  },
+  "anchor": {
+    "x": 210,
+    "y": 430,
+    "meaning": "horizontal head center and common sole baseline"
+  },
+  "format": "RGBA PNG",
+  "frame_count_per_outfit": 1,
+  "outfits": [
+    {
+      "id": "white_tank",
+      "label_ja": "白タンクトップ",
+      "sprite": "sprites/white_tank.png",
+      "original": "originals/white_tank.png",
+      "source_dimensions": [
+        1198,
+        1313
+      ],
+      "source_subject_bbox": [
+        409,
+        225,
+        811,
+        1228
+      ],
+      "sprite_bbox": [
+        139,
+        80,
+        279,
+        430
+      ],
+      "sha256": "18e0ced0c0a13d34e276fb1e4c28029a4a106741a0e3e349f8df8e4edb4b960f"
+    },
+    {
+      "id": "business_suit",
+      "label_ja": "ビジネススーツ",
+      "sprite": "sprites/business_suit.png",
+      "original": "originals/business_suit.png",
+      "source_dimensions": [
+        1198,
+        1313
+      ],
+      "source_subject_bbox": [
+        404,
+        227,
+        802,
+        1228
+      ],
+      "sprite_bbox": [
+        140,
+        80,
+        279,
+        430
+      ],
+      "sha256": "3cbfb209bbe70e5445cccabaffb5cb82458b1083747df6e08bd8ddc761f2d109"
+    },
+    {
+      "id": "orange_gi",
+      "label_ja": "オレンジ道着",
+      "sprite": "sprites/orange_gi.png",
+      "original": "originals/orange_gi.png",
+      "source_dimensions": [
+        1108,
+        1420
+      ],
+      "source_subject_bbox": [
+        346,
+        238,
+        772,
+        1307
+      ],
+      "sprite_bbox": [
+        140,
+        80,
+        279,
+        430
+      ],
+      "sha256": "ecf8f527c42782e9c053d84094b6b707bd0a601bbcbaee261158ae2aef3b40f2"
+    },
+    {
+      "id": "hero_cape",
+      "label_ja": "ヒーローマント",
+      "sprite": "sprites/hero_cape.png",
+      "original": "originals/hero_cape.png",
+      "source_dimensions": [
+        1108,
+        1420
+      ],
+      "source_subject_bbox": [
+        215,
+        231,
+        839,
+        1295
+      ],
+      "sprite_bbox": [
+        98,
+        80,
+        303,
+        430
+      ],
+      "sha256": "f6e52791b42b1e54f8c6113d012c989c6e3ec2efaac1ac5eb6ccd755350faf0a"
+    },
+    {
+      "id": "running",
+      "label_ja": "ランニングウェア",
+      "sprite": "sprites/running.png",
+      "original": "originals/running.png",
+      "source_dimensions": [
+        1198,
+        1313
+      ],
+      "source_subject_bbox": [
+        413,
+        224,
+        812,
+        1224
+      ],
+      "sprite_bbox": [
+        140,
+        80,
+        280,
+        430
+      ],
+      "sha256": "8e959b16ce3f7ae3df6b9bacb9478147293757b319e1789f099f6edb2a8bfb81"
+    }
+  ]
+}

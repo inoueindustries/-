@@ -2,11 +2,19 @@
 """index.html（GAS用）から claude.ai 公開ページ用の claude-page.html を作る。
 - <!DOCTYPE>/<html>/<head>/<body> を外す（claude.ai が自分で付けるため）
 - ブラウザ側の計算 web-compute.js を埋め込む
-- キャラのドット絵（images/chanz.gif）を data URI で埋め込む（公開ページは外部の画像を読めないため）
+- キャラのドット絵（images/chanz.gif）と筋トレのアニメ（images/workout/*.png）、修行の背景（images/scenes/*.webp）を data URI で埋め込む（公開ページは外部の画像を読めないため）
 """
 import base64
+import json
 from pathlib import Path
 here = Path(__file__).resolve().parent
+# 種目の画像の一覧（images/exercises/index.json）を index.html に書きこむ
+import re
+ex_files = json.loads((here / "images" / "exercises" / "index.json").read_text(encoding="utf-8"))
+src_html = (here / "index.html").read_text(encoding="utf-8")
+src_html2 = re.sub(r"/\*EXFILES-BEGIN\*/.*?/\*EXFILES-END\*/", lambda m: "/*EXFILES-BEGIN*/" + json.dumps(ex_files, ensure_ascii=False) + "/*EXFILES-END*/", src_html, count=1, flags=re.S)
+if src_html2 != src_html:
+    (here / "index.html").write_text(src_html2, encoding="utf-8")
 s = (here / "index.html").read_text(encoding="utf-8")
 head_end = s.index("<title>")
 s = s[head_end:]
@@ -20,5 +28,43 @@ s = s.replace("/*@@COMPUTE@@*/", (here / "web-compute.js").read_text(encoding="u
 AVATAR_URL = "https://raw.githubusercontent.com/inoueindustries/-/main/%E7%AD%8B%E3%83%88%E3%83%AC%E5%86%92%E9%99%BA%E8%80%85%E3%82%B9%E3%83%86%E3%83%BC%E3%82%BF%E3%82%B9/images/chanz.gif"
 assert AVATAR_URL in s
 s = s.replace(AVATAR_URL, "data:image/gif;base64," + base64.b64encode((here / "images" / "chanz.gif").read_bytes()).decode())
+sprites = {k: ["data:image/png;base64," + base64.b64encode((here / "images" / "workout" / f"{k}-{i}.png").read_bytes()).decode() for i in range(4)]
+           for k in ("pullup", "pushup", "squat")}
+scenes = {k: "data:image/webp;base64," + base64.b64encode((here / "images" / "scenes" / f"{k}.webp").read_bytes()).decode()
+          for k in ("mountain", "waterfall", "sunset", "night")}
+assert "/*@@SCENES@@*/null" in s
+s = s.replace("/*@@SCENES@@*/null", json.dumps(scenes))
+ex_data = {n: "data:image/webp;base64," + base64.b64encode((here / "images" / "exercises" / f).read_bytes()).decode() for n, f in ex_files.items()}
+assert "/*@@EXDATA@@*/null" in s
+s = s.replace("/*@@EXDATA@@*/null", json.dumps(ex_data, ensure_ascii=False))
+outfits = {k: "data:image/png;base64," + base64.b64encode((here / "images" / "outfits" / f"{k}.png").read_bytes()).decode()
+           for k in ("white_tank", "business_suit", "orange_gi", "hero_cape", "running")}
+assert "/*@@OUTFITS@@*/null" in s
+s = s.replace("/*@@OUTFITS@@*/null", json.dumps(outfits))
+osprites = {o: {k: ["data:image/png;base64," + base64.b64encode((here / "images" / "workout" / o / f"{k}-{i}.png").read_bytes()).decode() for i in range(4)]
+                for k in ("pullup", "pushup", "squat")} for o in outfits}
+assert "/*@@OSPRITES@@*/null" in s
+s = s.replace("/*@@OSPRITES@@*/null", json.dumps(osprites))
+assert "/*@@SPRITES@@*/null" in s
+s = s.replace("/*@@SPRITES@@*/null", json.dumps(sprites))
 (here / "claude-page.html").write_text(s, encoding="utf-8")
 print("claude-page.html", len(s.encode()), "bytes")
+
+# ---- 専用アプリ版（GitHub Pages の quest/ に置く。ホーム画面に置くと全画面で開く） ----
+q = (here / "index.html").read_text(encoding="utf-8")
+q = q.replace("<?!= boot ?>", "").replace("/*@@COMPUTE@@*/", "")
+head = """<title>筋トレクエスト</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="icon-180.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="筋トレクエスト">
+<meta name="apple-mobile-web-app-status-bar-style" content="black">
+<script>window.QS_STANDALONE = true;</script>"""
+assert "<title>筋トレ冒険者ステータス</title>" in q
+q = q.replace("<title>筋トレ冒険者ステータス</title>", head, 1)
+out = here.parent / "quest"
+out.mkdir(exist_ok=True)
+(out / "index.html").write_text(q, encoding="utf-8")
+print("quest/index.html", len(q.encode()), "bytes")

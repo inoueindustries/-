@@ -82,6 +82,121 @@
   .stat span { font-size: 19px; }
   .stat.lost span { color: var(--danger); }
 
+  /* ホーム */
+  .home { padding: 10px 10px 8px; margin-bottom: 8px; }
+  /* スマホ：ホームを1画面に おさめる（背の低い画面では 場面を ちぢめる） */
+  @media (max-width: 959px) { .stage { width: 100%; max-height: max(120px, calc(100dvh - 450px)); } }
+  .idrow { display: grid; grid-template-columns: auto 1fr; gap: 8px; align-items: center; margin-bottom: 8px; }
+  .rank { font-size: 11px; color: var(--muted); letter-spacing: .1em; }
+  .rank b { font-weight: normal; font-size: 26px; line-height: 1; color: var(--gold); margin-left: 3px; text-shadow: 0 0 10px rgba(255,215,94,.35); }
+  .namebtn { font: inherit; letter-spacing: inherit; color: inherit; background: none; border: 0; padding: 4px 0; margin: 0; cursor: pointer; text-align: left; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .namebtn i { font-style: normal; font-size: 12px; color: var(--muted); }
+  .namebtn:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
+  .nameplate { display: flex; align-items: center; justify-content: space-between; gap: 6px; border: 2px solid #2a3366; border-radius: 6px; padding: 3px 6px 3px 10px; font-size: 17px; letter-spacing: .06em; background: #0a1030; min-width: 0; }
+  .titlechip { font-weight: normal; font-size: 12px; letter-spacing: 0; padding: 1px 8px; border-radius: 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    color: #2a1600; background: linear-gradient(180deg, #fff1b0, var(--gold) 45%, var(--gold2)); box-shadow: 0 0 0 1px #5a3a00; }
+  .statgrid { display: grid; grid-template-columns: 112px minmax(0, 1fr); gap: 8px; }
+  .heroart { position: relative; border: 2px solid #2a3366; border-radius: 8px; overflow: hidden; min-height: 112px;
+    background: repeating-linear-gradient(115deg, transparent 0 16px, rgba(255,215,94,.16) 16px 19px, transparent 19px 34px),
+      radial-gradient(120% 120% at 50% 40%, #1f2f73 0%, #0b1236 60%, #050914 100%); }
+  .heroart .avatar { position: absolute; left: 50%; top: 0; transform: translateX(-50%); width: 104px; height: 104px; margin: 0; filter: drop-shadow(0 0 10px rgba(111,214,255,.35)); }
+  .heroart .outfit { position: absolute; left: 50%; top: -18px; height: 124px; width: auto; margin-left: -57px; image-rendering: pixelated; filter: drop-shadow(0 0 8px rgba(111,214,255,.3)); animation: bob 1.6s steps(2) infinite; }
+  @keyframes bob { 50% { transform: translateY(2px); } }
+  .heroart .dress { position: absolute; right: 3px; top: 3px; z-index: 1; width: 30px; height: 30px; border-radius: 50%; border: 1px solid var(--gold); background: rgba(4,5,12,.75); font-size: 14px; line-height: 1; cursor: pointer; padding: 0; }
+  .heroart .dress:focus-visible, .outfits button:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
+  .stage #pose.pose-outfit { height: 104%; bottom: -3%; }
+  .outfits { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+  .outfits button { position: relative; font: inherit; color: var(--text); background: #0b1236; border: 2px solid #2a3366; border-radius: 8px; padding: 0 2px 4px; cursor: pointer; overflow: hidden; }
+  .outfits button[aria-pressed="true"] { border-color: var(--gold); box-shadow: 0 0 0 1px var(--gold) inset; }
+  .outfits .pic { display: block; height: 100px; overflow: hidden; position: relative; }
+  .outfits .pic img { position: absolute; left: 50%; top: -18px; height: 124px; width: auto; transform: translateX(-50%); image-rendering: pixelated; }
+  .outfits .pic img.bust { top: 4px; height: 92px; }
+  .outfits small { display: block; font-size: 11px; line-height: 1.3; }
+  @media (prefers-reduced-motion: reduce) { .heroart .outfit { animation: none; } }
+  .heroart .job { position: absolute; left: 0; right: 0; bottom: 0; text-align: center; font-size: 11px; color: var(--cyan); background: rgba(4,5,12,.78); padding: 1px 2px; white-space: nowrap; overflow: hidden; }
+  .heroart .job .badge { display: inline-block; border: 1px solid var(--gold); color: var(--gold); border-radius: 3px; font-size: 9px; padding: 0 3px; margin-left: 3px; }
+  .power { border: 2px solid #2a3366; border-radius: 8px; padding: 4px 10px 2px; background: #070b22; }
+  .pw-head { display: flex; justify-content: space-between; align-items: center; }
+  .pw-head small { font-size: 10px; color: var(--muted); }
+  .bonus { font-size: 10px; color: #2a1600; background: var(--gold); border-radius: 3px; padding: 0 4px; }
+  .pw-num { display: block; font-weight: normal; font-size: 26px; line-height: 1.15; color: var(--gold); text-shadow: 0 2px 0 #5a3a00, 0 0 12px rgba(255,215,94,.3); }
+  .slist { margin: 2px 0 0; font-size: 12px; line-height: 1.45; }
+  .slist div { display: flex; justify-content: space-between; gap: 6px; padding: 1px 0; border-top: 1px dashed #262d55; }
+  .slist dt { color: var(--muted); }
+  .slist dd { margin: 0; text-align: right; }
+  .slist dd.lost { color: var(--danger); }
+  .chips { display: grid; grid-template-columns: .8fr 1.35fr 1fr auto; gap: 6px; margin-top: 8px; }
+  .chip { border: 1px solid #2a3366; border-radius: 6px; background: #070b22; padding: 2px 6px; font-size: 12px; display: flex; align-items: baseline; justify-content: space-between; gap: 4px; min-width: 0; white-space: nowrap; }
+  .chip small { font-size: 9px; color: var(--muted); }
+  .chip b { font-weight: normal; overflow: hidden; text-overflow: ellipsis; }
+  #s-cond { color: var(--good); }
+  .chipbtn { font: inherit; font-size: 12px; color: var(--gold); border-color: var(--gold); cursor: pointer; align-items: center; }
+  .training { margin-top: 8px; }
+  .tr-head { display: inline-block; font-size: 11px; color: var(--gold); background: #0a1030; border: 1px solid #2a3366; border-bottom: 0; border-radius: 6px 6px 0 0; padding: 1px 10px; }
+  .stage { position: relative; aspect-ratio: 16 / 9; border: 2px solid var(--gold); border-radius: 0 8px 8px 8px; overflow: hidden; background: #0b1236; }
+  .scene { position: absolute; inset: 0; background-size: cover; background-position: center; image-rendering: pixelated; transition: opacity .6s ease; }
+  .stage #pose { position: absolute; left: 50%; bottom: 3%; transform: translateX(-50%); height: 82%; width: auto; image-rendering: pixelated; z-index: 1; filter: drop-shadow(0 3px 0 rgba(0,0,0,.35)); }
+  .gift { position: absolute; right: 6px; bottom: 6px; z-index: 2; width: 38px; height: 38px; border-radius: 50%; border: 2px solid var(--gold); background: rgba(4,5,12,.75); font-size: 18px; cursor: pointer; }
+  .tr-foot { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 2px 8px; align-items: center; margin-top: 6px; font-size: 13px; }
+  .tr-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .tr-lv { color: var(--muted); font-size: 12px; text-align: right; }
+  .tr-lv b { color: var(--gold); font-weight: normal; font-size: 15px; }
+  .tr-foot .bar { grid-column: 1; margin-top: 0; height: 10px; }
+  .tr-exp { font-size: 11px; color: var(--muted); text-align: right; }
+  .pose-tabs { display: none; gap: 6px; margin-top: 8px; }
+  .pose-tabs button { flex: 1; font: inherit; font-size: 12px; color: var(--muted); background: none; border: 1px solid #2a3366; border-radius: 6px; padding: 5px 2px; cursor: pointer; }
+  .pose-tabs button[aria-pressed="true"] { color: var(--gold); border-color: var(--gold); }
+  .ticker { display: grid; grid-template-columns: auto 1fr; gap: 8px; align-items: center; margin-top: 8px; border: 2px solid var(--gold2); border-radius: 8px; padding: 6px 8px; background: linear-gradient(180deg, #2a1400, #120800); }
+  .tk-ic { font-size: 16px; }
+  .tk-track { overflow: hidden; white-space: nowrap; font-size: 13px; color: #ffe6b0; }
+  .tk-track span { display: inline-block; padding-left: 100%; animation: tick 22s linear infinite; }
+  @keyframes tick { to { transform: translateX(-100%); } }
+  .gift:focus-visible, .chipbtn:focus-visible, .pose-tabs button:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
+
+  /* レベルアップの演出 */
+  .tc { position: absolute; left: 0; right: 0; top: 0; z-index: 2; padding: 6px 10px; font-size: clamp(14px, 4.6vw, 20px); letter-spacing: .06em;
+    color: #f2d27a; background: linear-gradient(180deg, rgba(20,40,40,.92), rgba(20,40,40,.6)); border-bottom: 2px solid #c9a227; animation: slidein .35s ease-out; }
+  .say { position: absolute; left: 6px; right: 6px; bottom: 6px; z-index: 4; margin: 0; padding: 6px 10px; min-height: 3.4em; text-align: left; font: inherit; font-size: 13px; line-height: 1.55;
+    color: var(--text); background: rgba(4,5,12,.9); border: 2px solid #fff; border-radius: 6px; cursor: pointer; }
+  .say::before { content: "＊ "; color: var(--muted); }
+  .say.t-levelup { color: var(--gold); } .say.t-leveldown, .say.t-danger { color: var(--danger); } .say.t-warn { color: var(--warn); } .say.t-sleep { color: var(--sleep); } .say.t-gain { color: var(--good); }
+  .say .cursor { font-size: 11px; }
+  @keyframes slidein { from { transform: translateY(-100%); } to { transform: none; } }
+  .tr-foot .bar.charge > i { transition: width 1.1s ease-in; background: linear-gradient(90deg, #e8b830, #fff1b0); }
+  .lvup { position: absolute; inset: 0; z-index: 3; display: grid; place-items: center; align-content: center; gap: 6px;
+    background: radial-gradient(90% 90% at 50% 50%, #0d2a5a 0%, #061230 55%, #02060f 100%); }
+  .lvup::before { content: ""; position: absolute; inset: 0; background: #fff; opacity: 0; pointer-events: none; }
+  .lvup.play::before { animation: flash .45s ease-out; }
+  @keyframes flash { 0% { opacity: .95; } 100% { opacity: 0; } }
+  .lv-grid { position: absolute; inset: 0; opacity: 0;
+    background-image: linear-gradient(rgba(111,214,255,.22) 1px, transparent 1px), linear-gradient(90deg, rgba(111,214,255,.22) 1px, transparent 1px);
+    background-size: 12px 12px; -webkit-mask: radial-gradient(70% 70% at 50% 50%, transparent 30%, #000 75%); mask: radial-gradient(70% 70% at 50% 50%, transparent 30%, #000 75%); }
+  .lvup.play .lv-grid { animation: gridin 1.2s ease-out forwards; }
+  @keyframes gridin { 0% { opacity: 0; background-size: 30px 30px; } 60% { opacity: 1; } 100% { opacity: .55; background-size: 12px 12px; } }
+  .lv-lines { position: absolute; inset: 0; width: 100%; height: 100%; }
+  .lv-lines polyline { fill: none; stroke: #6fd6ff; stroke-width: 2; stroke-dasharray: 160; stroke-dashoffset: 160; opacity: .8; }
+  .lvup.play .lv-lines polyline { animation: draw .9s .25s ease-out forwards; }
+  @keyframes draw { to { stroke-dashoffset: 0; } }
+  .lv-box { position: relative; border: 3px solid #6fd6ff; border-radius: 6px; padding: 4px 16px; background: rgba(2,8,24,.85); box-shadow: 0 0 0 2px #02060f, 0 0 18px rgba(111,214,255,.55); transform: scale(0); }
+  .lvup.play .lv-box { animation: pop .55s .2s cubic-bezier(.2,1.6,.4,1) forwards; }
+  @keyframes pop { to { transform: scale(1); } }
+  .lv-word { display: block; font-weight: normal; font-size: clamp(26px, 9vw, 40px); letter-spacing: .08em; line-height: 1.15;
+    background: linear-gradient(180deg, #fff6c8 0%, #ffd75e 45%, #ff8a1e 55%, #ff5a1e 100%); -webkit-background-clip: text; background-clip: text; color: transparent;
+    -webkit-text-stroke: 1px #3a1400; filter: drop-shadow(0 2px 0 #3a1400); }
+  .lv-sub { position: relative; margin: 0; font-size: 13px; color: #e8f6ff; text-align: center; opacity: 0; padding: 0 8px; }
+  .lvup.play .lv-sub { animation: fadein .4s 1s forwards; }
+  @keyframes fadein { to { opacity: 1; } }
+  .lvup.out { animation: fadeout .5s forwards; }
+  @keyframes fadeout { to { opacity: 0; } }
+
+  .dlg { max-width: min(420px, calc(100vw - 32px)); width: 100%; color: var(--text); padding-top: 10px; max-height: calc(100dvh - 24px); overflow: auto; }
+  .dlg .win-title { position: static; display: block; padding: 0; margin-bottom: 8px; }
+  .rec-img { max-height: min(170px, 24dvh); }
+  .dlg::backdrop { background: rgba(2,4,12,.7); }
+  .dlg-next { font-size: 13px; margin: 4px 0 8px; color: var(--gold); }
+  .dlg form { text-align: center; margin-top: 10px; }
+  .tbl tr.got td { color: var(--muted); }
+
   /* レーダー */
   .radar svg { width: 100%; max-width: 360px; display: block; margin: 0 auto; }
   .radar text { fill: var(--text); font-family: inherit; font-size: 13px; }
@@ -104,7 +219,39 @@
   /* 17部位 */
   .group { margin-bottom: 12px; }
   .group h3 { font-size: 14px; font-weight: normal; color: var(--gold); margin: 6px 0 4px; }
-  .fine { display: grid; grid-template-columns: 11.5em 2.6em 1fr 3.2em; gap: 8px; align-items: center; font-size: 13px; padding: 4px 0; }
+  .fine { display: grid; grid-template-columns: 11.5em 2.6em 1fr 3.2em; gap: 8px; align-items: center; font-size: 13px; padding: 4px 0;
+    width: 100%; font-family: inherit; color: inherit; background: none; border: 0; text-align: left; cursor: pointer; border-radius: 4px; }
+  .fine:hover, .fine-row.open .fine { background: #0d1440; }
+  .fine:focus-visible { outline: 2px solid var(--gold); outline-offset: 1px; }
+  .fine .caret { color: var(--muted); font-size: 10px; margin-left: 4px; display: inline-block; transition: transform .2s; }
+  .fine-row.open .caret { transform: rotate(90deg); color: var(--gold); }
+  .fine-tip { margin: 2px 0 8px 14px; padding: 8px 10px; border-left: 2px solid var(--gold); background: #080d2c; border-radius: 0 6px 6px 0; font-size: 12px; animation: pop2 .18s ease-out; }
+  @keyframes pop2 { from { opacity: 0; transform: translateY(-3px); } to { opacity: 1; transform: none; } }
+  .fine-tip .ft-head { margin: 0 0 6px; color: var(--gold); }
+  .fine-tip ol { margin: 0; padding-left: 1.3em; }
+  .fine-tip li { margin-bottom: 6px; }
+  .fine-tip li b { font-weight: normal; color: var(--text); font-size: 13px; }
+  .fine-tip .pct { margin-left: 6px; font-size: 11px; color: var(--cyan); }
+  .fine-tip .plan, .fine-tip .how { display: block; color: var(--muted); line-height: 1.5; }
+  .fine-tip .plan { color: #cfd6f0; }
+  .fine-tip ol { list-style: none; padding-left: 0; }
+  .fine-tip li { display: grid; grid-template-columns: 84px minmax(0, 1fr); gap: 8px; align-items: start; padding-top: 6px; border-top: 1px dashed #262d55; }
+  .eximg { width: 84px; height: 64px; object-fit: contain; background: #fff; border-radius: 6px; }
+  .eximg.none { background: #10173a; }
+  .recbtn { font: inherit; font-size: 12px; color: #2a1600; background: var(--gold); border: 0; border-radius: 6px; padding: 4px 10px; margin-top: 4px; cursor: pointer; }
+  .recbtn:focus-visible, .fld input:focus-visible, .fld select:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
+  .fine-hint { font-size: 11px; color: var(--muted); margin: 0 0 6px; }
+  .recopen { display: block; width: 100%; margin-top: 10px; color: var(--gold); border-color: var(--gold); }
+  .rec-img { display: block; width: 100%; max-height: 170px; object-fit: contain; background: #fff; border-radius: 8px; margin-bottom: 8px; }
+  .fld { display: grid; gap: 2px; font-size: 12px; color: var(--muted); margin-bottom: 8px; min-width: 0; }
+  .fld input, .fld select { font: inherit; font-size: 16px; color: var(--text); background: #0a1030; border: 2px solid #2a3366; border-radius: 6px; padding: 7px 8px; width: 100%; min-width: 0; }
+  .fld3 { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+  .rec-plan { font-size: 12px; color: #cfd6f0; margin: -2px 0 8px; }
+  .rec-msg { font-size: 12px; min-height: 1.4em; margin: 0 0 6px; color: var(--warn); }
+  .rec-btns { display: flex; gap: 8px; justify-content: center; }
+  .refresh.rec-save { color: #2a1600; background: var(--gold); border-color: var(--gold); }
+  .toast { position: fixed; left: 50%; transform: translateX(-50%); bottom: calc(84px + env(safe-area-inset-bottom, 0px)); z-index: 20; max-width: calc(100% - 32px);
+    background: #06301f; color: #c8ffe6; border: 2px solid var(--good); border-radius: 8px; padding: 8px 14px; font-size: 13px; }
   .fine .dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 6px; vertical-align: 1px; }
   .fine .l { color: var(--gold); text-align: right; }
   .fine .e { text-align: right; color: var(--muted); }
@@ -134,6 +281,9 @@
   .body-row { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; }
   .body-row div small { display: block; color: var(--muted); font-size: 11px; }
   .body-row div span { font-size: 22px; }
+  .bodychart { margin-top: 10px; display: grid; gap: 10px; }
+  .bodychart h3 { margin: 0 0 2px; font-size: 12px; font-weight: normal; color: var(--muted); }
+  @media (min-width: 560px) { .bodychart { grid-template-columns: 1fr 1fr; } }
   .delta-down { color: var(--good); font-size: 12px; } .delta-up { color: var(--warn); font-size: 12px; }
 
   /* けいけんち（スプシと同じ表） */
@@ -199,6 +349,7 @@
   @media (min-width: 960px) {
     body { padding-block: 24px; padding-left: max(24px, env(safe-area-inset-left, 0px)); padding-right: max(24px, env(safe-area-inset-right, 0px)); }
     .cmd { display: none; }
+    .pose-tabs { display: flex; }
     .grid { display: grid; grid-template-columns: 1.05fr 1fr 1fr; gap: 0 20px; align-items: start; }
     .panel { display: block !important; animation: none; }
     .msg { min-height: 0; }
@@ -207,6 +358,8 @@
   }
   @media (prefers-reduced-motion: reduce) {
     .bar > i, .mini > i { transition: none; }
+    .tk-track span { animation: none; padding-left: 0; }
+    .lvup.play *, .lvup.play::before { animation-duration: .01s !important; animation-delay: 0s !important; }
     .panel.on { animation: none; }
   }
 </style>
@@ -221,40 +374,125 @@
   </div>
   <div class="grid" id="main">
     <section class="panel on" data-tab="status">
-      <div class="win">
-        <div class="win-title">つよさ</div>
-        <div class="hero">
-          <img class="avatar" id="avatar" src="https://raw.githubusercontent.com/inoueindustries/-/main/%E7%AD%8B%E3%83%88%E3%83%AC%E5%86%92%E9%99%BA%E8%80%85%E3%82%B9%E3%83%86%E3%83%BC%E3%82%BF%E3%82%B9/images/chanz.gif" alt="ちゃんズの ドット絵" width="96" height="96">
-          <div>
-            <div class="name" id="name">―</div>
-            <div class="job" id="job">―</div>
-            <div class="muted" id="title" style="font-size:13px">―</div>
+      <div class="win home">
+        <div class="idrow">
+          <span class="rank">Lv<b class="num" id="lv">-</b></span>
+          <span class="nameplate"><button type="button" class="namebtn" id="name-open" aria-label="なまえを かえる"><span id="name">―</span> <i aria-hidden="true">✎</i></button><b class="titlechip" id="title">―</b></span>
+        </div>
+        <div class="statgrid">
+          <div class="heroart">
+            <img class="avatar" id="avatar" src="https://raw.githubusercontent.com/inoueindustries/-/main/%E7%AD%8B%E3%83%88%E3%83%AC%E5%86%92%E9%99%BA%E8%80%85%E3%82%B9%E3%83%86%E3%83%BC%E3%82%BF%E3%82%B9/images/chanz.gif" alt="ちゃんズの ドット絵" width="104" height="104">
+            <img class="outfit" id="outfit" alt="" hidden>
+            <button type="button" class="dress" id="open-outfits" aria-label="きせかえ">👕</button>
+            <span class="job" id="job">―</span>
           </div>
-          <div class="lv"><small>レベル</small><b id="lv">-</b></div>
-          <div class="bar" role="progressbar" aria-label="つぎのレベルまでの けいけんち" id="expbar"><i></i></div>
-          <div class="next"><span>E <b class="num" id="eff">0</b></span><span>つぎのレベルまで あと <b class="num" id="need">0</b></span></div>
+          <div class="power">
+            <div class="pw-head"><small>ちから（有効EXP）</small><span class="bonus" id="s-keep">―</span></div>
+            <b class="pw-num num" id="s-eff">0</b>
+            <dl class="slist">
+              <div><dt>累計EXP</dt><dd class="num" id="s-cum">0</dd></div>
+              <div><dt>失われたEXP</dt><dd class="num lost" id="s-lost">0</dd></div>
+              <div><dt>つぎのLvまで</dt><dd class="num" id="need">0</dd></div>
+            </dl>
+          </div>
         </div>
-        <div class="stats">
-          <div class="stat"><small>有効EXP</small><span class="num" id="s-eff">0</span></div>
-          <div class="stat"><small>累計EXP</small><span class="num" id="s-cum">0</span></div>
-          <div class="stat lost"><small>失われたEXP</small><span class="num" id="s-lost">0</span></div>
+        <div class="chips">
+          <span class="chip"><small>調子</small><b class="num" id="s-cond">―</b><i id="s-cond-l" hidden></i></span>
+          <span class="chip"><small>最強</small><b id="s-top">―</b></span>
+          <span class="chip"><small>修行</small><b id="s-last">―</b></span>
+          <button type="button" class="chip chipbtn" id="open-titles"><span aria-hidden="true">🏅</span>称号</button>
         </div>
+        <div class="training">
+          <div class="tr-head">▶ しゅぎょう期間 <span class="num" id="tr-period">―</span></div>
+          <div class="stage" id="stage">
+            <div class="scene" id="scene"></div>
+            <img id="pose" alt="" width="150" height="164">
+            <div class="tc" id="tc" hidden>TRAINING COMPLETE</div>
+            <button type="button" class="say" id="say" hidden aria-live="polite"></button>
+            <button type="button" class="gift" id="gift" aria-label="しょうごうの ごほうびを みる">🎁</button>
+            <div class="lvup" id="lvup" hidden aria-live="polite">
+              <div class="lv-grid"></div>
+              <svg class="lv-lines" viewBox="0 0 320 180" preserveAspectRatio="none" aria-hidden="true">
+                <polyline points="0,40 60,40 80,60 120,60"/><polyline points="320,40 260,40 240,60 200,60"/>
+                <polyline points="0,140 50,140 70,120 110,120"/><polyline points="320,140 270,140 250,120 210,120"/>
+                <polyline points="160,0 160,30"/><polyline points="160,180 160,150"/>
+              </svg>
+              <div class="lv-box"><b class="lv-word">LEVEL UP!</b></div>
+              <p class="lv-sub" id="lvup-sub"></p>
+            </div>
+          </div>
+          <div class="tr-foot">
+            <span class="tr-name" id="pose-text">―</span>
+            <span class="tr-lv">Lv.<b class="num" id="lv2">-</b></span>
+            <div class="bar" role="progressbar" aria-label="つぎのレベルまでの けいけんち" id="expbar"><i></i></div>
+            <span class="tr-exp num" id="eff">0</span>
+          </div>
+          <div class="pose-tabs" role="group" aria-label="しゅぎょうの しゅるい">
+            <button type="button" data-pose="pullup" aria-pressed="false">けんすい</button>
+            <button type="button" data-pose="pushup" aria-pressed="false">うでたて</button>
+            <button type="button" data-pose="squat" aria-pressed="false">スクワット</button>
+          </div>
+        </div>
+        <div class="ticker"><span class="tk-ic" aria-hidden="true">📜</span><div class="tk-track"><span id="ticker">―</span></div></div>
       </div>
+      <dialog class="win dlg" id="name-dlg">
+        <div class="win-title">なまえを かえる</div>
+        <form id="name-form">
+          <label class="fld">あたらしい なまえ（12文字まで）<input type="text" id="name-in" maxlength="12" autocomplete="off"></label>
+          <p class="rule">この たんまつに おぼえます。スプシは かわりません。</p>
+          <button class="refresh" type="submit" id="name-save">けってい</button> <button class="refresh" type="button" id="name-reset">もとに もどす</button> <button class="refresh" type="button" id="name-cancel">やめる</button>
+        </form>
+      </dialog>
+      <dialog class="win dlg" id="outfit-dlg">
+        <div class="win-title">きせかえ</div>
+        <div class="outfits" id="outfits"></div>
+        <p class="rule">えらんだ ふくは、この たんまつに おぼえます。しゅぎょうの 絵も きがえます。</p>
+        <form method="dialog"><button class="refresh" type="submit">とじる</button></form>
+      </dialog>
+      <dialog class="win dlg" id="titles-dlg">
+        <div class="win-title">しょうごうの ごほうび</div>
+        <p class="dlg-next" id="dlg-next"></p>
+        <div class="tbl-wrap"><table class="tbl" id="dlg-titles"></table></div>
+        <form method="dialog"><button class="refresh" type="button" id="replay">▶ レベルアップの えんしゅつ</button> <button class="refresh" type="submit">とじる</button></form>
+      </dialog>
+    </section>
+
+    <section class="panel" data-tab="parts">
       <div class="win radar">
         <div class="win-title">ぶいの バランス</div>
         <div id="radar"></div>
       </div>
-    </section>
-
-    <section class="panel" data-tab="parts">
       <div class="win">
         <div class="win-title">ぶいの ようす</div>
         <ul class="parts" id="majors"></ul>
       </div>
       <div class="win">
         <div class="win-title">こまかい ぶい（17）</div>
+        <p class="fine-hint">ぶいを おすと、きたえる しゅもくが でます。「きろくする」で そのまま 記録できます。</p>
         <div id="fines"></div>
+        <button type="button" class="refresh recopen" id="rec-open">＋ きんトレを きろくする</button>
       </div>
+      <dialog class="win dlg" id="rec-dlg">
+        <div class="win-title">きんトレの きろく</div>
+        <form id="rec-form" novalidate>
+          <img class="rec-img" id="rec-img" alt="" hidden>
+          <label class="fld">しゅもく<select id="rec-ex" required></select></label>
+          <p class="rec-plan" id="rec-plan"></p>
+          <label class="fld">ひづけ<input type="date" id="rec-date" required></label>
+          <div class="fld3" id="rec-nums">
+            <label class="fld">重量(kg)<input type="number" id="rec-w" inputmode="decimal" min="0" max="500" step="0.5"></label>
+            <label class="fld">回数<input type="number" id="rec-r" inputmode="numeric" min="1" max="1000" step="1"></label>
+            <label class="fld">セット<input type="number" id="rec-s" inputmode="numeric" min="1" max="50" step="1"></label>
+          </div>
+          <label class="fld" id="rec-memo-f" hidden>じかん・きょり（メモ）<input type="text" id="rec-memo" maxlength="60" placeholder="30分 など"></label>
+          <p class="rec-msg" id="rec-msg" role="status"></p>
+          <div class="rec-btns">
+            <button type="submit" class="refresh rec-save" id="rec-save">きろくする</button>
+            <button type="button" class="refresh" id="rec-close">とじる</button>
+          </div>
+        </form>
+      </dialog>
+      <div class="toast" id="toast" role="status" hidden></div>
     </section>
 
     <section class="panel" data-tab="log">
@@ -274,6 +512,7 @@
       <div class="win" id="bodywin" hidden>
         <div class="win-title">からだの じょうたい</div>
         <div class="body-row" id="body"></div>
+        <div class="bodychart chart" id="bodychart"></div>
       </div>
       <div class="foot">
         <span id="asof">―</span>
@@ -346,7 +585,33 @@
   // ---------- 描画 ----------
   var state = null;
 
+  // ---------- なまえの変更（この端末だけ。画面の なまえと「たたかいの きろく」の文を おきかえる） ----------
+  var NAME_KEY = 'qs.name', customName = '', rawState = null;
+  try { customName = (localStorage.getItem(NAME_KEY) || '').slice(0, 12); } catch (e) {}
+  function withName(d) {
+    if (!d || d.error || !customName || !d.player || customName === d.player) return d;
+    var o = {}; for (var k in d) o[k] = d[k];
+    o.log = (d.log || []).map(function (l) { return { type: l.type, text: l.text.split(d.player).join(customName) }; });
+    o.player = customName;
+    return o;
+  }
+  function setName(v) {
+    customName = v;
+    try { if (v) localStorage.setItem(NAME_KEY, v); else localStorage.removeItem(NAME_KEY); } catch (e) {}
+    $('name-dlg').close();
+    if (rawState) { var keep = introState; if (keep === 0) keep = 2; render(rawState); introState = keep; }
+  }
+  $('name-open').addEventListener('click', function () {
+    if (!state || state.error) return;
+    $('name-in').value = state.player || '';
+    var dlg = $('name-dlg'); if (dlg.showModal) dlg.showModal(); else dlg.setAttribute('open', '');
+    $('name-in').select();
+  });
+  $('name-form').addEventListener('submit', function (e) { e.preventDefault(); var v = $('name-in').value.trim().slice(0, 12); if (v) setName(v); });
+  $('name-reset').addEventListener('click', function () { setName(''); });
+  $('name-cancel').addEventListener('click', function () { $('name-dlg').close(); });
   function render(d) {
+    rawState = d; d = withName(d);
     state = d;
     $('notice').innerHTML = '';
     $('loading').hidden = true;
@@ -362,17 +627,28 @@
     var t = d.total;
     $('name').textContent = d.player;
     $('job').innerHTML = esc(t.job) + (t.upperJob ? '<span class="badge">上級職</span>' : '');
-    $('title').textContent = '称号：' + t.title;
+    $('title').textContent = t.title;
     $('lv').textContent = t.lv;
-    $('eff').textContent = fmt(t.eff);
+    $('lv2').textContent = t.lv;
+    $('eff').textContent = fmt(t.eff) + ' / ' + fmt(t.nextLvExp);
     $('need').textContent = fmt(t.need);
     $('s-eff').textContent = fmt(t.eff);
     $('s-cum').textContent = fmt(t.cum);
     $('s-lost').textContent = (t.lost > 0 ? '-' : '') + fmt(t.lost);
-    var bar = $('expbar');
-    bar.setAttribute('aria-valuenow', Math.round(t.progress * 100));
-    requestAnimationFrame(function () { bar.firstElementChild.style.width = (t.progress * 100).toFixed(1) + '%'; });
-
+    $('s-keep').textContent = t.cum > 0 ? '維持 ' + (t.eff / t.cum * 100).toFixed(1) + '%' : '―';
+    var top = d.majors.slice().sort(function (a, b) { return b.eff - a.eff; })[0];
+    $('s-top').textContent = top && top.eff > 0 ? top.key + ' Lv.' + top.lv : '―';
+    var lt = d.latest;
+    $('s-last').textContent = lt ? (lt.elapsed ? lt.elapsed + '日前' : 'きょう') : '―';
+    var good = d.majors.filter(function (m) { return m.cond === 'good'; }).length;
+    $('s-cond').textContent = good + '/' + d.majors.length;
+    $('s-cond-l').textContent = good === d.majors.length ? '絶好調' : '部位が絶好調';
+    var ym = String(d.asOf).match(/^(\d{4})\/(\d{1,2})/);
+    if (ym) { var last = new Date(+ym[1], +ym[2], 0).getDate(); $('tr-period').textContent = ym[1] + '/' + ('0' + ym[2]).slice(-2) + '/01〜' + ('0' + ym[2]).slice(-2) + '/' + last; }
+    $('ticker').textContent = (d.log || []).map(function (l) { return '＊ ' + l.text; }).join('　　');
+    renderPose(d);
+    setBar(t.progress);
+    checkLevelUp(d);
     $('radar').innerHTML = radarSvg(d.majors);
     renderMajors(d.majors);
     renderFines(d.fines);
@@ -403,8 +679,102 @@
     });
   }
 
+  // ---------- 種目の画像と、きんトレの記録 ----------
+  // 画像：images/exercises/（スプシ『筋トレマスタ』の画像を小さくしたもの）。公開ページでは data URI に置きかえる
+  var EX_BASE = 'https://raw.githubusercontent.com/inoueindustries/-/main/%E7%AD%8B%E3%83%88%E3%83%AC%E5%86%92%E9%99%BA%E8%80%85%E3%82%B9%E3%83%86%E3%83%BC%E3%82%BF%E3%82%B9/images/exercises/';
+  var EX_FILES = /*EXFILES-BEGIN*/{"サイドレイズ": "01.webp", "ダンベルショルダープレス": "02.webp", "ダンベルベンチプレス": "05.webp", "加重ディップス": "07.webp", "プッシュアップ": "08.webp", "懸垂": "09.webp", "ダンベルロウ": "10.webp", "ダンベルカール": "11.webp", "インクラインダンベルカール": "12.webp", "ベンチディップス": "15.webp", "スクワット": "16.webp", "カーフレイズ": "18.webp", "クランチ": "19.webp", "バイシクルクランチ": "20.webp", "ハンギングレッグレイズ": "21.webp", "プランク": "22.webp", "ロードサイクリング": "23.webp", "ウォーキング": "24.webp", "サウナ・温冷交代浴": "25.webp", "インクラインサイドレイズ": "26.webp", "ダンベルシュラッグ": "27.webp", "アブローラー": "29.webp", "ダンベルプルオーバー": "35.webp", "ダンベルルーマニアンデッドリフト": "36.webp", "サイドプランク": "38.webp", "ライイングレッグレイズ": "39.webp", "フラッターキック": "40.webp", "ロシアンツイスト": "42.webp", "リアデルトレイズ": "04.webp", "ハンマーカール": "13.webp", "トライセプスエクステンション": "14.webp", "ブルガリアンスクワット": "17.webp", "コンセントレーションカール": "31.webp", "ゾットマンカール": "32.webp", "キューバンプレス": "33.webp", "ダンベルサイドベンド": "41.webp", "インクラインダンベルプレス": "06.webp", "アップライトロウ": "28.webp", "スプリットスクワット": "30.webp", "ダンベルリアデルトロウ": "34.webp", "スーパーマン": "37.webp", "フロントレイズ": "03.webp"}/*EXFILES-END*/;
+  var EX_DATA = /*@@EXDATA@@*/null;
+  var nrm = function (v) { return String(v == null ? '' : v).replace(/（/g, '(').replace(/）/g, ')').replace(/[\s　]/g, ''); };
+  function exName(k) { var hit = ((state && state.exercises) || []).filter(function (e) { return e.name === k || nrm(e.name) === nrm(k); })[0]; return hit ? hit.name : k; }
+  function exImg(name) { if (EX_DATA) return EX_DATA[name] || ''; return EX_FILES[name] ? EX_BASE + EX_FILES[name] : ''; }
+  function exInfo(name) { return ((state && state.exercises) || []).filter(function (e) { return e.name === name; })[0] || null; }
+  var toastTimer = null;
+  function toast(msg) { var t = $('toast'); t.textContent = msg; t.hidden = false; clearTimeout(toastTimer); toastTimer = setTimeout(function () { t.hidden = true; }, 5000); }
+  function isCardio(e) { return !!e && /有酸素|リカバリー/.test(e.part); }
+  function fillRec(name) {
+    var e = exInfo(name), img = $('rec-img'), src = exImg(name);
+    img.hidden = !src; if (src) { img.src = src; img.alt = name + 'の フォーム'; }
+    $('rec-plan').textContent = e ? [e.plan ? 'めやす：' + e.plan : '', e.last ? 'ぜんかい ' + e.last.date + '：' + (e.last.r ? e.last.w + 'kg × ' + e.last.r + '回 × ' + e.last.s + 'セット' : 'きろくあり') : 'はじめての しゅもく'].filter(Boolean).join('　／　') : '';
+    var cardio = isCardio(e);
+    $('rec-nums').hidden = cardio; $('rec-memo-f').hidden = !cardio;
+    $('rec-w').value = e && e.last ? e.last.w : 0;
+    $('rec-r').value = e && e.last && e.last.r ? e.last.r : '';
+    $('rec-s').value = e && e.last ? e.last.s : 2;
+    $('rec-msg').textContent = '';
+  }
+  function openRec(name) {
+    if (!state || state.error) return;
+    var list = state.exercises || [];
+    if (!list.length) { toast('しゅもくの いちらんを よみこめませんでした'); return; }
+    var groups = {}, order = [];
+    list.forEach(function (e) { var k = e.part || 'そのた'; if (!groups[k]) { groups[k] = []; order.push(k); } groups[k].push(e.name); });
+    $('rec-ex').innerHTML = order.map(function (k) { return '<optgroup label="' + esc(k) + '">' + groups[k].map(function (n) { return '<option>' + esc(n) + '</option>'; }).join('') + '</optgroup>'; }).join('');
+    if (!name || !exInfo(name)) name = list[0].name;
+    $('rec-ex').value = name;
+    var n = new Date(), pad = function (x) { return ('0' + x).slice(-2); };
+    $('rec-date').value = n.getFullYear() + '-' + pad(n.getMonth() + 1) + '-' + pad(n.getDate());
+    fillRec(name);
+    $('rec-save').disabled = false;
+    var dlg = $('rec-dlg'); if (dlg.showModal) dlg.showModal(); else dlg.setAttribute('open', '');
+  }
+  $('rec-ex').addEventListener('change', function () { fillRec(this.value); });
+  ['rec-w', 'rec-r', 'rec-s'].forEach(function (id) { $(id).addEventListener('input', function () { $('rec-msg').textContent = ''; }); });
+  $('rec-open').addEventListener('click', function () { openRec(null); });
+  $('rec-close').addEventListener('click', function () { $('rec-dlg').close(); });
+  $('rec-form').addEventListener('submit', function (ev) {
+    ev.preventDefault();
+    var name = $('rec-ex').value, e = exInfo(name), msg = $('rec-msg'), cardio = isCardio(e);
+    var dm = $('rec-date').value.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+    if (!e || !dm) { msg.textContent = 'しゅもくと ひづけを えらんでください。'; return; }
+    var rec = { date: dm[1] + '/' + dm[2] + '/' + dm[3], ex: name, part: e.part, w: 0, r: '', s: 1, memo: '' };
+    if (cardio) { rec.memo = $('rec-memo').value.trim(); }
+    else {
+      rec.w = parseFloat($('rec-w').value || '0'); rec.r = parseInt($('rec-r').value, 10); rec.s = parseInt($('rec-s').value || '1', 10);
+      if (!(rec.r >= 1 && rec.r <= 1000)) { msg.textContent = '回数を いれてください。'; return; }
+      if (!(rec.w >= 0 && rec.w <= 500) || !(rec.s >= 1 && rec.s <= 50)) { msg.textContent = '重量は 0〜500kg、セットは 1〜50 で いれてください。'; return; }
+    }
+    var btn = $('rec-save'); btn.disabled = true; msg.textContent = 'かきこみちゅう……';
+    var ok = function () { introState = 0; $('rec-dlg').close(); toast(name + ' を きろくした！ けいけんちを けいさんしています……'); };
+    var ng = function (text, unsure) { btn.disabled = false; msg.textContent = text + (unsure ? ' もういちど おす前に、スプシに 行が ふえていないか たしかめてください。' : ''); };
+    if (isGas) {
+      google.script.run.withSuccessHandler(function (json) { var d = JSON.parse(json); if (d.error) return ng(d.error); ok(); render(d); })
+        .withFailureHandler(function (er) { ng('かきこめませんでした（' + (er && er.message || er) + '）', true); }).addLogEntry(rec);
+    } else if (mcp) {
+      saveViaMcp(rec, ok, ng);
+    } else if (window.QS_STANDALONE && getApi()) {
+      var q = '&action=add&date=' + encodeURIComponent(rec.date) + '&ex=' + encodeURIComponent(rec.ex) + '&w=' + rec.w + '&r=' + rec.r + '&s=' + rec.s + '&memo=' + encodeURIComponent(rec.memo);
+      fetch(getApi() + q, { redirect: 'follow' }).then(function (r) { return r.json(); })
+        .then(function (d) { if (d && d.error) return ng(d.error); ok(); d.fetchedAt = Date.now(); render(d); }, function () { ng('つながりませんでした。', true); });
+    } else {
+      ng('見本データでは きろくできません。');
+    }
+  });
+  // claude.ai のページ：閲覧者の Google Sheets 連携で、ログの最初の空き行に書く（式の列には さわらない）
+  var LOG_SHEET = "'トレーニング・運動ログ'";
+  function saveViaMcp(rec, ok, ng) {
+    mcp.callTool(SERVER, 'get_values', { spreadsheetId: SHEET_ID, range: LOG_SHEET + '!B1:D1000' }, { cache: false }).then(function (res) {
+      var v = payloadValues(res), row = -1;
+      for (var i = 1; i < 1000; i++) { var r = v[i] || []; if (!String(r[0] == null ? '' : r[0]).trim() && !String(r[2] == null ? '' : r[2]).trim()) { row = i + 1; break; } }
+      if (row < 2) { ng('ログの行が いっぱいです。'); return null; }
+      var cardio = rec.r === '';
+      var vals = [rec.date, rec.part, rec.ex, null, rec.w, cardio ? null : rec.r, rec.s, null, null, null, rec.memo || null];
+      return mcp.callTool(SERVER, 'update_values', { spreadsheetId: SHEET_ID, range: LOG_SHEET + '!B' + row + ':L' + row, values: [vals] }, { cache: false }).then(function () {
+        ok();
+        mcp.invalidate(SERVER).catch(function () {});
+      }, function (er) {
+        var c = er && er.code;
+        if (c === 'not_in_manifest' || c === 'approval_required' || c === 'consent_required' || c === 'blocked_by_policy') ng('スプシへの 書きこみが 許可されていません。許可してから もういちど おしてください。');
+        else if (c === 'needs_reauth' || c === 'server_not_connected') ng('Google Sheets の接続が 切れています。claude.ai の 設定 → コネクタ で つなぎ直してください。');
+        else if (c === 'tool_error') ng('かきこめませんでした。スプシを 編集できる アカウントか たしかめてください。');
+        else ng('かきこみの 結果が わかりませんでした。', true);
+      });
+    }, function () { ng('スプシを よみこめませんでした。すこし まってから もういちど おしてください。'); });
+  }
+
+  // 17部位：タップ（PCはカーソルを当てる／クリック）で、その部位を きたえる しゅぎょうを ひらく
   function renderFines(fines) {
     var max = Math.max.apply(null, fines.map(function (f) { return f.eff; }).concat([1]));
+    var tips = (state && state.tips) || {};
     var groups = [];
     fines.forEach(function (f) {
       var g = groups.filter(function (x) { return x.k === f.major; })[0];
@@ -412,16 +782,40 @@
       g.items.push(f);
     });
     $('fines').innerHTML = groups.map(function (g) {
-      return '<div class="group"><h3>' + esc(g.k) + '</h3>' + g.items.map(function (f) {
-        return '<div class="fine" title="' + esc(f.condLabel) + (f.last ? '／さいご ' + f.last : '') + '">' +
-          '<span><i class="dot b-' + f.cond + '"></i>' + esc(f.name) + '</span>' +
+      return '<div class="group"><h3>' + esc(g.k) + '</h3>' + g.items.map(function (f, n) {
+        var id = 'ft-' + esc(f.key).replace(/[^\w]/g, '') + n + g.k.length;
+        var list = tips[f.key] || [];
+        var body = list.length ? '<ol>' + list.map(function (x) {
+          var nm = exName(x.ex), src = exImg(nm);
+          return '<li>' + (src ? '<img class="eximg" loading="lazy" alt="' + esc(nm) + 'の フォーム" src="' + esc(src) + '">' : '<span class="eximg none"></span>') + '<div><b>' + esc(nm) + '</b>' + (x.ratio ? '<span class="pct">この部位に ' + Math.round(x.ratio * 100) + '%</span>' : '') +
+            (x.plan || x.guide ? '<span class="plan">' + esc(x.plan || x.guide) + '</span>' : '') +
+            (x.how ? '<span class="how">コツ：' + esc(x.how) + '</span>' : '') +
+            '<button type="button" class="recbtn" data-ex="' + esc(nm) + '">きろくする</button></div></li>';
+        }).join('') + '</ol>' : '<p class="muted">この部位に 経験値が入る種目が マスタに ありません</p>';
+        var head = (f.next != null && f.lv < 999 ? 'あと ' + fmt(f.next) + ' EXP で Lv.' + (f.lv + 1) + '！' : '') + (f.last ? '（さいご ' + esc(f.last) + '）' : '（まだ きたえていない）');
+        return '<div class="fine-row">' +
+          '<button type="button" class="fine" aria-expanded="false" aria-controls="' + id + '">' +
+          '<span><i class="dot b-' + f.cond + '"></i>' + esc(f.name) + '<span class="caret" aria-hidden="true">▸</span></span>' +
           '<span class="l">Lv' + f.lv + '</span>' +
           '<span class="mini"><i class="b-' + f.cond + '" data-w="' + (f.eff / max * 100).toFixed(1) + '"></i></span>' +
-          '<span class="e num">' + fmt(f.eff) + '</span></div>';
+          '<span class="e num">' + fmt(f.eff) + '</span></button>' +
+          '<div class="fine-tip" id="' + id + '" hidden><p class="ft-head">' + head + '</p>' + body + '</div></div>';
       }).join('') + '</div>';
     }).join('');
     requestAnimationFrame(function () {
       document.querySelectorAll('#fines .mini i').forEach(function (i) { i.style.width = i.getAttribute('data-w') + '%'; });
+    });
+    document.querySelectorAll('#fines .recbtn').forEach(function (b) { b.addEventListener('click', function () { openRec(b.getAttribute('data-ex')); }); });
+    document.querySelectorAll('#fines .eximg').forEach(function (i) { i.addEventListener('error', function () { i.classList.add('none'); i.removeAttribute('src'); }); });
+    var hover = window.matchMedia('(hover: hover) and (pointer: fine)').matches;
+    document.querySelectorAll('#fines .fine-row').forEach(function (row) {
+      var btn = row.querySelector('.fine'), tip = row.querySelector('.fine-tip'), pinned = false;
+      var show = function (on) { tip.hidden = !on; btn.setAttribute('aria-expanded', on ? 'true' : 'false'); row.classList.toggle('open', on); };
+      btn.addEventListener('click', function () { pinned = !pinned || tip.hidden; show(pinned); });
+      if (hover) {
+        row.addEventListener('mouseenter', function () { show(true); });
+        row.addEventListener('mouseleave', function () { if (!pinned) show(false); });
+      }
     });
   }
 
@@ -447,7 +841,243 @@
     $('body').innerHTML =
       '<div><small>たいじゅう（' + esc(b.date) + '）</small><span class="num">' + (b.weight != null ? b.weight.toFixed(1) : '―') + '</span> kg' + delta(b.weightFromStart, 'kg') + '</div>' +
       '<div><small>たいしぼうりつ</small><span class="num">' + (b.fat != null ? b.fat.toFixed(1) : '―') + '</span> %' + delta(b.fatFromStart, 'pt') + '</div>';
+    var se = b.series || [], out = '';
+    if (se.length >= 2) {
+      out += '<div><h3>たいじゅうの すいい（kg）</h3>' + seriesSvg(se, 'w', '#6fd3ff', '体重の推移') + '</div>';
+      if (se.filter(function (x) { return x.f != null; }).length >= 2) out += '<div><h3>たいしぼうりつの すいい（%）</h3>' + seriesSvg(se, 'f', '#ffb86b', '体脂肪率の推移') + '</div>';
+      if (se.filter(function (x) { return x.m != null; }).length >= 2) out += '<div><h3>きんにくりつの すいい（%）</h3>' + seriesSvg(se, 'm', '#7be08a', '筋肉率の推移') + '</div>';
+    } else {
+      out = '<p class="rule">けいそくが 2回ぶん たまると、ここに すいいの グラフが 出ます。</p>';
+    }
+    $('bodychart').innerHTML = out;
   }
+  // 体重・体脂肪率の折れ線（さいきん60回ぶんの計測）
+  function seriesSvg(se, key, color, label) {
+    var pts = se.map(function (x, i) { return { i: i, v: x[key], d: x.d }; }).filter(function (x) { return x.v != null; });
+    var W = 340, H = 130, L = 36, Rr = 10, T = 16, B = 22, n = se.length;
+    var vals = pts.map(function (x) { return x.v; });
+    var lo = Math.min.apply(null, vals), hi = Math.max.apply(null, vals);
+    var pad = Math.max(0.5, (hi - lo) * 0.15); lo -= pad; hi += pad;
+    var x = function (i) { return L + (W - L - Rr) * (n === 1 ? 1 : i / (n - 1)); };
+    var y = function (v) { return T + (H - T - B) * (1 - (v - lo) / (hi - lo)); };
+    var s = '<svg viewBox="0 0 ' + W + ' ' + H + '" role="img" aria-label="' + label + '">';
+    [0, 0.5, 1].forEach(function (k) {
+      var v = lo + (hi - lo) * k, yy = y(v);
+      s += '<line x1="' + L + '" x2="' + (W - Rr) + '" y1="' + yy + '" y2="' + yy + '" stroke="#1f2650"/>';
+      s += '<text x="' + (L - 6) + '" y="' + (yy + 4) + '" text-anchor="end">' + v.toFixed(1) + '</text>';
+    });
+    s += '<polyline points="' + pts.map(function (q) { return x(q.i).toFixed(1) + ',' + y(q.v).toFixed(1); }).join(' ') + '" fill="none" stroke="' + color + '" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/>';
+    if (pts.length <= 31) pts.forEach(function (q) { s += '<circle cx="' + x(q.i).toFixed(1) + '" cy="' + y(q.v).toFixed(1) + '" r="2" fill="' + color + '"/>'; });
+    var lp = pts[pts.length - 1], lx = x(lp.i);
+    s += '<circle cx="' + lx + '" cy="' + y(lp.v) + '" r="4" fill="' + color + '"/>';
+    s += '<text x="' + lx + '" y="' + (y(lp.v) - 8) + '" text-anchor="end" style="fill:' + color + ';font-size:12px">' + lp.v.toFixed(1) + '</text>';
+    [0, Math.floor((n - 1) / 2), n - 1].forEach(function (i) {
+      s += '<text x="' + x(i) + '" y="' + (H - 6) + '" text-anchor="' + (i === 0 ? 'start' : i === n - 1 ? 'end' : 'middle') + '">' + esc(se[i].d) + '</text>';
+    });
+    return s + '</svg>';
+  }
+
+  // ---------- きょうの しゅぎょう ----------
+  // 画像：images/workout/（Codex が作ったドット絵。公開ページでは build_claude_page.py が data URI に置きかえる）
+  var SPRITE_BASE = 'https://raw.githubusercontent.com/inoueindustries/-/main/%E7%AD%8B%E3%83%88%E3%83%AC%E5%86%92%E9%99%BA%E8%80%85%E3%82%B9%E3%83%86%E3%83%BC%E3%82%BF%E3%82%B9/images/workout/';
+  var SPRITES = /*@@SPRITES@@*/null;
+  var POSES = {
+    pullup: { name: 'けんすい', ms: [220, 220, 320, 220] },
+    pushup: { name: 'うでたてふせ', ms: [220, 220, 320, 220] },
+    squat: { name: 'スクワット', ms: [220, 220, 320, 220] }
+  };
+  var poseTimer = null, poseKey = null, poseManual = false;
+  // きせかえで えらんだ ふくの コマ（images/workout/<衣装ID>/）。赤いよろいは images/workout/ の直下
+  var OSPRITES = /*@@OSPRITES@@*/null;
+  function spriteUrl(k, i) {
+    var o = (typeof outfitId === 'string' && outfitId !== 'armor') ? outfitId : null;
+    if (o) return OSPRITES ? OSPRITES[o][k][i] : SPRITE_BASE + o + '/' + k + '-' + i + '.png';
+    return SPRITES ? SPRITES[k][i] : SPRITE_BASE + k + '-' + i + '.png';
+  }
+  // いちばん最近 きたえた大部位から えらぶ（同じ日なら EXP の多い部位）
+  function poseFor(d) {
+    var trained = d.majors.filter(function (m) { return m.elapsed != null; });
+    if (!trained.length) return { key: 'squat', part: null };
+    var minEl = Math.min.apply(null, trained.map(function (m) { return m.elapsed; }));
+    var m = trained.filter(function (x) { return x.elapsed === minEl; }).sort(function (a, b) { return b.eff - a.eff; })[0];
+    var key = m.key === '脚' ? 'squat' : (m.key === '背中' || m.key === '腕') ? 'pullup' : 'pushup';
+    return { key: key, part: m };
+  }
+  function playPose(key, part) {
+    poseKey = key;
+    clearTimeout(poseTimer);
+    document.querySelectorAll('.pose-tabs button').forEach(function (b) { b.setAttribute('aria-pressed', b.getAttribute('data-pose') === key ? 'true' : 'false'); });
+    var P = POSES[key], img = $('pose'), i = 0;
+    img.alt = 'ちゃんズが ' + P.name + 'を している ドット絵';
+    $('pose-text').textContent = (state && state.player ? state.player : '') + '（' + P.name + '）';
+    for (var k = 0; k < 4; k++) { var pre = new Image(); pre.src = spriteUrl(key, k); }
+    var reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    img.classList.remove('pose-outfit');
+    (function step() {
+      img.src = spriteUrl(key, i);
+      if (reduce) return;
+      poseTimer = setTimeout(function () { i = (i + 1) % 4; step(); }, P.ms[i]);
+    })();
+  }
+  // ---------- きせかえ ----------
+  // 画像：images/outfits/（立ち姿の1枚絵。420×460 の共通キャンバス）。えらんだ ふくは localStorage に おぼえる
+  var OUTFIT_BASE = 'https://raw.githubusercontent.com/inoueindustries/-/main/%E7%AD%8B%E3%83%88%E3%83%AC%E5%86%92%E9%99%BA%E8%80%85%E3%82%B9%E3%83%86%E3%83%BC%E3%82%BF%E3%82%B9/images/outfits/';
+  var OUTFITS = /*@@OUTFITS@@*/null;
+  var OUTFIT_LIST = [
+    { id: 'armor', name: 'あかい よろい' },
+    { id: 'white_tank', name: '白タンクトップ' },
+    { id: 'business_suit', name: 'ビジネススーツ' },
+    { id: 'orange_gi', name: 'オレンジ道着' },
+    { id: 'hero_cape', name: 'ヒーローマント' },
+    { id: 'running', name: 'ランニングウェア' }
+  ];
+  var OUTFIT_KEY = 'qs.outfit', outfitId = 'armor';
+  try { var ov = localStorage.getItem(OUTFIT_KEY); if (OUTFIT_LIST.some(function (o) { return o.id === ov; })) outfitId = ov; } catch (e) {}
+  function outfitUrl(id) { return OUTFITS ? OUTFITS[id] : OUTFIT_BASE + id + '.png'; }
+  function outfitName(id) { return OUTFIT_LIST.filter(function (o) { return o.id === id; })[0].name; }
+  function applyOutfit() {
+    var av = $('avatar'), im = $('outfit'), on = outfitId !== 'armor';
+    av.hidden = on; im.hidden = !on;
+    if (on) { im.src = outfitUrl(outfitId); im.alt = outfitName(outfitId) + 'を きた ちゃんズの ドット絵'; }
+  }
+  function openOutfits() {
+    $('outfits').innerHTML = OUTFIT_LIST.map(function (o) {
+      var src = o.id === 'armor' ? $('avatar').src : outfitUrl(o.id);
+      return '<button type="button" data-outfit="' + o.id + '" aria-pressed="' + (o.id === outfitId) + '"><span class="pic"><img' + (o.id === 'armor' ? ' class="bust"' : '') + ' src="' + src + '" alt=""></span><small>' + esc(o.name) + '</small></button>';
+    }).join('');
+    var dlg = $('outfit-dlg');
+    if (dlg.showModal) dlg.showModal(); else dlg.setAttribute('open', '');
+  }
+  $('open-outfits').addEventListener('click', openOutfits);
+  $('outfits').addEventListener('click', function (e) {
+    var b = e.target.closest('button[data-outfit]'); if (!b) return;
+    outfitId = b.getAttribute('data-outfit');
+    try { localStorage.setItem(OUTFIT_KEY, outfitId); } catch (err) {}
+    document.querySelectorAll('#outfits button').forEach(function (x) { x.setAttribute('aria-pressed', x === b ? 'true' : 'false'); });
+    applyOutfit();
+    if (poseKey && $('lvup').hidden && $('tc').hidden) playPose(poseKey, null);   // 修行の絵も きがえる
+  });
+  applyOutfit();
+  // ---------- 修行の場面とレベルアップの演出 ----------
+  // 背景：images/scenes/（Codex が作ったドット絵。公開ページでは data URI に置きかえる）。Lv ごとに場面が かわる
+  var SCENE_BASE = 'https://raw.githubusercontent.com/inoueindustries/-/main/%E7%AD%8B%E3%83%88%E3%83%AC%E5%86%92%E9%99%BA%E8%80%85%E3%82%B9%E3%83%86%E3%83%BC%E3%82%BF%E3%82%B9/images/scenes/';
+  var SCENES = /*@@SCENES@@*/null;
+  var SCENE_KEYS = ['mountain', 'waterfall', 'sunset', 'night'];
+  function sceneUrl(lv) { var k = SCENE_KEYS[lv % SCENE_KEYS.length]; return SCENES ? SCENES[k] : SCENE_BASE + k + '.webp'; }
+  function setScene(lv) { $('scene').style.backgroundImage = 'url("' + sceneUrl(lv) + '")'; }
+  function setBar(p) {
+    var bar = $('expbar');
+    bar.setAttribute('aria-valuenow', Math.round(p * 100));
+    requestAnimationFrame(function () { bar.firstElementChild.style.width = (p * 100).toFixed(1) + '%'; });
+  }
+  var LV_KEY = 'qs.lastLv', lvTimers = [];
+  function readLastLv() { try { var v = parseInt(localStorage.getItem(LV_KEY), 10); return isNaN(v) ? null : v; } catch (e) { return null; } }
+  function saveLastLv(v) { try { localStorage.setItem(LV_KEY, String(v)); } catch (e) {} }
+  function titleOfLv(d, lv) { var n = ''; (d.titles || []).forEach(function (x) { if (lv >= x.lv) n = x.name; }); return n; }
+  // 画面を開いたとき、前回みたときより Lv が上がっていたら 演出を出す。
+  // 前回の記録がない（はじめて開く・保存できない）ときは、さいごの修行の前の日の Lv と くらべる（修行の当日と翌日だけ）
+  var lvPlayedFor = null;
+  function checkLevelUp(d) {
+    var lv = d.total.lv, prev = readLastLv();
+    if (prev == null && d.latest && d.latest.elapsed <= 1 && d.trend) {
+      var before = d.trend[d.trend.length - 2 - d.latest.elapsed];
+      if (before) prev = before.lv;
+    }
+    if (!d.demo) saveLastLv(lv);
+    if (prev != null && lv > prev && !d.demo && lvPlayedFor !== lv) {
+      lvPlayedFor = lv;
+      var from = prev;
+      pendingLv = function () { playLevelUp(from, lv, d); };
+      if ($('lvup').hidden && $('tc').hidden) setScene(from);
+    } else if ($('lvup').hidden && $('tc').hidden && !pendingLv) setScene(lv);
+    // さきに「たたかいの きろく」の ことばを 出し、読みおわってから レベルアップの演出へ
+    var go = function () { var f = pendingLv; pendingLv = null; if (f) f(); };
+    if (introState === 0) { introState = 1; playIntro(d.log || [], function () { introState = 2; go(); }); }
+    else if (introState === 2) go();
+  }
+  // 0：まだ　1：ことばを 出している　2：おわった（記録を保存すると 0 にもどる）
+  var introState = 0, pendingLv = null, sayTimer = null;
+  function playIntro(lines, done) {
+    var box = $('say'), li = 0, ci = 0, wait = 0;
+    var reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    clearInterval(sayTimer);
+    var finish = function () { clearInterval(sayTimer); box.hidden = true; box.onclick = null; done(); };
+    if (!lines.length) { finish(); return; }
+    box.hidden = false;
+    var show = function () { box.className = 'say t-' + lines[li].type; box.textContent = lines[li].text.slice(0, ci); };
+    sayTimer = setInterval(function () {
+      var full = lines[li].text.length;
+      if (ci < full) { ci = reduce ? full : Math.min(full, ci + 2); show(); if (ci >= full) { wait = 0; box.insertAdjacentHTML('beforeend', '<span class="cursor">▼</span>'); } return; }
+      if (++wait < (reduce ? 70 : 50)) return;
+      li++; ci = 0;
+      if (li >= lines.length) finish(); else show();
+    }, 30);
+    box.onclick = function (e) {   // タップ：その行を 全文表示 → つぎの行へ
+      e.stopPropagation();
+      var full = lines[li].text.length;
+      if (ci < full) { ci = full; show(); wait = 0; box.insertAdjacentHTML('beforeend', '<span class="cursor">▼</span>'); return; }
+      li++; ci = 0;
+      if (li >= lines.length) finish(); else show();
+    };
+  }
+  // 1) TRAINING COMPLETE（立ち姿で止まり、EXPバーが満タンまで伸びる）→ 2) LEVEL UP! → 3) 次の場面へ、Lv が上がる
+  function playLevelUp(from, to, d) {
+    lvTimers.forEach(clearTimeout); lvTimers = [];
+    clearTimeout(poseTimer);
+    var box = $('lvup'), tc = $('tc'), bar = $('expbar'), t = d.total, resumeKey = poseKey;
+    var newTitle = titleOfLv(d, to), oldTitle = titleOfLv(d, from);
+    $('lvup-sub').textContent = 'Lv.' + from + ' → Lv.' + to + (newTitle && newTitle !== oldTitle ? '　しょうごう「' + newTitle + '」を てにいれた！' : '');
+    setScene(from);
+    $('lv2').textContent = from;
+    // TRAINING COMPLETE の立ち姿は、きせかえで えらんだ ふく
+    if (outfitId !== 'armor') { $('pose').src = outfitUrl(outfitId); $('pose').classList.add('pose-outfit'); }
+    else $('pose').src = spriteUrl('squat', 0);
+    tc.hidden = false;
+    bar.classList.add('charge');
+    setBar(Math.min(0.85, t.progress));
+    lvTimers.push(setTimeout(function () { setBar(1); }, 250));
+    lvTimers.push(setTimeout(function () {
+      tc.hidden = true;
+      box.hidden = false; box.classList.remove('play', 'out'); void box.offsetWidth; box.classList.add('play');
+    }, 1700));
+    lvTimers.push(setTimeout(function () { setScene(to); $('lv2').textContent = to; bar.classList.remove('charge'); setBar(0); }, 3000));
+    lvTimers.push(setTimeout(function () { box.classList.add('out'); }, 4200));
+    lvTimers.push(setTimeout(function () {
+      box.hidden = true; box.classList.remove('play', 'out');
+      setBar(t.progress);
+      playPose(resumeKey || 'squat', null);
+    }, 4700));
+  }
+  $('replay').addEventListener('click', function () { $('titles-dlg').close(); if (state && !state.error) playLevelUp(Math.max(1, state.total.lv - 1), state.total.lv, state); });
+  // しょうごうの ごほうび（つぎの称号まで）
+  function openTitles() {
+    if (!state || state.error) return;
+    var d = state, t = d.total, list = d.titles || [];
+    var next = list.filter(function (x) { return x.lv > t.lv; })[0];
+    $('dlg-next').textContent = next ? 'つぎの しょうごう：Lv.' + next.lv + '「' + next.name + '」（あと ' + fmt(Math.max(0, next.exp - t.eff)) + ' EXP）' : 'すべての しょうごうを てにいれた！';
+    $('dlg-titles').innerHTML = '<thead><tr><th class="l">必要Lv</th><th class="l">称号</th><th>必要EXP</th></tr></thead><tbody>' + list.map(function (x) {
+      var cur = x.name === t.title;
+      return '<tr class="' + (cur ? 'cur' : t.lv >= x.lv ? 'got' : '') + '"><td class="l num">Lv.' + x.lv + '</td><td class="l">' + (t.lv >= x.lv && !cur ? '✓ ' : '') + esc(x.name) + '</td><td class="num">' + fmt(x.exp) + '</td></tr>';
+    }).join('') + '</tbody>';
+    var dlg = $('titles-dlg');
+    if (dlg.showModal) dlg.showModal(); else dlg.setAttribute('open', '');
+  }
+  $('open-titles').addEventListener('click', openTitles);
+  $('gift').addEventListener('click', openTitles);
+  $('stage').addEventListener('click', function (e) {   // 場面をタップすると 修行の しゅるいが かわる
+    if (e.target.closest('button') || !$('lvup').hidden) return;
+    var keys = Object.keys(POSES), i = keys.indexOf(poseKey);
+    poseManual = true; playPose(keys[(i + 1) % keys.length], null);
+  });
+
+  function renderPose(d) {
+    var pick = poseFor(d);
+    if (poseManual && poseKey) { playPose(poseKey, null); return; }
+    playPose(pick.key, pick.part);
+  }
+  document.querySelectorAll('.pose-tabs button').forEach(function (b) {
+    b.addEventListener('click', function () { poseManual = true; playPose(b.getAttribute('data-pose'), null); });
+  });
 
   // ---------- けいけんち（スプシの表と同じ並び） ----------
   function renderExp(d) {
@@ -735,13 +1365,54 @@
         .getStatusJson();
     } else if (mcp) {
       refreshAll();
+    } else if (window.QS_STANDALONE) {
+      btn.disabled = true; btn.textContent = 'よみこみちゅう……';
+      loadApi(function () { btn.disabled = false; btn.textContent = 'さいしんの じょうほう'; });
     } else {
       render(demo());
     }
   });
 
+  // ---------- 専用アプリ（ホーム画面に置く版）：GAS の合言葉つきURLから読む ----------
+  var API_KEY = 'qs.api';
+  function getApi() { try { return localStorage.getItem(API_KEY) || ''; } catch (e) { return ''; } }
+  function askApi(msg) {
+    $('loading').hidden = true;
+    var box = $('notice'); box.innerHTML = '';
+    var w = document.createElement('div'); w.className = 'win notice';
+    w.innerHTML = '<div class="win-title">さいしょの せってい</div><p></p>' +
+      '<input id="api-in" type="url" inputmode="url" autocomplete="off" placeholder="https://script.google.com/macros/s/…/exec?format=json&key=…" style="width:100%;font:inherit;font-size:13px;padding:8px;border-radius:6px;border:2px solid var(--line);background:#0a1030;color:var(--text);margin-bottom:8px">' +
+      '<button type="button" class="refresh" id="api-save">ほぞんして よみこむ</button>';
+    w.querySelector('p').textContent = msg || 'Apps Script の setupAppKey で出た「合言葉つきURL」を はりつけてください。';
+    box.appendChild(w);
+    $('api-in').value = getApi();
+    $('api-save').addEventListener('click', function () {
+      var v = $('api-in').value.trim();
+      if (!/^https:\/\/script\.google\.com\/macros\/s\/[\w-]+\/exec\?/.test(v) || v.indexOf('key=') < 0) { w.querySelector('p').textContent = 'URLの形が ちがうようです。「https://script.google.com/macros/s/…/exec?format=json&key=…」を まるごと はりつけてください。'; return; }
+      try { localStorage.setItem(API_KEY, v); } catch (e) {}
+      box.innerHTML = ''; loadApi();
+    });
+  }
+  function loadApi(done) {
+    var api = getApi();
+    if (!api) { if (!state) { $('main').hidden = true; document.querySelector('.cmd').hidden = true; } askApi(); if (done) done(); return; }
+    if (!state) showLoading();
+    fetch(api, { redirect: 'follow' }).then(function (r) { return r.json(); }).then(function (d) {
+      if (done) done();
+      if (d && d.error) { if (!state) retract(); askApi('よみこめませんでした（' + d.error + '）。URLを たしかめてください。'); return; }
+      d.fetchedAt = Date.now(); render(d);
+    }).catch(function () {
+      if (done) done();
+      showProblem('スプシに つながりませんでした。電波を たしかめて、もういちど よみこんでください。', { label: 'もういちど よみこむ', run: function () { $('notice').innerHTML = ''; loadApi(); } });
+      var b = document.createElement('button'); b.type = 'button'; b.className = 'refresh'; b.style.marginLeft = '8px'; b.textContent = 'URLを いれなおす';
+      b.addEventListener('click', function () { askApi(); }); $('notice').firstChild.appendChild(b);
+    });
+  }
+
   // ---------- 起動 ----------
-  if (isGas) {
+  if (window.QS_STANDALONE) {
+    loadApi();
+  } else if (isGas) {
     var boot = null;
     try { boot = JSON.parse($('boot').textContent); } catch (e) { boot = demo(); }
     render(boot);
@@ -797,7 +1468,8 @@
         { type: 'warn', text: 'あしの けいけんちが あと2日で へりはじめる！ はやく きたえよう！' },
         { type: 'info', text: 'つぎの レベルまで あと 208ポイント！' },
       ],
-      body: { date: '2026/11/04', weight: 72.4, fat: 18.6, weightFromStart: -2.1, fatFromStart: -1.8, startDate: '2026/09/01' },
+      body: { date: '2026/11/04', weight: 72.4, fat: 18.6, weightFromStart: -2.1, fatFromStart: -1.8, startDate: '2026/09/01',
+        series: (function () { var a = []; for (var i = 0; i < 30; i++) a.push({ d: (i < 26 ? '10/' + (i + 6) : '11/' + (i - 25)), w: Math.round((74.5 - i * 0.07 + Math.sin(i * 1.3) * 0.4) * 10) / 10, f: Math.round((20.4 - i * 0.06 + Math.cos(i * 0.9) * 0.3) * 10) / 10 }); return a; })() },
       warnings: [],
     };
   }
