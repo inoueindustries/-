@@ -37,6 +37,10 @@ s = s.replace("/*@@SCENES@@*/null", json.dumps(scenes))
 ex_data = {n: "data:image/webp;base64," + base64.b64encode((here / "images" / "exercises" / f).read_bytes()).decode() for n, f in ex_files.items()}
 assert "/*@@EXDATA@@*/null" in s
 s = s.replace("/*@@EXDATA@@*/null", json.dumps(ex_data, ensure_ascii=False))
+outfits = {k: "data:image/png;base64," + base64.b64encode((here / "images" / "outfits" / f"{k}.png").read_bytes()).decode()
+           for k in ("white_tank", "business_suit", "orange_gi", "hero_cape", "running")}
+assert "/*@@OUTFITS@@*/null" in s
+s = s.replace("/*@@OUTFITS@@*/null", json.dumps(outfits))
 assert "/*@@SPRITES@@*/null" in s
 s = s.replace("/*@@SPRITES@@*/null", json.dumps(sprites))
 (here / "claude-page.html").write_text(s, encoding="utf-8")

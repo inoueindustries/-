@@ -97,6 +97,19 @@
     background: repeating-linear-gradient(115deg, transparent 0 16px, rgba(255,215,94,.16) 16px 19px, transparent 19px 34px),
       radial-gradient(120% 120% at 50% 40%, #1f2f73 0%, #0b1236 60%, #050914 100%); }
   .heroart .avatar { position: absolute; left: 50%; top: 0; transform: translateX(-50%); width: 104px; height: 104px; margin: 0; filter: drop-shadow(0 0 10px rgba(111,214,255,.35)); }
+  .heroart .outfit { position: absolute; left: 50%; top: -18px; height: 124px; width: auto; margin-left: -57px; image-rendering: pixelated; filter: drop-shadow(0 0 8px rgba(111,214,255,.3)); animation: bob 1.6s steps(2) infinite; }
+  @keyframes bob { 50% { transform: translateY(2px); } }
+  .heroart .dress { position: absolute; right: 3px; top: 3px; z-index: 1; width: 30px; height: 30px; border-radius: 50%; border: 1px solid var(--gold); background: rgba(4,5,12,.75); font-size: 14px; line-height: 1; cursor: pointer; padding: 0; }
+  .heroart .dress:focus-visible, .outfits button:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
+  .stage #pose.pose-outfit { height: 104%; bottom: -3%; }
+  .outfits { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+  .outfits button { position: relative; font: inherit; color: var(--text); background: #0b1236; border: 2px solid #2a3366; border-radius: 8px; padding: 0 2px 4px; cursor: pointer; overflow: hidden; }
+  .outfits button[aria-pressed="true"] { border-color: var(--gold); box-shadow: 0 0 0 1px var(--gold) inset; }
+  .outfits .pic { display: block; height: 100px; overflow: hidden; position: relative; }
+  .outfits .pic img { position: absolute; left: 50%; top: -18px; height: 124px; width: auto; transform: translateX(-50%); image-rendering: pixelated; }
+  .outfits .pic img.bust { top: 4px; height: 92px; }
+  .outfits small { display: block; font-size: 11px; line-height: 1.3; }
+  @media (prefers-reduced-motion: reduce) { .heroart .outfit { animation: none; } }
   .heroart .job { position: absolute; left: 0; right: 0; bottom: 0; text-align: center; font-size: 11px; color: var(--cyan); background: rgba(4,5,12,.78); padding: 1px 2px; white-space: nowrap; overflow: hidden; }
   .heroart .job .badge { display: inline-block; border: 1px solid var(--gold); color: var(--gold); border-radius: 3px; font-size: 9px; padding: 0 3px; margin-left: 3px; }
   .power { border: 2px solid #2a3366; border-radius: 8px; padding: 4px 10px 2px; background: #070b22; }
@@ -366,6 +379,8 @@
         <div class="statgrid">
           <div class="heroart">
             <img class="avatar" id="avatar" src="https://raw.githubusercontent.com/inoueindustries/-/main/%E7%AD%8B%E3%83%88%E3%83%AC%E5%86%92%E9%99%BA%E8%80%85%E3%82%B9%E3%83%86%E3%83%BC%E3%82%BF%E3%82%B9/images/chanz.gif" alt="ちゃんズの ドット絵" width="104" height="104">
+            <img class="outfit" id="outfit" alt="" hidden>
+            <button type="button" class="dress" id="open-outfits" aria-label="きせかえ">👕</button>
             <span class="job" id="job">―</span>
           </div>
           <div class="power">
@@ -417,6 +432,12 @@
         </div>
         <div class="ticker"><span class="tk-ic" aria-hidden="true">📜</span><div class="tk-track"><span id="ticker">―</span></div></div>
       </div>
+      <dialog class="win dlg" id="outfit-dlg">
+        <div class="win-title">きせかえ</div>
+        <div class="outfits" id="outfits"></div>
+        <p class="rule">えらんだ ふくは、この たんまつに おぼえます。しゅぎょう中の うごく絵は いまの ままです。</p>
+        <form method="dialog"><button class="refresh" type="submit">とじる</button></form>
+      </dialog>
       <dialog class="win dlg" id="titles-dlg">
         <div class="win-title">しょうごうの ごほうび</div>
         <p class="dlg-next" id="dlg-next"></p>
@@ -848,12 +869,51 @@
     $('pose-text').textContent = (state && state.player ? state.player : '') + '（' + P.name + '）';
     for (var k = 0; k < 4; k++) { var pre = new Image(); pre.src = spriteUrl(key, k); }
     var reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    img.classList.remove('pose-outfit');
     (function step() {
       img.src = spriteUrl(key, i);
       if (reduce) return;
       poseTimer = setTimeout(function () { i = (i + 1) % 4; step(); }, P.ms[i]);
     })();
   }
+  // ---------- きせかえ ----------
+  // 画像：images/outfits/（立ち姿の1枚絵。420×460 の共通キャンバス）。えらんだ ふくは localStorage に おぼえる
+  var OUTFIT_BASE = 'https://raw.githubusercontent.com/inoueindustries/-/main/%E7%AD%8B%E3%83%88%E3%83%AC%E5%86%92%E9%99%BA%E8%80%85%E3%82%B9%E3%83%86%E3%83%BC%E3%82%BF%E3%82%B9/images/outfits/';
+  var OUTFITS = /*@@OUTFITS@@*/null;
+  var OUTFIT_LIST = [
+    { id: 'armor', name: 'あかい よろい' },
+    { id: 'white_tank', name: '白タンクトップ' },
+    { id: 'business_suit', name: 'ビジネススーツ' },
+    { id: 'orange_gi', name: 'オレンジ道着' },
+    { id: 'hero_cape', name: 'ヒーローマント' },
+    { id: 'running', name: 'ランニングウェア' }
+  ];
+  var OUTFIT_KEY = 'qs.outfit', outfitId = 'armor';
+  try { var ov = localStorage.getItem(OUTFIT_KEY); if (OUTFIT_LIST.some(function (o) { return o.id === ov; })) outfitId = ov; } catch (e) {}
+  function outfitUrl(id) { return OUTFITS ? OUTFITS[id] : OUTFIT_BASE + id + '.png'; }
+  function outfitName(id) { return OUTFIT_LIST.filter(function (o) { return o.id === id; })[0].name; }
+  function applyOutfit() {
+    var av = $('avatar'), im = $('outfit'), on = outfitId !== 'armor';
+    av.hidden = on; im.hidden = !on;
+    if (on) { im.src = outfitUrl(outfitId); im.alt = outfitName(outfitId) + 'を きた ちゃんズの ドット絵'; }
+  }
+  function openOutfits() {
+    $('outfits').innerHTML = OUTFIT_LIST.map(function (o) {
+      var src = o.id === 'armor' ? $('avatar').src : outfitUrl(o.id);
+      return '<button type="button" data-outfit="' + o.id + '" aria-pressed="' + (o.id === outfitId) + '"><span class="pic"><img' + (o.id === 'armor' ? ' class="bust"' : '') + ' src="' + src + '" alt=""></span><small>' + esc(o.name) + '</small></button>';
+    }).join('');
+    var dlg = $('outfit-dlg');
+    if (dlg.showModal) dlg.showModal(); else dlg.setAttribute('open', '');
+  }
+  $('open-outfits').addEventListener('click', openOutfits);
+  $('outfits').addEventListener('click', function (e) {
+    var b = e.target.closest('button[data-outfit]'); if (!b) return;
+    outfitId = b.getAttribute('data-outfit');
+    try { localStorage.setItem(OUTFIT_KEY, outfitId); } catch (err) {}
+    document.querySelectorAll('#outfits button').forEach(function (x) { x.setAttribute('aria-pressed', x === b ? 'true' : 'false'); });
+    applyOutfit();
+  });
+  applyOutfit();
   // ---------- 修行の場面とレベルアップの演出 ----------
   // 背景：images/scenes/（Codex が作ったドット絵。公開ページでは data URI に置きかえる）。Lv ごとに場面が かわる
   var SCENE_BASE = 'https://raw.githubusercontent.com/inoueindustries/-/main/%E7%AD%8B%E3%83%88%E3%83%AC%E5%86%92%E9%99%BA%E8%80%85%E3%82%B9%E3%83%86%E3%83%BC%E3%82%BF%E3%82%B9/images/scenes/';
@@ -925,7 +985,9 @@
     $('lvup-sub').textContent = 'Lv.' + from + ' → Lv.' + to + (newTitle && newTitle !== oldTitle ? '　しょうごう「' + newTitle + '」を てにいれた！' : '');
     setScene(from);
     $('lv2').textContent = from;
-    $('pose').src = spriteUrl('squat', 0);
+    // TRAINING COMPLETE の立ち姿は、きせかえで えらんだ ふく
+    if (outfitId !== 'armor') { $('pose').src = outfitUrl(outfitId); $('pose').classList.add('pose-outfit'); }
+    else $('pose').src = spriteUrl('squat', 0);
     tc.hidden = false;
     bar.classList.add('charge');
     setBar(Math.min(0.85, t.progress));
