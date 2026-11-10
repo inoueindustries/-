@@ -168,8 +168,9 @@ var QSWeb = (function () {
     if (hr < 0) return null;
     var header = v[hr].map(norm), dc = findCol(header, /日付/, 0), wc = findCol(header, /体重/, -1);
     var fc = findCol(header, /体脂肪率/, findCol(header, /体脂肪/, -1));
+    var mc = findCol(header, /筋肉率/, -1);
     var rows = v.slice(hr + 1).map(function (r) {
-      return { day: toDayNum(cell(r, dc)), w: num(cell(r, wc)) || null, f: fc >= 0 ? (num(cell(r, fc)) || null) : null };
+      return { day: toDayNum(cell(r, dc)), w: num(cell(r, wc)) || null, m: mc >= 0 ? (num(cell(r, mc)) || null) : null, f: fc >= 0 ? (num(cell(r, fc)) || null) : null };
     }).filter(function (r) { return r.day != null && r.w; });
     if (!rows.length) return null;
     rows.sort(function (a, b) { return a.day - b.day; });
@@ -179,7 +180,8 @@ var QSWeb = (function () {
       date: fmt(last.day, true), weight: last.w, fat: pct(last.f),
       weightFromStart: last.w - first.w,
       fatFromStart: last.f != null && first.f != null ? pct(last.f) - pct(first.f) : null,
-      startDate: fmt(first.day, true)
+      startDate: fmt(first.day, true),
+      series: rows.slice(-60).map(function (r) { return { d: fmt(r.day), w: r.w, f: pct(r.f), m: pct(r.m) }; })
     };
   }
 

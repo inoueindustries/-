@@ -148,6 +148,11 @@
   /* レベルアップの演出 */
   .tc { position: absolute; left: 0; right: 0; top: 0; z-index: 2; padding: 6px 10px; font-size: clamp(14px, 4.6vw, 20px); letter-spacing: .06em;
     color: #f2d27a; background: linear-gradient(180deg, rgba(20,40,40,.92), rgba(20,40,40,.6)); border-bottom: 2px solid #c9a227; animation: slidein .35s ease-out; }
+  .say { position: absolute; left: 6px; right: 6px; bottom: 6px; z-index: 4; margin: 0; padding: 6px 10px; min-height: 3.4em; text-align: left; font: inherit; font-size: 13px; line-height: 1.55;
+    color: var(--text); background: rgba(4,5,12,.9); border: 2px solid #fff; border-radius: 6px; cursor: pointer; }
+  .say::before { content: "＊ "; color: var(--muted); }
+  .say.t-levelup { color: var(--gold); } .say.t-leveldown, .say.t-danger { color: var(--danger); } .say.t-warn { color: var(--warn); } .say.t-sleep { color: var(--sleep); } .say.t-gain { color: var(--good); }
+  .say .cursor { font-size: 11px; }
   @keyframes slidein { from { transform: translateY(-100%); } to { transform: none; } }
   .tr-foot .bar.charge > i { transition: width 1.1s ease-in; background: linear-gradient(90deg, #e8b830, #fff1b0); }
   .lvup { position: absolute; inset: 0; z-index: 3; display: grid; place-items: center; align-content: center; gap: 6px;
@@ -268,6 +273,9 @@
   .body-row { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; }
   .body-row div small { display: block; color: var(--muted); font-size: 11px; }
   .body-row div span { font-size: 22px; }
+  .bodychart { margin-top: 10px; display: grid; gap: 10px; }
+  .bodychart h3 { margin: 0 0 2px; font-size: 12px; font-weight: normal; color: var(--muted); }
+  @media (min-width: 560px) { .bodychart { grid-template-columns: 1fr 1fr; } }
   .delta-down { color: var(--good); font-size: 12px; } .delta-up { color: var(--warn); font-size: 12px; }
 
   /* けいけんち（スプシと同じ表） */
@@ -390,6 +398,7 @@
             <div class="scene" id="scene"></div>
             <img id="pose" alt="" width="150" height="164">
             <div class="tc" id="tc" hidden>TRAINING COMPLETE</div>
+            <button type="button" class="say" id="say" hidden aria-live="polite"></button>
             <button type="button" class="gift" id="gift" aria-label="しょうごうの ごほうびを みる">🎁</button>
             <div class="lvup" id="lvup" hidden aria-live="polite">
               <div class="lv-grid"></div>
@@ -479,6 +488,7 @@
       <div class="win" id="bodywin" hidden>
         <div class="win-title">からだの じょうたい</div>
         <div class="body-row" id="body"></div>
+        <div class="bodychart chart" id="bodychart"></div>
       </div>
       <div class="foot">
         <span id="asof">―</span>
@@ -674,7 +684,7 @@
       if (!(rec.w >= 0 && rec.w <= 500) || !(rec.s >= 1 && rec.s <= 50)) { msg.textContent = '重量は 0〜500kg、セットは 1〜50 で いれてください。'; return; }
     }
     var btn = $('rec-save'); btn.disabled = true; msg.textContent = 'かきこみちゅう……';
-    var ok = function () { $('rec-dlg').close(); toast(name + ' を きろくした！ けいけんちを けいさんしています……'); };
+    var ok = function () { introState = 0; $('rec-dlg').close(); toast(name + ' を きろくした！ けいけんちを けいさんしています……'); };
     var ng = function (text, unsure) { btn.disabled = false; msg.textContent = text + (unsure ? ' もういちど おす前に、スプシに 行が ふえていないか たしかめてください。' : ''); };
     if (isGas) {
       google.script.run.withSuccessHandler(function (json) { var d = JSON.parse(json); if (d.error) return ng(d.error); ok(); render(d); })
@@ -781,6 +791,40 @@
     $('body').innerHTML =
       '<div><small>たいじゅう（' + esc(b.date) + '）</small><span class="num">' + (b.weight != null ? b.weight.toFixed(1) : '―') + '</span> kg' + delta(b.weightFromStart, 'kg') + '</div>' +
       '<div><small>たいしぼうりつ</small><span class="num">' + (b.fat != null ? b.fat.toFixed(1) : '―') + '</span> %' + delta(b.fatFromStart, 'pt') + '</div>';
+    var se = b.series || [], out = '';
+    if (se.length >= 2) {
+      out += '<div><h3>たいじゅうの すいい（kg）</h3>' + seriesSvg(se, 'w', '#6fd3ff', '体重の推移') + '</div>';
+      if (se.filter(function (x) { return x.f != null; }).length >= 2) out += '<div><h3>たいしぼうりつの すいい（%）</h3>' + seriesSvg(se, 'f', '#ffb86b', '体脂肪率の推移') + '</div>';
+      if (se.filter(function (x) { return x.m != null; }).length >= 2) out += '<div><h3>きんにくりつの すいい（%）</h3>' + seriesSvg(se, 'm', '#7be08a', '筋肉率の推移') + '</div>';
+    } else {
+      out = '<p class="rule">けいそくが 2回ぶん たまると、ここに すいいの グラフが 出ます。</p>';
+    }
+    $('bodychart').innerHTML = out;
+  }
+  // 体重・体脂肪率の折れ線（さいきん60回ぶんの計測）
+  function seriesSvg(se, key, color, label) {
+    var pts = se.map(function (x, i) { return { i: i, v: x[key], d: x.d }; }).filter(function (x) { return x.v != null; });
+    var W = 340, H = 130, L = 36, Rr = 10, T = 16, B = 22, n = se.length;
+    var vals = pts.map(function (x) { return x.v; });
+    var lo = Math.min.apply(null, vals), hi = Math.max.apply(null, vals);
+    var pad = Math.max(0.5, (hi - lo) * 0.15); lo -= pad; hi += pad;
+    var x = function (i) { return L + (W - L - Rr) * (n === 1 ? 1 : i / (n - 1)); };
+    var y = function (v) { return T + (H - T - B) * (1 - (v - lo) / (hi - lo)); };
+    var s = '<svg viewBox="0 0 ' + W + ' ' + H + '" role="img" aria-label="' + label + '">';
+    [0, 0.5, 1].forEach(function (k) {
+      var v = lo + (hi - lo) * k, yy = y(v);
+      s += '<line x1="' + L + '" x2="' + (W - Rr) + '" y1="' + yy + '" y2="' + yy + '" stroke="#1f2650"/>';
+      s += '<text x="' + (L - 6) + '" y="' + (yy + 4) + '" text-anchor="end">' + v.toFixed(1) + '</text>';
+    });
+    s += '<polyline points="' + pts.map(function (q) { return x(q.i).toFixed(1) + ',' + y(q.v).toFixed(1); }).join(' ') + '" fill="none" stroke="' + color + '" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/>';
+    if (pts.length <= 31) pts.forEach(function (q) { s += '<circle cx="' + x(q.i).toFixed(1) + '" cy="' + y(q.v).toFixed(1) + '" r="2" fill="' + color + '"/>'; });
+    var lp = pts[pts.length - 1], lx = x(lp.i);
+    s += '<circle cx="' + lx + '" cy="' + y(lp.v) + '" r="4" fill="' + color + '"/>';
+    s += '<text x="' + lx + '" y="' + (y(lp.v) - 8) + '" text-anchor="end" style="fill:' + color + ';font-size:12px">' + lp.v.toFixed(1) + '</text>';
+    [0, Math.floor((n - 1) / 2), n - 1].forEach(function (i) {
+      s += '<text x="' + x(i) + '" y="' + (H - 6) + '" text-anchor="' + (i === 0 ? 'start' : i === n - 1 ? 'end' : 'middle') + '">' + esc(se[i].d) + '</text>';
+    });
+    return s + '</svg>';
   }
 
   // ---------- きょうの しゅぎょう ----------
@@ -844,8 +888,41 @@
       if (before) prev = before.lv;
     }
     if (!d.demo) saveLastLv(lv);
-    if (prev != null && lv > prev && !d.demo && lvPlayedFor !== lv) { lvPlayedFor = lv; playLevelUp(prev, lv, d); }
-    else if ($('lvup').hidden && $('tc').hidden) setScene(lv);
+    if (prev != null && lv > prev && !d.demo && lvPlayedFor !== lv) {
+      lvPlayedFor = lv;
+      var from = prev;
+      pendingLv = function () { playLevelUp(from, lv, d); };
+      if ($('lvup').hidden && $('tc').hidden) setScene(from);
+    } else if ($('lvup').hidden && $('tc').hidden && !pendingLv) setScene(lv);
+    // さきに「たたかいの きろく」の ことばを 出し、読みおわってから レベルアップの演出へ
+    var go = function () { var f = pendingLv; pendingLv = null; if (f) f(); };
+    if (introState === 0) { introState = 1; playIntro(d.log || [], function () { introState = 2; go(); }); }
+    else if (introState === 2) go();
+  }
+  // 0：まだ　1：ことばを 出している　2：おわった（記録を保存すると 0 にもどる）
+  var introState = 0, pendingLv = null, sayTimer = null;
+  function playIntro(lines, done) {
+    var box = $('say'), li = 0, ci = 0, wait = 0;
+    var reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    clearInterval(sayTimer);
+    var finish = function () { clearInterval(sayTimer); box.hidden = true; box.onclick = null; done(); };
+    if (!lines.length) { finish(); return; }
+    box.hidden = false;
+    var show = function () { box.className = 'say t-' + lines[li].type; box.textContent = lines[li].text.slice(0, ci); };
+    sayTimer = setInterval(function () {
+      var full = lines[li].text.length;
+      if (ci < full) { ci = reduce ? full : Math.min(full, ci + 2); show(); if (ci >= full) { wait = 0; box.insertAdjacentHTML('beforeend', '<span class="cursor">▼</span>'); } return; }
+      if (++wait < (reduce ? 70 : 50)) return;
+      li++; ci = 0;
+      if (li >= lines.length) finish(); else show();
+    }, 30);
+    box.onclick = function (e) {   // タップ：その行を 全文表示 → つぎの行へ
+      e.stopPropagation();
+      var full = lines[li].text.length;
+      if (ci < full) { ci = full; show(); wait = 0; box.insertAdjacentHTML('beforeend', '<span class="cursor">▼</span>'); return; }
+      li++; ci = 0;
+      if (li >= lines.length) finish(); else show();
+    };
   }
   // 1) TRAINING COMPLETE（立ち姿で止まり、EXPバーが満タンまで伸びる）→ 2) LEVEL UP! → 3) 次の場面へ、Lv が上がる
   function playLevelUp(from, to, d) {
@@ -1293,7 +1370,8 @@
         { type: 'warn', text: 'あしの けいけんちが あと2日で へりはじめる！ はやく きたえよう！' },
         { type: 'info', text: 'つぎの レベルまで あと 208ポイント！' },
       ],
-      body: { date: '2026/11/04', weight: 72.4, fat: 18.6, weightFromStart: -2.1, fatFromStart: -1.8, startDate: '2026/09/01' },
+      body: { date: '2026/11/04', weight: 72.4, fat: 18.6, weightFromStart: -2.1, fatFromStart: -1.8, startDate: '2026/09/01',
+        series: (function () { var a = []; for (var i = 0; i < 30; i++) a.push({ d: (i < 26 ? '10/' + (i + 6) : '11/' + (i - 25)), w: Math.round((74.5 - i * 0.07 + Math.sin(i * 1.3) * 0.4) * 10) / 10, f: Math.round((20.4 - i * 0.06 + Math.cos(i * 0.9) * 0.3) * 10) / 10 }); return a; })() },
       warnings: [],
     };
   }

@@ -330,8 +330,9 @@ const QS = (() => {
       const dc = findCol(header, /日付/, 0);
       const wc = findCol(header, /体重/, -1);
       const fc = findCol(header, /体脂肪率/, findCol(header, /体脂肪/, -1));
+      const mc = findCol(header, /筋肉率/, -1);
       const rows = v.slice(hr + 1)
-        .map(r => ({ day: toDayNum(r[dc]), w: Number(r[wc]) || null, f: fc >= 0 ? (Number(r[fc]) || null) : null }))
+        .map(r => ({ day: toDayNum(r[dc]), w: Number(r[wc]) || null, m: mc >= 0 ? (Number(r[mc]) || null) : null, f: fc >= 0 ? (Number(r[fc]) || null) : null }))
         .filter(r => r.day != null && r.w);
       if (!rows.length) return null;
       rows.sort((a, b) => a.day - b.day);
@@ -343,7 +344,7 @@ const QS = (() => {
         weightFromStart: last.w - first.w,
         fatFromStart: last.f != null && first.f != null ? pct(last.f) - pct(first.f) : null,
         startDate: fmt(first.day, true),
-        series: rows.slice(-60).map(r => ({ d: fmt(r.day), w: r.w, f: pct(r.f) })),
+        series: rows.slice(-60).map(r => ({ d: fmt(r.day), w: r.w, f: pct(r.f), m: pct(r.m) })),
       };
     } catch (e) {
       return null;
