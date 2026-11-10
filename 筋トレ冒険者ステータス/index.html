@@ -89,6 +89,9 @@
   .idrow { display: grid; grid-template-columns: auto 1fr; gap: 8px; align-items: center; margin-bottom: 8px; }
   .rank { font-size: 11px; color: var(--muted); letter-spacing: .1em; }
   .rank b { font-weight: normal; font-size: 26px; line-height: 1; color: var(--gold); margin-left: 3px; text-shadow: 0 0 10px rgba(255,215,94,.35); }
+  .namebtn { font: inherit; letter-spacing: inherit; color: inherit; background: none; border: 0; padding: 4px 0; margin: 0; cursor: pointer; text-align: left; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .namebtn i { font-style: normal; font-size: 12px; color: var(--muted); }
+  .namebtn:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
   .nameplate { display: flex; align-items: center; justify-content: space-between; gap: 6px; border: 2px solid #2a3366; border-radius: 6px; padding: 3px 6px 3px 10px; font-size: 17px; letter-spacing: .06em; background: #0a1030; min-width: 0; }
   .titlechip { font-weight: normal; font-size: 12px; letter-spacing: 0; padding: 1px 8px; border-radius: 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
     color: #2a1600; background: linear-gradient(180deg, #fff1b0, var(--gold) 45%, var(--gold2)); box-shadow: 0 0 0 1px #5a3a00; }
@@ -374,7 +377,7 @@
       <div class="win home">
         <div class="idrow">
           <span class="rank">Lv<b class="num" id="lv">-</b></span>
-          <span class="nameplate"><span id="name">―</span><b class="titlechip" id="title">―</b></span>
+          <span class="nameplate"><button type="button" class="namebtn" id="name-open" aria-label="なまえを かえる"><span id="name">―</span> <i aria-hidden="true">✎</i></button><b class="titlechip" id="title">―</b></span>
         </div>
         <div class="statgrid">
           <div class="heroart">
@@ -432,6 +435,14 @@
         </div>
         <div class="ticker"><span class="tk-ic" aria-hidden="true">📜</span><div class="tk-track"><span id="ticker">―</span></div></div>
       </div>
+      <dialog class="win dlg" id="name-dlg">
+        <div class="win-title">なまえを かえる</div>
+        <form id="name-form">
+          <label class="fld">あたらしい なまえ（12文字まで）<input type="text" id="name-in" maxlength="12" autocomplete="off"></label>
+          <p class="rule">この たんまつに おぼえます。スプシは かわりません。</p>
+          <button class="refresh" type="submit" id="name-save">けってい</button> <button class="refresh" type="button" id="name-reset">もとに もどす</button> <button class="refresh" type="button" id="name-cancel">やめる</button>
+        </form>
+      </dialog>
       <dialog class="win dlg" id="outfit-dlg">
         <div class="win-title">きせかえ</div>
         <div class="outfits" id="outfits"></div>
@@ -574,7 +585,33 @@
   // ---------- 描画 ----------
   var state = null;
 
+  // ---------- なまえの変更（この端末だけ。画面の なまえと「たたかいの きろく」の文を おきかえる） ----------
+  var NAME_KEY = 'qs.name', customName = '', rawState = null;
+  try { customName = (localStorage.getItem(NAME_KEY) || '').slice(0, 12); } catch (e) {}
+  function withName(d) {
+    if (!d || d.error || !customName || !d.player || customName === d.player) return d;
+    var o = {}; for (var k in d) o[k] = d[k];
+    o.log = (d.log || []).map(function (l) { return { type: l.type, text: l.text.split(d.player).join(customName) }; });
+    o.player = customName;
+    return o;
+  }
+  function setName(v) {
+    customName = v;
+    try { if (v) localStorage.setItem(NAME_KEY, v); else localStorage.removeItem(NAME_KEY); } catch (e) {}
+    $('name-dlg').close();
+    if (rawState) { var keep = introState; if (keep === 0) keep = 2; render(rawState); introState = keep; }
+  }
+  $('name-open').addEventListener('click', function () {
+    if (!state || state.error) return;
+    $('name-in').value = state.player || '';
+    var dlg = $('name-dlg'); if (dlg.showModal) dlg.showModal(); else dlg.setAttribute('open', '');
+    $('name-in').select();
+  });
+  $('name-form').addEventListener('submit', function (e) { e.preventDefault(); var v = $('name-in').value.trim().slice(0, 12); if (v) setName(v); });
+  $('name-reset').addEventListener('click', function () { setName(''); });
+  $('name-cancel').addEventListener('click', function () { $('name-dlg').close(); });
   function render(d) {
+    rawState = d; d = withName(d);
     state = d;
     $('notice').innerHTML = '';
     $('loading').hidden = true;
