@@ -67,6 +67,21 @@ function doGet(e) {
     return ContentService.createTextOutput(JSON.stringify({ error: '合言葉がちがいます' }))
       .setMimeType(ContentService.MimeType.JSON);
   }
+  // 専用アプリ用：スプシの生の値だけを返す。計算と画面はアプリ（GitHub Pages）側で行うので、
+  // アプリの機能を足しても このスクリプトの再デプロイは いらない。r=範囲（A1形式）を いくつでも
+  if (p.format === 'ranges') {
+    if (!appKey) return ContentService.createTextOutput(JSON.stringify({ error: '先に setupAppKey を実行してください' })).setMimeType(ContentService.MimeType.JSON);
+    const book = SpreadsheetApp.openById(QS_CONFIG.SPREADSHEET_ID);
+    const out = ((e.parameters && e.parameters.r) || []).slice(0, 12).map(a1 => {
+      try {
+        const v = book.getRange(a1).getDisplayValues();
+        let n = v.length;
+        while (n > 0 && v[n - 1].every(c => c === '')) n--;   // 下の空行は送らない
+        return v.slice(0, n);
+      } catch (err) { return null; }
+    });
+    return ContentService.createTextOutput(JSON.stringify({ ranges: out })).setMimeType(ContentService.MimeType.JSON);
+  }
   if (p.action === 'add') {   // 専用アプリからの記録（合言葉つきURLのときだけ）
     if (!appKey) return ContentService.createTextOutput(JSON.stringify({ error: '先に setupAppKey を実行してください' })).setMimeType(ContentService.MimeType.JSON);
     return ContentService.createTextOutput(addLogEntry(p)).setMimeType(ContentService.MimeType.JSON);
@@ -142,10 +157,11 @@ function checkLogRow_(sh, row, p) {
   const d = v[0] instanceof Date ? Utilities.formatDate(v[0], tz, 'yyyy/MM/dd') : String(v[0]);
   if (String(v[2]).trim() !== String(p.ex0 || '').trim() || d !== String(p.date0 || '')) throw new Error('きろくが かわっています。よみこみ直してから もういちど ためしてください');
 }
-function withLogLock_(fn) {
+function withLogLock_(fn, p) {
   try {
     const lock = LockService.getScriptLock(); lock.waitLock(10000);
     try { fn(logSheet_()); } finally { lock.releaseLock(); }
+    if (p && p.lite) return JSON.stringify({ ok: true });   // 専用アプリは このあと 自分で読み直して計算する
     return getStatusJson();
   } catch (err) {
     return JSON.stringify({ error: String(err && err.message || err) });
@@ -162,7 +178,7 @@ function addLogEntry(p) {
     const row = last + 3;
     if (row > sh.getMaxRows()) throw new Error('ログの行が いっぱいです');
     writeLogRow_(sh, row, rec);
-  });
+  }, p);
 }
 /** 1行なおす。addLogEntry の中身に加えて {row:行番号, ex0:もとの種目名, date0:'もとの日付 yyyy/MM/dd'} */
 function updateLogEntry(p) {
@@ -170,7 +186,7 @@ function updateLogEntry(p) {
     const rec = parseRec_(p), row = Number(p.row);
     checkLogRow_(sh, row, p);
     writeLogRow_(sh, row, rec);
-  });
+  }, p);
 }
 /** 1行とりけす（入力した列だけ 空にする）。{row, ex0, date0} */
 function deleteLogEntry(p) {
@@ -181,7 +197,7 @@ function deleteLogEntry(p) {
     sh.getRange(row, 6, 1, 3).clearContent();
     sh.getRange(row, 12).clearContent();
     SpreadsheetApp.flush();
-  });
+  }, p);
 }
 
 function getStatusJson() {
