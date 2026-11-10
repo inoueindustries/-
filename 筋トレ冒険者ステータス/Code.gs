@@ -88,9 +88,9 @@ function doGet(e) {
 function setupAppKey() {
   const key = Utilities.getUuid().replace(/-/g, '');
   PropertiesService.getScriptProperties().setProperty('APP_KEY', key);
-  const url = ScriptApp.getService().getUrl();
-  Logger.log(url ? '▼ このURLをアプリに貼ってください\n' + url + '?format=json&key=' + key
-    : '合言葉を作りました。先に「デプロイ → 新しいデプロイ → ウェブアプリ」をしてから、もう一度実行してください');
+  // エディタから実行すると getUrl() はテスト用（/dev）のURLを返すので、URLは作らず合言葉だけを出す
+  Logger.log('▼ あいことば（アプリの ② に貼ってください）\nkey=' + key +
+    '\n\n① に貼るURLは「デプロイ → デプロイを管理」に出る、/exec で終わる「ウェブアプリ URL」です');
 }
 
 /** トレーニングログに1行足す。{date:'2026/11/10', ex:'種目名', w:重量, r:回数, s:セット数, memo:'時間・距離'}。足したあとの最新ステータスを返す */
