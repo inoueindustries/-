@@ -1362,13 +1362,54 @@ if (typeof module !== 'undefined') module.exports = QSWeb;
         .getStatusJson();
     } else if (mcp) {
       refreshAll();
+    } else if (window.QS_STANDALONE) {
+      btn.disabled = true; btn.textContent = 'よみこみちゅう……';
+      loadApi(function () { btn.disabled = false; btn.textContent = 'さいしんの じょうほう'; });
     } else {
       render(demo());
     }
   });
 
+  // ---------- 専用アプリ（ホーム画面に置く版）：GAS の合言葉つきURLから読む ----------
+  var API_KEY = 'qs.api';
+  function getApi() { try { return localStorage.getItem(API_KEY) || ''; } catch (e) { return ''; } }
+  function askApi(msg) {
+    $('loading').hidden = true;
+    var box = $('notice'); box.innerHTML = '';
+    var w = document.createElement('div'); w.className = 'win notice';
+    w.innerHTML = '<div class="win-title">さいしょの せってい</div><p></p>' +
+      '<input id="api-in" type="url" inputmode="url" autocomplete="off" placeholder="https://script.google.com/macros/s/…/exec?format=json&key=…" style="width:100%;font:inherit;font-size:13px;padding:8px;border-radius:6px;border:2px solid var(--line);background:#0a1030;color:var(--text);margin-bottom:8px">' +
+      '<button type="button" class="refresh" id="api-save">ほぞんして よみこむ</button>';
+    w.querySelector('p').textContent = msg || 'Apps Script の setupAppKey で出た「合言葉つきURL」を はりつけてください。';
+    box.appendChild(w);
+    $('api-in').value = getApi();
+    $('api-save').addEventListener('click', function () {
+      var v = $('api-in').value.trim();
+      if (!/^https:\/\/script\.google\.com\/macros\/s\/[\w-]+\/exec\?/.test(v) || v.indexOf('key=') < 0) { w.querySelector('p').textContent = 'URLの形が ちがうようです。「https://script.google.com/macros/s/…/exec?format=json&key=…」を まるごと はりつけてください。'; return; }
+      try { localStorage.setItem(API_KEY, v); } catch (e) {}
+      box.innerHTML = ''; loadApi();
+    });
+  }
+  function loadApi(done) {
+    var api = getApi();
+    if (!api) { if (!state) { $('main').hidden = true; document.querySelector('.cmd').hidden = true; } askApi(); if (done) done(); return; }
+    if (!state) showLoading();
+    fetch(api, { redirect: 'follow' }).then(function (r) { return r.json(); }).then(function (d) {
+      if (done) done();
+      if (d && d.error) { if (!state) retract(); askApi('よみこめませんでした（' + d.error + '）。URLを たしかめてください。'); return; }
+      d.fetchedAt = Date.now(); render(d);
+    }).catch(function () {
+      if (done) done();
+      showProblem('スプシに つながりませんでした。電波を たしかめて、もういちど よみこんでください。', { label: 'もういちど よみこむ', run: function () { $('notice').innerHTML = ''; loadApi(); } });
+      var b = document.createElement('button'); b.type = 'button'; b.className = 'refresh'; b.style.marginLeft = '8px'; b.textContent = 'URLを いれなおす';
+      b.addEventListener('click', function () { askApi(); }); $('notice').firstChild.appendChild(b);
+    });
+  }
+
   // ---------- 起動 ----------
-  if (isGas) {
+  if (window.QS_STANDALONE) {
+    loadApi();
+  } else if (isGas) {
     var boot = null;
     try { boot = JSON.parse($('boot').textContent); } catch (e) { boot = demo(); }
     render(boot);

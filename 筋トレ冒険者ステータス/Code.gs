@@ -60,7 +60,14 @@ const QS_CONFIG = {
 };
 
 function doGet(e) {
-  if (e && e.parameter && e.parameter.format === 'json') {
+  const p = (e && e.parameter) || {};
+  // 専用アプリ（スマホのホーム画面に置く版）用：setupAppKey で合言葉を作ったあとは、合言葉つきのURLでしか読めない
+  const appKey = PropertiesService.getScriptProperties().getProperty('APP_KEY');
+  if (appKey && p.key !== appKey) {
+    return ContentService.createTextOutput(JSON.stringify({ error: '合言葉がちがいます' }))
+      .setMimeType(ContentService.MimeType.JSON);
+  }
+  if (p.format === 'json') {
     return ContentService.createTextOutput(getStatusJson())
       .setMimeType(ContentService.MimeType.JSON);
   }
@@ -71,6 +78,15 @@ function doGet(e) {
     .addMetaTag('viewport', 'width=device-width, initial-scale=1, viewport-fit=cover')
     .addMetaTag('apple-mobile-web-app-capable', 'yes')
     .addMetaTag('mobile-web-app-capable', 'yes');
+}
+
+/** 専用アプリ用の「合言葉つきURL」を作る。1回実行して、実行ログに出たURLをアプリに貼る。もう一度実行すると合言葉が変わり、前のURLは使えなくなる */
+function setupAppKey() {
+  const key = Utilities.getUuid().replace(/-/g, '');
+  PropertiesService.getScriptProperties().setProperty('APP_KEY', key);
+  const url = ScriptApp.getService().getUrl();
+  Logger.log(url ? '▼ このURLをアプリに貼ってください\n' + url + '?format=json&key=' + key
+    : '合言葉を作りました。先に「デプロイ → 新しいデプロイ → ウェブアプリ」をしてから、もう一度実行してください');
 }
 
 function getStatusJson() {

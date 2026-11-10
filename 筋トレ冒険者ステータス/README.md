@@ -19,6 +19,19 @@
 
 以下のGASのWebアプリは、claude.ai を使わずに見たいとき用の別ルートです（画面は同じ）。
 
+## スマホのホーム画面に置く専用アプリ版（quest/）
+
+claude.ai のページはホーム画面に置くとアイコンが Claude のマークになり、上に Claude のバーが出ます。専用アプリ版は、キャラのアイコンで全画面表示になります。
+
+- 置き場所：リポジトリの `quest/`（GitHub Pages で `https://inoueindustries.github.io/-/quest/`）。`python3 build_claude_page.py` で `index.html` から作ります
+- データ：スプシの Apps Script（下の「導入手順」の `Code.gs`）を「全員」に公開し、`setupAppKey` で作った合言葉つきURLから読みます。合言葉つきURLはスマホの中にだけ保存し、リポジトリには置きません
+- 手順
+  1. 下の「導入手順」で `Code.gs` を貼り、ウェブアプリとしてデプロイ（アクセスできるユーザー：**全員**）
+  2. Apps Script で `setupAppKey` を1回実行し、実行ログに出たURLをコピー
+  3. iPhone の Safari で `quest/` のページを開き、「共有 → ホーム画面に追加」
+  4. ホーム画面のアイコンから開き、コピーしたURLを貼って「ほぞんして よみこむ」
+- `setupAppKey` を実行したあとは、合言葉のないURLでは何も読めません。もう一度実行すると合言葉が変わります
+
 ## 画面の中身
 
 | 画面 | 内容 |

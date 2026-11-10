@@ -1,0 +1,1161 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<base target="_top">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#070b1f">
+<title>筋トレクエスト</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="icon-180.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="筋トレクエスト">
+<meta name="apple-mobile-web-app-status-bar-style" content="black">
+<script>window.QS_STANDALONE = true;</script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=DotGothic16&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #070b1f;
+    --bg2: #111a3d;
+    --win: #04050c;
+    --line: #f4f1e8;
+    --text: #f4f1e8;
+    --muted: #9aa3c2;
+    --gold: #ffd75e;
+    --gold2: #ff9f2e;
+    --good: #2fd39a;
+    --warn: #ff9a3c;
+    --danger: #ff5470;
+    --sleep: #6c7393;
+    --cyan: #6fd6ff;
+    --r: 12px;
+    color-scheme: dark;
+  }
+  * { box-sizing: border-box; }
+  [hidden] { display: none !important; }
+  html, body { margin: 0; }
+  body {
+    background: radial-gradient(120% 80% at 50% 0%, var(--bg2) 0%, var(--bg) 60%) fixed, var(--bg);
+    color: var(--text);
+    font-family: "DotGothic16", "Hiragino Kaku Gothic ProN", "Yu Gothic", monospace;
+    font-size: 15px;
+    line-height: 1.6;
+    -webkit-font-smoothing: none;
+    padding-block: 12px calc(84px + env(safe-area-inset-bottom, 0px));
+    padding-left: max(16px, env(safe-area-inset-left, 0px));
+    padding-right: max(16px, env(safe-area-inset-right, 0px));
+  }
+  .wrap { max-width: 1180px; margin: 0 auto; }
+
+  /* RPGウィンドウ */
+  .win {
+    background: var(--win);
+    border: 3px solid var(--line);
+    border-radius: var(--r);
+    box-shadow: 0 0 0 3px var(--win), 0 0 0 4px #2a3366, 0 10px 30px rgba(0,0,0,.45);
+    padding: 14px 14px 12px;
+    margin: 0 0 16px;
+    position: relative;
+  }
+  .win-title {
+    position: absolute; top: -13px; left: 14px;
+    background: var(--win); padding: 0 8px;
+    font-size: 13px; letter-spacing: .08em; color: var(--gold);
+  }
+  .muted { color: var(--muted); }
+  .num { font-variant-numeric: tabular-nums; }
+
+  /* ヘッダー */
+  .hero { display: grid; grid-template-columns: auto 1fr auto; gap: 4px 12px; align-items: end; }
+  .avatar { width: 96px; height: 96px; display: block; margin: -6px 0 -2px -4px; filter: drop-shadow(0 0 10px rgba(111,214,255,.25)); }
+  @media (min-width: 960px) { .avatar { width: 112px; height: 112px; } }
+  .name { font-size: 22px; letter-spacing: .06em; }
+  .job { color: var(--cyan); font-size: 14px; }
+  .job .badge { display: inline-block; border: 1px solid var(--gold); color: var(--gold); border-radius: 4px; font-size: 11px; padding: 0 5px; margin-left: 6px; vertical-align: 2px; }
+  .lv { text-align: right; line-height: 1; }
+  .lv small { display: block; font-size: 12px; color: var(--muted); margin-bottom: 4px; }
+  .lv b { font-size: 46px; color: var(--gold); text-shadow: 0 0 12px rgba(255,215,94,.35); font-weight: normal; }
+  .bar { height: 14px; border: 2px solid var(--line); border-radius: 4px; background: #1a1f3a; overflow: hidden; margin-top: 10px; grid-column: 1 / -1; }
+  .bar > i { display: block; height: 100%; background: linear-gradient(90deg, var(--gold2), var(--gold)); width: 0; transition: width 1.2s cubic-bezier(.2,.8,.2,1); }
+  .next { grid-column: 1 / -1; display: flex; justify-content: space-between; font-size: 13px; color: var(--muted); margin-top: 4px; }
+  .next b { color: var(--text); font-weight: normal; }
+
+  .stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-top: 14px; }
+  .stat { border-top: 1px dashed #3a4274; padding-top: 8px; }
+  .stat small { display: block; color: var(--muted); font-size: 11px; }
+  .stat span { font-size: 19px; }
+  .stat.lost span { color: var(--danger); }
+
+  /* ホーム */
+  .home { padding: 12px 12px 10px; }
+  .banner { text-align: center; margin: 2px 0 10px; }
+  .banner small { display: block; font-size: 11px; letter-spacing: .3em; color: var(--muted); }
+  .banner b { display: inline-block; font-weight: normal; font-size: 18px; padding: 4px 18px; border-radius: 4px;
+    color: #2a1600; background: linear-gradient(180deg, #fff1b0, var(--gold) 45%, var(--gold2)); box-shadow: 0 0 0 2px #5a3a00, 0 0 14px rgba(255,215,94,.35); }
+  .idrow { display: grid; grid-template-columns: auto 1fr; gap: 8px; align-items: center; margin-bottom: 8px; }
+  .rank { font-size: 12px; color: var(--muted); letter-spacing: .1em; }
+  .rank b { font-weight: normal; font-size: 26px; color: var(--gold); margin-left: 4px; text-shadow: 0 0 10px rgba(255,215,94,.35); }
+  .nameplate { border: 2px solid #2a3366; border-radius: 6px; padding: 3px 10px; font-size: 18px; letter-spacing: .08em; background: #0a1030; }
+  .heroart { position: relative; height: 160px; border: 2px solid #2a3366; border-radius: 8px; overflow: hidden;
+    background: repeating-linear-gradient(115deg, transparent 0 22px, rgba(255,215,94,.16) 22px 26px, transparent 26px 46px),
+      radial-gradient(120% 120% at 50% 40%, #1f2f73 0%, #0b1236 60%, #050914 100%); }
+  .heroart .avatar { position: absolute; left: 50%; top: 4px; transform: translateX(-50%); width: 150px; height: 150px; margin: 0; filter: drop-shadow(0 0 14px rgba(111,214,255,.35)); }
+  .heroart .job { position: absolute; left: 8px; bottom: 6px; font-size: 13px; color: var(--cyan); background: rgba(4,5,12,.7); padding: 0 6px; border-radius: 4px; }
+  .heroart .job .badge { display: inline-block; border: 1px solid var(--gold); color: var(--gold); border-radius: 4px; font-size: 10px; padding: 0 4px; margin-left: 4px; }
+  .heroart .cap { position: absolute; right: 8px; bottom: 6px; font-size: 9px; letter-spacing: .15em; color: var(--muted); }
+  .statgrid { display: grid; grid-template-columns: minmax(0, 1fr) 96px; gap: 8px; margin-top: 10px; }
+  .power { border: 2px solid #2a3366; border-radius: 8px; padding: 6px 10px 4px; background: #070b22; }
+  .pw-head { display: flex; justify-content: space-between; align-items: center; }
+  .pw-head small { font-size: 11px; color: var(--muted); }
+  .bonus { font-size: 10px; color: #2a1600; background: var(--gold); border-radius: 3px; padding: 0 4px; }
+  .pw-num { display: block; font-weight: normal; font-size: 30px; line-height: 1.2; color: var(--gold); text-shadow: 0 2px 0 #5a3a00, 0 0 12px rgba(255,215,94,.3); }
+  .slist { margin: 4px 0 0; font-size: 12px; }
+  .slist div { display: flex; justify-content: space-between; gap: 6px; padding: 2px 0; border-top: 1px dashed #262d55; }
+  .slist dt { color: var(--muted); }
+  .slist dd { margin: 0; text-align: right; }
+  .slist dd.lost { color: var(--danger); }
+  .side { display: grid; gap: 8px; align-content: start; }
+  .cond { border: 2px solid #2a3366; border-radius: 8px; padding: 6px 4px; text-align: center; background: #070b22; }
+  .cond small { display: block; font-size: 10px; color: var(--muted); }
+  .cond b { display: block; font-weight: normal; font-size: 22px; color: var(--good); }
+  .cond span { font-size: 11px; color: var(--good); }
+  .sidebtn { font: inherit; font-size: 12px; color: var(--gold); background: #0a1030; border: 2px solid var(--gold); border-radius: 8px; padding: 8px 2px; cursor: pointer; display: grid; gap: 2px; justify-items: center; }
+  .sidebtn span { font-size: 20px; }
+  .training { margin-top: 12px; }
+  .tr-head { display: inline-block; font-size: 11px; color: var(--gold); background: #0a1030; border: 1px solid #2a3366; border-bottom: 0; border-radius: 6px 6px 0 0; padding: 1px 10px; }
+  .stage { position: relative; aspect-ratio: 16 / 9; border: 2px solid var(--gold); border-radius: 0 8px 8px 8px; overflow: hidden; background: #0b1236; }
+  .scene { position: absolute; inset: 0; background-size: cover; background-position: center; image-rendering: pixelated; transition: opacity .6s ease; }
+  .stage #pose { position: absolute; left: 50%; bottom: 3%; transform: translateX(-50%); height: 82%; width: auto; image-rendering: pixelated; z-index: 1; filter: drop-shadow(0 3px 0 rgba(0,0,0,.35)); }
+  .gift { position: absolute; right: 6px; bottom: 6px; z-index: 2; width: 38px; height: 38px; border-radius: 50%; border: 2px solid var(--gold); background: rgba(4,5,12,.75); font-size: 18px; cursor: pointer; }
+  .tr-foot { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 2px 8px; align-items: center; margin-top: 6px; font-size: 13px; }
+  .tr-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .tr-lv { color: var(--muted); font-size: 12px; text-align: right; }
+  .tr-lv b { color: var(--gold); font-weight: normal; font-size: 15px; }
+  .tr-foot .bar { grid-column: 1; margin-top: 0; height: 10px; }
+  .tr-exp { font-size: 11px; color: var(--muted); text-align: right; }
+  .pose-tabs { display: flex; gap: 6px; margin-top: 8px; }
+  .pose-tabs button { flex: 1; font: inherit; font-size: 12px; color: var(--muted); background: none; border: 1px solid #2a3366; border-radius: 6px; padding: 5px 2px; cursor: pointer; }
+  .pose-tabs button[aria-pressed="true"] { color: var(--gold); border-color: var(--gold); }
+  .ticker { display: grid; grid-template-columns: auto 1fr; gap: 8px; align-items: center; margin-top: 10px; border: 2px solid var(--gold2); border-radius: 8px; padding: 6px 8px; background: linear-gradient(180deg, #2a1400, #120800); }
+  .tk-ic { font-size: 16px; }
+  .tk-track { overflow: hidden; white-space: nowrap; font-size: 13px; color: #ffe6b0; }
+  .tk-track span { display: inline-block; padding-left: 100%; animation: tick 22s linear infinite; }
+  @keyframes tick { to { transform: translateX(-100%); } }
+  .replay { display: block; margin: 8px auto 0; font: inherit; font-size: 11px; color: var(--muted); background: none; border: 0; cursor: pointer; text-decoration: underline dotted; }
+  .gift:focus-visible, .sidebtn:focus-visible, .pose-tabs button:focus-visible, .replay:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
+
+  /* レベルアップの演出 */
+  .tc { position: absolute; left: 0; right: 0; top: 0; z-index: 2; padding: 6px 10px; font-size: clamp(14px, 4.6vw, 20px); letter-spacing: .06em;
+    color: #f2d27a; background: linear-gradient(180deg, rgba(20,40,40,.92), rgba(20,40,40,.6)); border-bottom: 2px solid #c9a227; animation: slidein .35s ease-out; }
+  @keyframes slidein { from { transform: translateY(-100%); } to { transform: none; } }
+  .tr-foot .bar.charge > i { transition: width 1.1s ease-in; background: linear-gradient(90deg, #e8b830, #fff1b0); }
+  .lvup { position: absolute; inset: 0; z-index: 3; display: grid; place-items: center; align-content: center; gap: 6px;
+    background: radial-gradient(90% 90% at 50% 50%, #0d2a5a 0%, #061230 55%, #02060f 100%); }
+  .lvup::before { content: ""; position: absolute; inset: 0; background: #fff; opacity: 0; pointer-events: none; }
+  .lvup.play::before { animation: flash .45s ease-out; }
+  @keyframes flash { 0% { opacity: .95; } 100% { opacity: 0; } }
+  .lv-grid { position: absolute; inset: 0; opacity: 0;
+    background-image: linear-gradient(rgba(111,214,255,.22) 1px, transparent 1px), linear-gradient(90deg, rgba(111,214,255,.22) 1px, transparent 1px);
+    background-size: 12px 12px; -webkit-mask: radial-gradient(70% 70% at 50% 50%, transparent 30%, #000 75%); mask: radial-gradient(70% 70% at 50% 50%, transparent 30%, #000 75%); }
+  .lvup.play .lv-grid { animation: gridin 1.2s ease-out forwards; }
+  @keyframes gridin { 0% { opacity: 0; background-size: 30px 30px; } 60% { opacity: 1; } 100% { opacity: .55; background-size: 12px 12px; } }
+  .lv-lines { position: absolute; inset: 0; width: 100%; height: 100%; }
+  .lv-lines polyline { fill: none; stroke: #6fd6ff; stroke-width: 2; stroke-dasharray: 160; stroke-dashoffset: 160; opacity: .8; }
+  .lvup.play .lv-lines polyline { animation: draw .9s .25s ease-out forwards; }
+  @keyframes draw { to { stroke-dashoffset: 0; } }
+  .lv-box { position: relative; border: 3px solid #6fd6ff; border-radius: 6px; padding: 4px 16px; background: rgba(2,8,24,.85); box-shadow: 0 0 0 2px #02060f, 0 0 18px rgba(111,214,255,.55); transform: scale(0); }
+  .lvup.play .lv-box { animation: pop .55s .2s cubic-bezier(.2,1.6,.4,1) forwards; }
+  @keyframes pop { to { transform: scale(1); } }
+  .lv-word { display: block; font-weight: normal; font-size: clamp(26px, 9vw, 40px); letter-spacing: .08em; line-height: 1.15;
+    background: linear-gradient(180deg, #fff6c8 0%, #ffd75e 45%, #ff8a1e 55%, #ff5a1e 100%); -webkit-background-clip: text; background-clip: text; color: transparent;
+    -webkit-text-stroke: 1px #3a1400; filter: drop-shadow(0 2px 0 #3a1400); }
+  .lv-sub { position: relative; margin: 0; font-size: 13px; color: #e8f6ff; text-align: center; opacity: 0; padding: 0 8px; }
+  .lvup.play .lv-sub { animation: fadein .4s 1s forwards; }
+  @keyframes fadein { to { opacity: 1; } }
+  .lvup.out { animation: fadeout .5s forwards; }
+  @keyframes fadeout { to { opacity: 0; } }
+
+  .dlg { max-width: min(420px, calc(100vw - 32px)); width: 100%; color: var(--text); padding-top: 20px; }
+  .dlg::backdrop { background: rgba(2,4,12,.7); }
+  .dlg-next { font-size: 13px; margin: 4px 0 8px; color: var(--gold); }
+  .dlg form { text-align: center; margin-top: 10px; }
+  .tbl tr.got td { color: var(--muted); }
+
+  /* レーダー */
+  .radar svg { width: 100%; max-width: 360px; display: block; margin: 0 auto; }
+  .radar text { fill: var(--text); font-family: inherit; font-size: 13px; }
+  .radar .lvlabel { fill: var(--gold); font-size: 12px; }
+
+  /* 部位リスト */
+  .parts { list-style: none; margin: 0; padding: 0; }
+  .parts li { display: grid; grid-template-columns: 30px 1fr auto; gap: 2px 10px; align-items: center; padding: 9px 0; border-bottom: 1px dashed #262d55; }
+  .parts li:last-child { border-bottom: 0; }
+  .parts .ic { font-size: 20px; text-align: center; grid-row: span 2; }
+  .parts .nm { font-size: 16px; }
+  .parts .nm small { color: var(--gold); margin-left: 8px; font-size: 14px; }
+  .parts .cd { font-size: 12px; text-align: right; }
+  .parts .meta { grid-column: 2 / 4; display: grid; grid-template-columns: 1fr auto; gap: 8px; align-items: center; font-size: 12px; color: var(--muted); }
+  .mini { height: 6px; background: #1a1f3a; border-radius: 3px; overflow: hidden; }
+  .mini > i { display: block; height: 100%; width: 0; transition: width 1s ease; }
+  .c-good { color: var(--good); } .c-warn { color: var(--warn); } .c-danger { color: var(--danger); } .c-sleep { color: var(--sleep); }
+  .b-good { background: var(--good); } .b-warn { background: var(--warn); } .b-danger { background: var(--danger); } .b-sleep { background: var(--sleep); }
+
+  /* 17部位 */
+  .group { margin-bottom: 12px; }
+  .group h3 { font-size: 14px; font-weight: normal; color: var(--gold); margin: 6px 0 4px; }
+  .fine { display: grid; grid-template-columns: 11.5em 2.6em 1fr 3.2em; gap: 8px; align-items: center; font-size: 13px; padding: 4px 0;
+    width: 100%; font-family: inherit; color: inherit; background: none; border: 0; text-align: left; cursor: pointer; border-radius: 4px; }
+  .fine:hover, .fine-row.open .fine { background: #0d1440; }
+  .fine:focus-visible { outline: 2px solid var(--gold); outline-offset: 1px; }
+  .fine .caret { color: var(--muted); font-size: 10px; margin-left: 4px; display: inline-block; transition: transform .2s; }
+  .fine-row.open .caret { transform: rotate(90deg); color: var(--gold); }
+  .fine-tip { margin: 2px 0 8px 14px; padding: 8px 10px; border-left: 2px solid var(--gold); background: #080d2c; border-radius: 0 6px 6px 0; font-size: 12px; animation: pop2 .18s ease-out; }
+  @keyframes pop2 { from { opacity: 0; transform: translateY(-3px); } to { opacity: 1; transform: none; } }
+  .fine-tip .ft-head { margin: 0 0 6px; color: var(--gold); }
+  .fine-tip ol { margin: 0; padding-left: 1.3em; }
+  .fine-tip li { margin-bottom: 6px; }
+  .fine-tip li b { font-weight: normal; color: var(--text); font-size: 13px; }
+  .fine-tip .pct { margin-left: 6px; font-size: 11px; color: var(--cyan); }
+  .fine-tip .plan, .fine-tip .how { display: block; color: var(--muted); line-height: 1.5; }
+  .fine-tip .plan { color: #cfd6f0; }
+  .fine .dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 6px; vertical-align: 1px; }
+  .fine .l { color: var(--gold); text-align: right; }
+  .fine .e { text-align: right; color: var(--muted); }
+
+  /* たたかいのきろく */
+  .msg { font-size: 15px; line-height: 1.85; min-height: 7em; }
+  .msg p { margin: 0 0 6px; }
+  .msg p::before { content: "＊ "; color: var(--muted); }
+  .msg .t-levelup { color: var(--gold); }
+  .msg .t-leveldown, .msg .t-danger { color: var(--danger); }
+  .msg .t-warn { color: var(--warn); }
+  .msg .t-sleep { color: var(--sleep); }
+  .msg .t-gain { color: var(--good); }
+  .cursor { display: inline-block; color: var(--text); animation: blink 1s steps(1) infinite; margin-left: 4px; }
+  @keyframes blink { 50% { opacity: 0; } }
+
+  .forecast { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; text-align: center; }
+  .forecast div { border: 1px solid #2a3366; border-radius: 8px; padding: 8px 2px; }
+  .forecast small { display: block; color: var(--muted); font-size: 11px; }
+  .forecast b { display: block; font-weight: normal; font-size: 16px; }
+  .forecast em { font-style: normal; font-size: 12px; color: var(--danger); }
+  .rule { font-size: 12px; color: var(--muted); margin-top: 10px; }
+
+  /* 推移 */
+  .chart svg { width: 100%; display: block; }
+  .chart text { fill: var(--muted); font-family: inherit; font-size: 11px; }
+  .body-row { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; }
+  .body-row div small { display: block; color: var(--muted); font-size: 11px; }
+  .body-row div span { font-size: 22px; }
+  .delta-down { color: var(--good); font-size: 12px; } .delta-up { color: var(--warn); font-size: 12px; }
+
+  /* けいけんち（スプシと同じ表） */
+  .kv { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0 14px; font-size: 13px; }
+  .kv div { display: flex; justify-content: space-between; gap: 8px; padding: 6px 0; border-bottom: 1px dashed #262d55; }
+  .kv dt { color: var(--muted); }
+  .kv dd { margin: 0; text-align: right; }
+  .tbl-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; margin: 0 -6px; padding: 0 6px; }
+  .tbl { border-collapse: collapse; width: 100%; font-size: 13px; white-space: nowrap; }
+  .tbl th { color: var(--gold); font-weight: normal; font-size: 12px; text-align: right; padding: 6px 8px; border-bottom: 2px solid #2a3366; position: sticky; top: 0; background: var(--win); }
+  .tbl td { padding: 6px 8px; border-bottom: 1px dashed #262d55; text-align: right; }
+  .tbl th.l, .tbl td.l { text-align: left; }
+  .tbl .stick { position: sticky; left: 0; background: var(--win); z-index: 1; }
+  .tbl tr.sum td { border-top: 2px solid #2a3366; border-bottom: 0; color: var(--gold); }
+  .tbl td.tip > div { width: 25em; }
+  .tbl td.tip { white-space: normal; text-align: left; color: var(--muted); font-size: 12px; line-height: 1.5; }
+  .tbl td.tip b { color: var(--text); font-weight: normal; }
+  .tbl .gauge { width: 72px; }
+  .tbl tr.cur td { color: var(--gold); }
+  .tbl tr.cur td:first-child::before { content: "▶ "; }
+  .tbl .lvc { color: var(--gold); }
+  .tbl tr.grp td { color: var(--gold); font-size: 12px; text-align: left; padding-top: 10px; border-bottom: 1px solid #2a3366; }
+  .scroll-hint { font-size: 11px; color: var(--muted); margin: 6px 0 0; }
+  .sim { display: grid; grid-template-columns: repeat(8, 1fr); gap: 6px; align-items: end; height: 120px; margin-top: 6px; }
+  .sim div { display: flex; flex-direction: column; justify-content: flex-end; align-items: center; height: 100%; font-size: 11px; }
+  .sim i { display: block; width: 70%; border-radius: 3px 3px 0 0; min-height: 2px; }
+  .sim b { font-weight: normal; font-size: 12px; }
+  .sim small { color: var(--muted); }
+  @media (min-width: 640px) { .scroll-hint { display: none; } }
+
+  /* コマンドメニュー（スマホ） */
+  .cmd {
+    position: fixed; left: 50%; transform: translateX(-50%);
+    bottom: calc(10px + env(safe-area-inset-bottom));
+    width: min(560px, calc(100% - 20px));
+    display: grid; grid-template-columns: repeat(4, 1fr) .6fr;
+    background: var(--win); border: 3px solid var(--line); border-radius: var(--r);
+    box-shadow: 0 0 0 3px var(--win), 0 6px 20px rgba(0,0,0,.6);
+    z-index: 10;
+  }
+  .cmd button {
+    font: inherit; color: var(--text); background: none; border: 0;
+    padding: 11px 2px 10px; font-size: 14px; cursor: pointer; position: relative;
+  }
+  .cmd button[aria-selected="true"] { color: var(--gold); }
+  .cmd button[aria-selected="true"]::before { content: "▶"; position: absolute; left: 2px; font-size: 10px; top: 14px; animation: blink 1s steps(1) infinite; }
+
+  .foot { display: flex; justify-content: space-between; align-items: center; gap: 8px; font-size: 12px; color: var(--muted); padding: 4px 4px 0; }
+  .refresh { font: inherit; color: var(--text); background: var(--win); border: 2px solid var(--line); border-radius: 8px; padding: 6px 12px; cursor: pointer; font-size: 13px; }
+  .refresh:disabled { opacity: .5; }
+  .notice { border-color: var(--warn); color: var(--warn); font-size: 13px; }
+  .notice p { margin: 0 0 8px; color: var(--text); }
+  .notice .refresh { margin-top: 4px; }
+  .loading { text-align: center; padding: 28px 14px; }
+  .loading .cursor { margin-left: 0; }
+  .refresh:focus-visible, .cmd button:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
+
+  .panel { display: none; }
+  .panel.on { display: block; animation: pop .25s ease; }
+  @keyframes pop { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+
+  /* PC：全部いっぺんに見せる */
+  @media (min-width: 960px) {
+    body { padding-block: 24px; padding-left: max(24px, env(safe-area-inset-left, 0px)); padding-right: max(24px, env(safe-area-inset-right, 0px)); }
+    .cmd { display: none; }
+    .grid { display: grid; grid-template-columns: 1.05fr 1fr 1fr; gap: 0 20px; align-items: start; }
+    .panel { display: block !important; animation: none; }
+    .msg { min-height: 0; }
+    .panel[data-tab="exp"] { grid-column: 1 / -1; }
+    .exp-side { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0 20px; align-items: start; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .bar > i, .mini > i { transition: none; }
+    .tk-track span { animation: none; padding-left: 0; }
+    .lvup.play *, .lvup.play::before { animation-duration: .01s !important; animation-delay: 0s !important; }
+    .panel.on { animation: none; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div id="notice"></div>
+  <div class="win loading" id="loading" hidden>
+    <div class="win-title">よみこみ</div>
+    <p id="loading-text">ぼうけんの きろくを よみこんでいます……</p>
+    <span class="cursor">▼</span>
+  </div>
+  <div class="grid" id="main">
+    <section class="panel on" data-tab="status">
+      <div class="win home">
+        <div class="banner"><small>MY STATUS</small><b id="title">―</b></div>
+        <div class="idrow">
+          <span class="rank">Lv<b class="num" id="lv">-</b></span>
+          <span class="nameplate" id="name">―</span>
+        </div>
+        <div class="heroart">
+          <img class="avatar" id="avatar" src="https://raw.githubusercontent.com/inoueindustries/-/main/%E7%AD%8B%E3%83%88%E3%83%AC%E5%86%92%E9%99%BA%E8%80%85%E3%82%B9%E3%83%86%E3%83%BC%E3%82%BF%E3%82%B9/images/chanz.gif" alt="ちゃんズの ドット絵" width="150" height="150">
+          <span class="job" id="job">―</span>
+          <small class="cap">MAIN CHARACTER</small>
+        </div>
+        <div class="statgrid">
+          <div class="power">
+            <div class="pw-head"><small>ちから（有効EXP）</small><span class="bonus" id="s-keep">―</span></div>
+            <b class="pw-num num" id="s-eff">0</b>
+            <dl class="slist">
+              <div><dt>累計EXP</dt><dd class="num" id="s-cum">0</dd></div>
+              <div><dt>失われたEXP</dt><dd class="num lost" id="s-lost">0</dd></div>
+              <div><dt>つぎのLvまで</dt><dd class="num" id="need">0</dd></div>
+              <div><dt>いちばん強い部位</dt><dd id="s-top">―</dd></div>
+              <div><dt>さいごの修行</dt><dd id="s-last">―</dd></div>
+            </dl>
+          </div>
+          <div class="side">
+            <div class="cond"><small>コンディション</small><b class="num" id="s-cond">―</b><span id="s-cond-l">絶好調</span></div>
+            <button type="button" class="sidebtn" id="open-titles"><span aria-hidden="true">🏅</span>しょうごう</button>
+          </div>
+        </div>
+        <div class="training">
+          <div class="tr-head">▶ しゅぎょう期間 <span class="num" id="tr-period">―</span></div>
+          <div class="stage" id="stage">
+            <div class="scene" id="scene"></div>
+            <img id="pose" alt="" width="150" height="164">
+            <div class="tc" id="tc" hidden>TRAINING COMPLETE</div>
+            <button type="button" class="gift" id="gift" aria-label="しょうごうの ごほうびを みる">🎁</button>
+            <div class="lvup" id="lvup" hidden aria-live="polite">
+              <div class="lv-grid"></div>
+              <svg class="lv-lines" viewBox="0 0 320 180" preserveAspectRatio="none" aria-hidden="true">
+                <polyline points="0,40 60,40 80,60 120,60"/><polyline points="320,40 260,40 240,60 200,60"/>
+                <polyline points="0,140 50,140 70,120 110,120"/><polyline points="320,140 270,140 250,120 210,120"/>
+                <polyline points="160,0 160,30"/><polyline points="160,180 160,150"/>
+              </svg>
+              <div class="lv-box"><b class="lv-word">LEVEL UP!</b></div>
+              <p class="lv-sub" id="lvup-sub"></p>
+            </div>
+          </div>
+          <div class="tr-foot">
+            <span class="tr-name" id="pose-text">―</span>
+            <span class="tr-lv">Lv.<b class="num" id="lv2">-</b></span>
+            <div class="bar" role="progressbar" aria-label="つぎのレベルまでの けいけんち" id="expbar"><i></i></div>
+            <span class="tr-exp num" id="eff">0</span>
+          </div>
+          <div class="pose-tabs" role="group" aria-label="しゅぎょうの しゅるい">
+            <button type="button" data-pose="pullup" aria-pressed="false">けんすい</button>
+            <button type="button" data-pose="pushup" aria-pressed="false">うでたて</button>
+            <button type="button" data-pose="squat" aria-pressed="false">スクワット</button>
+          </div>
+        </div>
+        <div class="ticker"><span class="tk-ic" aria-hidden="true">📜</span><div class="tk-track"><span id="ticker">―</span></div></div>
+        <button type="button" class="replay" id="replay">▶ レベルアップの えんしゅつを みる</button>
+      </div>
+      <dialog class="win dlg" id="titles-dlg">
+        <div class="win-title">しょうごうの ごほうび</div>
+        <p class="dlg-next" id="dlg-next"></p>
+        <div class="tbl-wrap"><table class="tbl" id="dlg-titles"></table></div>
+        <form method="dialog"><button class="refresh" type="submit">とじる</button></form>
+      </dialog>
+    </section>
+
+    <section class="panel" data-tab="parts">
+      <div class="win radar">
+        <div class="win-title">ぶいの バランス</div>
+        <div id="radar"></div>
+      </div>
+      <div class="win">
+        <div class="win-title">ぶいの ようす</div>
+        <ul class="parts" id="majors"></ul>
+      </div>
+      <div class="win">
+        <div class="win-title">こまかい ぶい（17）</div>
+        <div id="fines"></div>
+      </div>
+    </section>
+
+    <section class="panel" data-tab="log">
+      <div class="win">
+        <div class="win-title">たたかいの きろく</div>
+        <div class="msg" id="log"></div>
+      </div>
+      <div class="win">
+        <div class="win-title">このまま やすむと……</div>
+        <div class="forecast" id="forecast"></div>
+        <div class="rule" id="rule"></div>
+      </div>
+      <div class="win chart">
+        <div class="win-title">けいけんちの すいい（30日）</div>
+        <div id="trend"></div>
+      </div>
+      <div class="win" id="bodywin" hidden>
+        <div class="win-title">からだの じょうたい</div>
+        <div class="body-row" id="body"></div>
+      </div>
+      <div class="foot">
+        <span id="asof">―</span>
+        <button class="refresh" id="refresh" type="button">さいしんの じょうほう</button>
+      </div>
+    </section>
+
+    <section class="panel" data-tab="exp">
+      <div>
+        <div class="exp-side">
+          <div class="win">
+            <div class="win-title">げんすいの ルール</div>
+            <dl class="kv" id="x-rule"></dl>
+          </div>
+          <div class="win">
+            <div class="win-title">やすんだ日数と 維持率</div>
+            <div class="sim" id="x-sim"></div>
+          </div>
+          <div class="win">
+            <div class="win-title">しょうごう いちらん</div>
+            <div class="tbl-wrap"><table class="tbl" id="x-titles"></table></div>
+          </div>
+        </div>
+        <div>
+          <div class="win">
+            <div class="win-title">大部位の けいけんち</div>
+            <div class="tbl-wrap"><table class="tbl" id="x-majors"></table></div>
+            <p class="scroll-hint">← 表は よこに スクロールできます →</p>
+          </div>
+          <div class="win">
+            <div class="win-title">17部位の けいけんち</div>
+            <div class="tbl-wrap"><table class="tbl" id="x-fines"></table></div>
+            <p class="scroll-hint">← 表は よこに スクロールできます →</p>
+          </div>
+        </div>
+      </div>
+    </section>
+  </div>
+</div>
+
+<nav class="cmd" role="tablist" aria-label="コマンド">
+  <button role="tab" aria-selected="true" data-go="status">つよさ</button>
+  <button role="tab" aria-selected="false" data-go="parts">ぶい</button>
+  <button role="tab" aria-selected="false" data-go="exp">けいけん</button>
+  <button role="tab" aria-selected="false" data-go="log">きろく</button>
+  <button role="tab" aria-selected="false" data-go="top" aria-label="いちばん うえへ">▲</button>
+</nav>
+
+<script type="application/json" id="boot"></script>
+<script id="qs-compute"></script>
+<script>
+(function () {
+  var $ = function (id) { return document.getElementById(id); };
+  var fmt = function (n) { return Math.round(n || 0).toLocaleString('ja-JP'); };
+  var esc = function (s) { return String(s == null ? '' : s).replace(/[&<>"]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); };
+
+  // ---------- タブ ----------
+  var tabs = document.querySelectorAll('.cmd button');
+  tabs.forEach(function (b) {
+    b.addEventListener('click', function () {
+      var go = b.getAttribute('data-go');
+      if (go === 'top') { window.scrollTo({ top: 0, behavior: 'smooth' }); return; }
+      tabs.forEach(function (x) { x.setAttribute('aria-selected', x === b ? 'true' : 'false'); });
+      document.querySelectorAll('.panel').forEach(function (p) { p.classList.toggle('on', p.getAttribute('data-tab') === go); });
+      window.scrollTo({ top: 0 });
+      if (go === 'log') typeLog();
+    });
+  });
+
+  // ---------- 描画 ----------
+  var state = null;
+
+  function render(d) {
+    state = d;
+    $('notice').innerHTML = '';
+    $('loading').hidden = true;
+    $('main').hidden = false;
+    document.querySelector('.cmd').hidden = false;
+    if (d.error) {
+      $('notice').innerHTML = '<div class="win notice"><div class="win-title">エラー</div>じゅもんが ちがいます……<br>' + esc(d.error) + '</div>';
+      return;
+    }
+    (d.warnings || []).concat(d.demo ? ['これは見本データです。GASにデプロイすると、スプシの本当のデータが表示されます。'] : []).forEach(function (w) {
+      $('notice').innerHTML += '<div class="win notice">' + esc(w) + '</div>';
+    });
+    var t = d.total;
+    $('name').textContent = d.player;
+    $('job').innerHTML = esc(t.job) + (t.upperJob ? '<span class="badge">上級職</span>' : '');
+    $('title').textContent = t.title;
+    $('lv').textContent = t.lv;
+    $('lv2').textContent = t.lv;
+    $('eff').textContent = fmt(t.eff) + ' / ' + fmt(t.nextLvExp);
+    $('need').textContent = fmt(t.need);
+    $('s-eff').textContent = fmt(t.eff);
+    $('s-cum').textContent = fmt(t.cum);
+    $('s-lost').textContent = (t.lost > 0 ? '-' : '') + fmt(t.lost);
+    $('s-keep').textContent = t.cum > 0 ? '維持 ' + (t.eff / t.cum * 100).toFixed(1) + '%' : '―';
+    var top = d.majors.slice().sort(function (a, b) { return b.eff - a.eff; })[0];
+    $('s-top').textContent = top && top.eff > 0 ? top.key + ' Lv.' + top.lv : '―';
+    var lt = d.latest;
+    $('s-last').textContent = lt ? lt.last.replace(/^\d{4}\/0?(\d+)\/0?(\d+)$/, '$1/$2') + (lt.elapsed ? '（' + lt.elapsed + '日前）' : '（きょう）') : '―';
+    var good = d.majors.filter(function (m) { return m.cond === 'good'; }).length;
+    $('s-cond').textContent = good + '/' + d.majors.length;
+    $('s-cond-l').textContent = good === d.majors.length ? '絶好調' : '部位が絶好調';
+    var ym = String(d.asOf).match(/^(\d{4})\/(\d{1,2})/);
+    if (ym) { var last = new Date(+ym[1], +ym[2], 0).getDate(); $('tr-period').textContent = ym[1] + '/' + ('0' + ym[2]).slice(-2) + '/01〜' + ('0' + ym[2]).slice(-2) + '/' + last; }
+    $('ticker').textContent = (d.log || []).map(function (l) { return '＊ ' + l.text; }).join('　　');
+    renderPose(d);
+    setBar(t.progress);
+    checkLevelUp(d);
+    $('radar').innerHTML = radarSvg(d.majors);
+    renderMajors(d.majors);
+    renderFines(d.fines);
+    renderForecast(d);
+    $('trend').innerHTML = trendSvg(d.trend);
+    renderBody(d.body);
+    renderExp(d);
+    $('asof').textContent = '判定基準日 ' + d.asOf + (d.fetchedAt ? '（' + new Date(d.fetchedAt).toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit' }) + ' よみこみ）' : '');
+    typed = false;
+    if (window.matchMedia('(min-width: 960px)').matches) typeLog();
+  }
+
+  function renderMajors(majors) {
+    var max = Math.max.apply(null, majors.map(function (m) { return m.eff; }).concat([1]));
+    $('majors').innerHTML = majors.map(function (m) {
+      var sub = m.elapsed == null ? 'まだ きたえていない' :
+        (m.daysToDecay != null ? 'さいご ' + m.last + '（あと' + m.daysToDecay + '日で げんすい）' : 'さいご ' + m.last + '（' + m.elapsed + '日まえ・維持率' + m.retention + '%）');
+      return '<li>' +
+        '<span class="ic" aria-hidden="true">' + m.icon + '</span>' +
+        '<span class="nm">' + esc(m.key) + '<small>Lv.' + m.lv + '</small></span>' +
+        '<span class="cd c-' + m.cond + '">' + esc(m.condLabel) + '</span>' +
+        '<span class="meta"><span class="mini"><i class="b-' + m.cond + '" data-w="' + (m.eff / max * 100).toFixed(1) + '"></i></span><span class="num">' + fmt(m.eff) + ' EXP</span>' +
+        '<span style="grid-column:1/-1">' + sub + '</span></span>' +
+        '</li>';
+    }).join('');
+    requestAnimationFrame(function () {
+      document.querySelectorAll('#majors .mini i').forEach(function (i) { i.style.width = i.getAttribute('data-w') + '%'; });
+    });
+  }
+
+  // 17部位：タップ（PCはカーソルを当てる／クリック）で、その部位を きたえる しゅぎょうを ひらく
+  function renderFines(fines) {
+    var max = Math.max.apply(null, fines.map(function (f) { return f.eff; }).concat([1]));
+    var tips = (state && state.tips) || {};
+    var groups = [];
+    fines.forEach(function (f) {
+      var g = groups.filter(function (x) { return x.k === f.major; })[0];
+      if (!g) { g = { k: f.major, items: [] }; groups.push(g); }
+      g.items.push(f);
+    });
+    $('fines').innerHTML = groups.map(function (g) {
+      return '<div class="group"><h3>' + esc(g.k) + '</h3>' + g.items.map(function (f, n) {
+        var id = 'ft-' + esc(f.key).replace(/[^\w]/g, '') + n + g.k.length;
+        var list = tips[f.key] || [];
+        var body = list.length ? '<ol>' + list.map(function (x) {
+          return '<li><b>' + esc(x.ex) + '</b>' + (x.ratio ? '<span class="pct">この部位に ' + Math.round(x.ratio * 100) + '%</span>' : '') +
+            (x.plan || x.guide ? '<span class="plan">' + esc(x.plan || x.guide) + '</span>' : '') +
+            (x.how ? '<span class="how">コツ：' + esc(x.how) + '</span>' : '') + '</li>';
+        }).join('') + '</ol>' : '<p class="muted">この部位に 経験値が入る種目が マスタに ありません</p>';
+        var head = (f.next != null && f.lv < 999 ? 'あと ' + fmt(f.next) + ' EXP で Lv.' + (f.lv + 1) + '！' : '') + (f.last ? '（さいご ' + esc(f.last) + '）' : '（まだ きたえていない）');
+        return '<div class="fine-row">' +
+          '<button type="button" class="fine" aria-expanded="false" aria-controls="' + id + '">' +
+          '<span><i class="dot b-' + f.cond + '"></i>' + esc(f.name) + '<span class="caret" aria-hidden="true">▸</span></span>' +
+          '<span class="l">Lv' + f.lv + '</span>' +
+          '<span class="mini"><i class="b-' + f.cond + '" data-w="' + (f.eff / max * 100).toFixed(1) + '"></i></span>' +
+          '<span class="e num">' + fmt(f.eff) + '</span></button>' +
+          '<div class="fine-tip" id="' + id + '" hidden><p class="ft-head">' + head + '</p>' + body + '</div></div>';
+      }).join('') + '</div>';
+    }).join('');
+    requestAnimationFrame(function () {
+      document.querySelectorAll('#fines .mini i').forEach(function (i) { i.style.width = i.getAttribute('data-w') + '%'; });
+    });
+    var hover = window.matchMedia('(hover: hover) and (pointer: fine)').matches;
+    document.querySelectorAll('#fines .fine-row').forEach(function (row) {
+      var btn = row.querySelector('.fine'), tip = row.querySelector('.fine-tip'), pinned = false;
+      var show = function (on) { tip.hidden = !on; btn.setAttribute('aria-expanded', on ? 'true' : 'false'); row.classList.toggle('open', on); };
+      btn.addEventListener('click', function () { pinned = !pinned || tip.hidden; show(pinned); });
+      if (hover) {
+        row.addEventListener('mouseenter', function () { show(true); });
+        row.addEventListener('mouseleave', function () { if (!pinned) show(false); });
+      }
+    });
+  }
+
+  function renderForecast(d) {
+    var now = d.total.eff;
+    $('forecast').innerHTML = d.forecast.map(function (f) {
+      var diff = f.eff - now;
+      return '<div><small>' + f.days + '日後</small><b>Lv.' + f.lv + '</b><span class="num" style="font-size:12px">' + fmt(f.eff) + '</span><br>' +
+        '<em class="num">' + (diff < 0 ? '-' + fmt(-diff) : '±0') + '</em></div>';
+    }).join('');
+    var s = d.settings;
+    $('rule').textContent = '※ ' + s.keepDays + '日間は100%維持 → ' + (s.keepDays + 1) + '日目から1日' + s.decayPct + '%ずつ減る → ' + s.zeroDay + '日で0%';
+  }
+
+  function renderBody(b) {
+    if (!b) { $('bodywin').hidden = true; return; }
+    $('bodywin').hidden = false;
+    var delta = function (v, unit) {
+      if (v == null || isNaN(v)) return '';
+      var cls = v <= 0 ? 'delta-down' : 'delta-up';
+      return '<div class="' + cls + '">はじめから ' + (v > 0 ? '+' : '') + v.toFixed(1) + unit + '</div>';
+    };
+    $('body').innerHTML =
+      '<div><small>たいじゅう（' + esc(b.date) + '）</small><span class="num">' + (b.weight != null ? b.weight.toFixed(1) : '―') + '</span> kg' + delta(b.weightFromStart, 'kg') + '</div>' +
+      '<div><small>たいしぼうりつ</small><span class="num">' + (b.fat != null ? b.fat.toFixed(1) : '―') + '</span> %' + delta(b.fatFromStart, 'pt') + '</div>';
+  }
+
+  // ---------- きょうの しゅぎょう ----------
+  // 画像：images/workout/（Codex が作ったドット絵。公開ページでは build_claude_page.py が data URI に置きかえる）
+  var SPRITE_BASE = 'https://raw.githubusercontent.com/inoueindustries/-/main/%E7%AD%8B%E3%83%88%E3%83%AC%E5%86%92%E9%99%BA%E8%80%85%E3%82%B9%E3%83%86%E3%83%BC%E3%82%BF%E3%82%B9/images/workout/';
+  var SPRITES = /*@@SPRITES@@*/null;
+  var POSES = {
+    pullup: { name: 'けんすい', ms: [220, 220, 320, 220] },
+    pushup: { name: 'うでたてふせ', ms: [220, 220, 320, 220] },
+    squat: { name: 'スクワット', ms: [220, 220, 320, 220] }
+  };
+  var poseTimer = null, poseKey = null, poseManual = false;
+  function spriteUrl(k, i) { return SPRITES ? SPRITES[k][i] : SPRITE_BASE + k + '-' + i + '.png'; }
+  // いちばん最近 きたえた大部位から えらぶ（同じ日なら EXP の多い部位）
+  function poseFor(d) {
+    var trained = d.majors.filter(function (m) { return m.elapsed != null; });
+    if (!trained.length) return { key: 'squat', part: null };
+    var minEl = Math.min.apply(null, trained.map(function (m) { return m.elapsed; }));
+    var m = trained.filter(function (x) { return x.elapsed === minEl; }).sort(function (a, b) { return b.eff - a.eff; })[0];
+    var key = m.key === '脚' ? 'squat' : (m.key === '背中' || m.key === '腕') ? 'pullup' : 'pushup';
+    return { key: key, part: m };
+  }
+  function playPose(key, part) {
+    poseKey = key;
+    clearTimeout(poseTimer);
+    document.querySelectorAll('.pose-tabs button').forEach(function (b) { b.setAttribute('aria-pressed', b.getAttribute('data-pose') === key ? 'true' : 'false'); });
+    var P = POSES[key], img = $('pose'), i = 0;
+    img.alt = 'ちゃんズが ' + P.name + 'を している ドット絵';
+    $('pose-text').textContent = (state && state.player ? state.player : '') + '（' + P.name + '）';
+    for (var k = 0; k < 4; k++) { var pre = new Image(); pre.src = spriteUrl(key, k); }
+    var reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    (function step() {
+      img.src = spriteUrl(key, i);
+      if (reduce) return;
+      poseTimer = setTimeout(function () { i = (i + 1) % 4; step(); }, P.ms[i]);
+    })();
+  }
+  // ---------- 修行の場面とレベルアップの演出 ----------
+  // 背景：images/scenes/（Codex が作ったドット絵。公開ページでは data URI に置きかえる）。Lv ごとに場面が かわる
+  var SCENE_BASE = 'https://raw.githubusercontent.com/inoueindustries/-/main/%E7%AD%8B%E3%83%88%E3%83%AC%E5%86%92%E9%99%BA%E8%80%85%E3%82%B9%E3%83%86%E3%83%BC%E3%82%BF%E3%82%B9/images/scenes/';
+  var SCENES = /*@@SCENES@@*/null;
+  var SCENE_KEYS = ['mountain', 'waterfall', 'sunset', 'night'];
+  function sceneUrl(lv) { var k = SCENE_KEYS[lv % SCENE_KEYS.length]; return SCENES ? SCENES[k] : SCENE_BASE + k + '.webp'; }
+  function setScene(lv) { $('scene').style.backgroundImage = 'url("' + sceneUrl(lv) + '")'; }
+  function setBar(p) {
+    var bar = $('expbar');
+    bar.setAttribute('aria-valuenow', Math.round(p * 100));
+    requestAnimationFrame(function () { bar.firstElementChild.style.width = (p * 100).toFixed(1) + '%'; });
+  }
+  var LV_KEY = 'qs.lastLv', lvTimers = [];
+  function readLastLv() { try { var v = parseInt(localStorage.getItem(LV_KEY), 10); return isNaN(v) ? null : v; } catch (e) { return null; } }
+  function saveLastLv(v) { try { localStorage.setItem(LV_KEY, String(v)); } catch (e) {} }
+  function titleOfLv(d, lv) { var n = ''; (d.titles || []).forEach(function (x) { if (lv >= x.lv) n = x.name; }); return n; }
+  function checkLevelUp(d) {
+    var lv = d.total.lv, prev = readLastLv();
+    if (!d.demo) saveLastLv(lv);
+    if (prev != null && lv > prev && !d.demo) playLevelUp(prev, lv, d); else setScene(lv);
+  }
+  // 1) TRAINING COMPLETE（立ち姿で止まり、EXPバーが満タンまで伸びる）→ 2) LEVEL UP! → 3) 次の場面へ、Lv が上がる
+  function playLevelUp(from, to, d) {
+    lvTimers.forEach(clearTimeout); lvTimers = [];
+    clearTimeout(poseTimer);
+    var box = $('lvup'), tc = $('tc'), bar = $('expbar'), t = d.total, resumeKey = poseKey;
+    var newTitle = titleOfLv(d, to), oldTitle = titleOfLv(d, from);
+    $('lvup-sub').textContent = 'Lv.' + from + ' → Lv.' + to + (newTitle && newTitle !== oldTitle ? '　しょうごう「' + newTitle + '」を てにいれた！' : '');
+    setScene(from);
+    $('lv2').textContent = from;
+    $('pose').src = spriteUrl('squat', 0);
+    tc.hidden = false;
+    bar.classList.add('charge');
+    setBar(Math.min(0.85, t.progress));
+    lvTimers.push(setTimeout(function () { setBar(1); }, 250));
+    lvTimers.push(setTimeout(function () {
+      tc.hidden = true;
+      box.hidden = false; box.classList.remove('play', 'out'); void box.offsetWidth; box.classList.add('play');
+    }, 1700));
+    lvTimers.push(setTimeout(function () { setScene(to); $('lv2').textContent = to; bar.classList.remove('charge'); setBar(0); }, 3000));
+    lvTimers.push(setTimeout(function () { box.classList.add('out'); }, 4200));
+    lvTimers.push(setTimeout(function () {
+      box.hidden = true; box.classList.remove('play', 'out');
+      setBar(t.progress);
+      playPose(resumeKey || 'squat', null);
+    }, 4700));
+  }
+  $('replay').addEventListener('click', function () { if (state && !state.error) playLevelUp(Math.max(1, state.total.lv - 1), state.total.lv, state); });
+  // しょうごうの ごほうび（つぎの称号まで）
+  function openTitles() {
+    if (!state || state.error) return;
+    var d = state, t = d.total, list = d.titles || [];
+    var next = list.filter(function (x) { return x.lv > t.lv; })[0];
+    $('dlg-next').textContent = next ? 'つぎの しょうごう：Lv.' + next.lv + '「' + next.name + '」（あと ' + fmt(Math.max(0, next.exp - t.eff)) + ' EXP）' : 'すべての しょうごうを てにいれた！';
+    $('dlg-titles').innerHTML = '<thead><tr><th class="l">必要Lv</th><th class="l">称号</th><th>必要EXP</th></tr></thead><tbody>' + list.map(function (x) {
+      var cur = x.name === t.title;
+      return '<tr class="' + (cur ? 'cur' : t.lv >= x.lv ? 'got' : '') + '"><td class="l num">Lv.' + x.lv + '</td><td class="l">' + (t.lv >= x.lv && !cur ? '✓ ' : '') + esc(x.name) + '</td><td class="num">' + fmt(x.exp) + '</td></tr>';
+    }).join('') + '</tbody>';
+    var dlg = $('titles-dlg');
+    if (dlg.showModal) dlg.showModal(); else dlg.setAttribute('open', '');
+  }
+  $('open-titles').addEventListener('click', openTitles);
+  $('gift').addEventListener('click', openTitles);
+  $('stage').addEventListener('click', function (e) {   // 場面をタップすると 修行の しゅるいが かわる
+    if (e.target.closest('button') || !$('lvup').hidden) return;
+    var keys = Object.keys(POSES), i = keys.indexOf(poseKey);
+    poseManual = true; playPose(keys[(i + 1) % keys.length], null);
+  });
+
+  function renderPose(d) {
+    var pick = poseFor(d);
+    if (poseManual && poseKey) { playPose(poseKey, null); return; }
+    playPose(pick.key, pick.part);
+  }
+  document.querySelectorAll('.pose-tabs button').forEach(function (b) {
+    b.addEventListener('click', function () { poseManual = true; playPose(b.getAttribute('data-pose'), null); });
+  });
+
+  // ---------- けいけんち（スプシの表と同じ並び） ----------
+  function renderExp(d) {
+    var s = d.settings || {}, t = d.total, lt = d.latest;
+    var A = s.curveA || 15.9, P = s.curveP || 1.5, MAX = s.maxLv || 999;
+    var need = function (lv) { return Math.ceil(A * Math.pow(lv - 1, P) - 1e-9); };
+    var nextOf = function (v) { return v.next != null ? v.next : (v.lv >= MAX ? 0 : Math.max(0, need(v.lv + 1) - v.eff)); };
+    var progOf = function (v) {
+      if (v.progress != null) return v.progress;
+      var a = need(v.lv), b = need(Math.min(v.lv + 1, MAX));
+      return v.lv >= MAX ? 1 : Math.max(0, Math.min(1, (v.eff - a) / (b - a)));
+    };
+    var gauge = function (p, cls) { return '<span class="mini gauge" style="display:inline-block;vertical-align:middle"><i class="' + cls + '" data-w="' + (p * 100).toFixed(1) + '"></i></span>'; };
+    var days = function (n) { return n == null ? '―' : n + '日'; };
+    var cond = lt ? (lt.elapsed <= s.keepDays ? { c: 'good', l: '🔥 絶好調（100%維持）' } : { c: 'warn', l: '⚠️ 減衰中' }) : { c: 'sleep', l: '💤 未修行' };
+    var kv = [
+      ['判定基準日', esc(d.asOf)], ['最新トレ日', lt ? esc(lt.last) : '―'],
+      ['100%維持期間', s.keepDays + '日間'], ['経過日数', lt ? lt.elapsed + '日' : '―'],
+      [(s.keepDays + 1) + '日目からの減衰', s.decayPct + '% / 日'], ['コンディション', '<span class="c-' + cond.c + '">' + cond.l + '</span>'],
+      ['完全減衰日数', s.zeroDay + '日'], ['完全減衰まで', lt ? lt.toZero + '日' : '―'],
+      ['Lv曲線 係数', A], ['Lv曲線 乗数', P]
+    ];
+    $('x-rule').innerHTML = kv.map(function (x) { return '<div><dt>' + x[0] + '</dt><dd class="num">' + x[1] + '</dd></div>'; }).join('');
+
+    // 経過日数ごとの維持率
+    var ret = function (el) { return el <= s.keepDays ? 1 : Math.max(0, 1 - (el - s.keepDays) * s.decayPct / 100); };
+    $('x-sim').innerHTML = [0, 3, s.keepDays, 10, 14, 17, 21, s.zeroDay].map(function (el) {
+      var r = ret(el), c = r >= 1 ? 'good' : r >= 0.5 ? 'warn' : r > 0 ? 'danger' : 'sleep';
+      return '<div><b class="num c-' + c + '">' + Math.round(r * 100) + '%</b><i class="b-' + c + '" style="height:' + Math.max(2, r * 80).toFixed(0) + 'px"></i><small>' + el + '日</small></div>';
+    }).join('');
+
+    // 称号
+    var titles = d.titles || [];
+    var curTitle = titles.filter(function (x) { return t.lv >= x.lv; }).pop();
+    $('x-titles').innerHTML = '<thead><tr><th class="l">必要Lv</th><th class="l">称号</th><th>必要な有効EXP</th></tr></thead><tbody>' +
+      titles.map(function (x) {
+        return '<tr class="' + (x === curTitle ? 'cur' : '') + '"><td class="l num">Lv.' + x.lv + '</td><td class="l">' + esc(x.name) + '</td><td class="num">' + fmt(x.exp) + '</td></tr>';
+      }).join('') + '</tbody>';
+
+    // 大部位
+    var head = '<thead><tr><th class="l stick">大部位</th><th>Lv</th><th>有効EXP<br>(減衰後)</th><th>累計EXP<br>(減衰前)</th><th>失われた<br>EXP</th><th>最終トレ日</th><th>経過</th><th class="l">コンディション</th><th class="l">ゲージ</th><th>次のLvまで</th></tr></thead>';
+    var rows = d.majors.map(function (m) {
+      var lost = m.lost != null ? m.lost : Math.max(0, (m.cum || 0) - m.eff);
+      return '<tr><td class="l stick">' + esc(m.icon || '') + ' ' + esc(m.key) + '</td><td class="lvc num">Lv.' + m.lv + '</td><td class="num">' + fmt(m.eff) + '</td><td class="num">' + (m.cum != null ? fmt(m.cum) : '―') + '</td>' +
+        '<td class="num' + (lost > 0 ? ' c-danger' : '') + '">' + fmt(lost) + '</td><td class="num">' + esc(m.last || '―') + '</td><td class="num">' + days(m.elapsed) + '</td>' +
+        '<td class="l c-' + m.cond + '">' + esc(m.condLabel) + (m.elapsed != null ? '（' + m.retention + '%）' : '') + '</td><td class="l">' + gauge(progOf(m), 'b-' + m.cond) + '</td><td class="num">' + fmt(nextOf(m)) + '</td></tr>';
+    }).join('');
+    var keep = t.cum > 0 ? (t.eff / t.cum * 100).toFixed(1) + '% 維持' : '―';
+    rows += '<tr class="sum"><td class="l stick">合計</td><td class="num">Lv.' + t.lv + '</td><td class="num">' + fmt(t.eff) + '</td><td class="num">' + fmt(t.cum) + '</td><td class="num">' + fmt(t.lost) + '</td>' +
+      '<td class="num">' + (lt ? esc(lt.last.replace(/^\d{4}\/0?(\d+)\/0?(\d+)$/, '$1/$2')) : '―') + '</td><td class="num">' + (lt ? days(lt.elapsed) : '―') + '</td><td class="l">' + keep + '</td><td class="l">' + gauge(t.progress, 'b-good') + '</td><td class="num">' + fmt(t.need) + '</td></tr>';
+    $('x-majors').innerHTML = head + '<tbody>' + rows + '</tbody>';
+
+    // 17部位
+    var tips = d.tips || {};
+    head = '<thead><tr><th class="l stick">部位</th><th>Lv</th><th>有効EXP</th><th>累計EXP</th><th>最終刺激日</th><th>経過</th><th>維持率</th><th class="l">状態</th><th class="l">ゲージ</th><th class="l">主に経験値が入る種目と目安</th></tr></thead>';
+    var se = 0, sc = 0, prevMajor = null;
+    rows = d.fines.map(function (f) {
+      var grp = f.major !== prevMajor ? '<tr class="grp"><td class="stick" colspan="1">' + esc(f.major) + '</td><td colspan="9"></td></tr>' : '';
+      prevMajor = f.major;
+      var eff = f.effRaw != null ? f.effRaw : f.eff, cum = f.cumRaw != null ? f.cumRaw : f.cum;
+      se += eff || 0; sc += cum || 0;
+      var keepPct = cum > 0 ? (eff / cum * 100).toFixed(1) + '%' : '―';
+      var tip = (tips[f.key] || []).map(function (x, i) { return '<b>' + esc(x.ex) + '</b>' + (i === 0 && x.guide ? '（' + esc(x.guide) + '）' : ''); }).join('、');
+      return grp + '<tr><td class="l stick">' + esc(f.name) + '</td><td class="lvc num">Lv.' + f.lv + '</td><td class="num">' + (eff != null ? eff.toFixed(1) : '―') + '</td><td class="num">' + (cum != null ? cum.toFixed(1) : '―') + '</td>' +
+        '<td class="num">' + esc(f.last || '―') + '</td><td class="num">' + days(f.elapsed) + '</td><td class="num">' + keepPct + '</td>' +
+        '<td class="l c-' + f.cond + '">' + esc(f.condLabel || '') + (f.elapsed != null && f.retention != null ? '（' + f.retention + '%）' : '') + '</td><td class="l">' + gauge(progOf(f), 'b-' + f.cond) + '</td><td class="tip"><div>' + (tip || '―') + '</div></td></tr>';
+    }).join('');
+    rows += '<tr class="sum"><td class="l stick">全17部位 合計</td><td></td><td class="num">' + se.toFixed(1) + '</td><td class="num">' + sc.toFixed(1) + '</td><td></td><td></td><td class="num">' + (sc > 0 ? (se / sc * 100).toFixed(1) + '%' : '―') + '</td><td></td><td></td><td></td></tr>';
+    $('x-fines').innerHTML = head + '<tbody>' + rows + '</tbody>';
+    requestAnimationFrame(function () {
+      document.querySelectorAll('[data-tab="exp"] .mini i').forEach(function (i) { i.style.width = i.getAttribute('data-w') + '%'; });
+    });
+  }
+
+  // ---------- レーダー（6大部位） ----------
+  function radarSvg(majors) {
+    var W = 320, cx = 160, cy = 156, R = 108, n = majors.length;
+    var maxLv = Math.max.apply(null, majors.map(function (m) { return m.lv; }).concat([10]));
+    var scale = Math.ceil(maxLv / 5) * 5;
+    var pt = function (i, r) {
+      var a = -Math.PI / 2 + i * 2 * Math.PI / n;
+      return [cx + r * Math.cos(a), cy + r * Math.sin(a)];
+    };
+    var poly = function (r) { return majors.map(function (_, i) { return pt(i, r).join(','); }).join(' '); };
+    var s = '<svg viewBox="0 0 ' + W + ' 312" role="img" aria-label="6大部位のレベルのレーダーチャート">';
+    [0.25, 0.5, 0.75, 1].forEach(function (k) {
+      s += '<polygon points="' + poly(R * k) + '" fill="none" stroke="#2a3366" stroke-width="1"/>';
+    });
+    majors.forEach(function (_, i) { var p = pt(i, R); s += '<line x1="' + cx + '" y1="' + cy + '" x2="' + p[0] + '" y2="' + p[1] + '" stroke="#2a3366"/>'; });
+    var vals = majors.map(function (m, i) { return pt(i, R * Math.min(1, m.lv / scale)).join(','); }).join(' ');
+    s += '<polygon points="' + vals + '" fill="rgba(255,215,94,.28)" stroke="#ffd75e" stroke-width="2.5" stroke-linejoin="round"/>';
+    majors.forEach(function (m, i) {
+      var p = pt(i, R * Math.min(1, m.lv / scale));
+      var col = { good: '#2fd39a', warn: '#ff9a3c', danger: '#ff5470', sleep: '#6c7393' }[m.cond];
+      s += '<circle cx="' + p[0] + '" cy="' + p[1] + '" r="4.5" fill="' + col + '" stroke="#04050c" stroke-width="1.5"/>';
+      var l = pt(i, R + 26);
+      var anchor = Math.abs(l[0] - cx) < 8 ? 'middle' : (l[0] > cx ? 'start' : 'end');
+      if (anchor !== 'middle') l[0] += (l[0] > cx ? -6 : 6);
+      s += '<text x="' + l[0] + '" y="' + (l[1] - 2) + '" text-anchor="' + anchor + '">' + esc(m.key) + '</text>';
+      s += '<text class="lvlabel" x="' + l[0] + '" y="' + (l[1] + 13) + '" text-anchor="' + anchor + '">Lv' + m.lv + '</text>';
+    });
+    return s + '</svg>';
+  }
+
+  // ---------- 推移 ----------
+  function trendSvg(tr) {
+    if (!tr || !tr.length) return '<p class="muted">データなし</p>';
+    var W = 340, H = 150, L = 36, Rr = 8, T = 10, B = 22;
+    var vals = tr.map(function (x) { return x.eff; });
+    var max = Math.max.apply(null, vals.concat([10])), min = 0;
+    var x = function (i) { return L + (W - L - Rr) * (tr.length === 1 ? 1 : i / (tr.length - 1)); };
+    var y = function (v) { return T + (H - T - B) * (1 - (v - min) / (max - min)); };
+    var line = tr.map(function (p, i) { return x(i).toFixed(1) + ',' + y(p.eff).toFixed(1); }).join(' ');
+    var s = '<svg viewBox="0 0 ' + W + ' ' + H + '" role="img" aria-label="有効EXPの30日推移">';
+    s += '<defs><linearGradient id="ga" x1="0" x2="0" y1="0" y2="1"><stop offset="0" stop-color="#ffd75e" stop-opacity=".35"/><stop offset="1" stop-color="#ffd75e" stop-opacity="0"/></linearGradient></defs>';
+    [0, 0.5, 1].forEach(function (k) {
+      var v = min + (max - min) * k, yy = y(v);
+      s += '<line x1="' + L + '" x2="' + (W - Rr) + '" y1="' + yy + '" y2="' + yy + '" stroke="#1f2650"/>';
+      s += '<text x="' + (L - 6) + '" y="' + (yy + 4) + '" text-anchor="end">' + (v >= 1000 ? (v / 1000).toFixed(1) + 'k' : Math.round(v)) + '</text>';
+    });
+    s += '<polygon points="' + x(0) + ',' + y(0) + ' ' + line + ' ' + x(tr.length - 1) + ',' + y(0) + '" fill="url(#ga)"/>';
+    s += '<polyline points="' + line + '" fill="none" stroke="#ffd75e" stroke-width="2.5" stroke-linejoin="round"/>';
+    var last = tr.length - 1;
+    s += '<circle cx="' + x(last) + '" cy="' + y(tr[last].eff) + '" r="4" fill="#ffd75e"/>';
+    [0, Math.floor(last / 2), last].forEach(function (i) {
+      s += '<text x="' + x(i) + '" y="' + (H - 6) + '" text-anchor="' + (i === 0 ? 'start' : i === last ? 'end' : 'middle') + '">' + tr[i].d + '</text>';
+    });
+    return s + '</svg>';
+  }
+
+  // ---------- メッセージ送り ----------
+  var typed = false, typing = null;
+  function typeLog() {
+    if (!state || state.error || typed) return;
+    typed = true;
+    var box = $('log');
+    box.innerHTML = '';
+    var lines = state.log || [];
+    var reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    if (reduce) {
+      box.innerHTML = lines.map(function (l) { return '<p class="t-' + l.type + '">' + esc(l.text) + '</p>'; }).join('') + '<span class="cursor">▼</span>';
+      return;
+    }
+    var li = 0, ci = 0, p = null;
+    clearInterval(typing);
+    typing = setInterval(function () {
+      if (li >= lines.length) { clearInterval(typing); box.insertAdjacentHTML('beforeend', '<span class="cursor">▼</span>'); return; }
+      if (!p) { p = document.createElement('p'); p.className = 't-' + lines[li].type; box.appendChild(p); }
+      ci += 2;
+      p.textContent = lines[li].text.slice(0, ci);
+      if (ci >= lines[li].text.length) { li++; ci = 0; p = null; }
+    }, 28);
+    box.onclick = function () {   // タップで全文表示
+      clearInterval(typing);
+      box.innerHTML = lines.map(function (l) { return '<p class="t-' + l.type + '">' + esc(l.text) + '</p>'; }).join('') + '<span class="cursor">▼</span>';
+    };
+  }
+
+  // ---------- データの取り方 ----------
+  // GAS で開いたとき：サーバーで計算した値（boot）＋「さいしんの じょうほう」で再計算
+  // claude.ai のページで開いたとき：閲覧者の Google Sheets 連携でスプシを読み、ブラウザで計算
+  // それ以外：見本データ
+  var SHEET_ID = '12XB0Ye3BNMW1jcXyGaBrtQHHczCjL5PHkMS5TxBTjOE';
+  var SERVER = 'Google Sheets';
+  var RANGES = {
+    status: "'ドラクエ風ステータス・EXP'!A1:N40",
+    master: "'経験値・部位負荷マスタ'!A1:X100",
+    log: "'トレーニング・運動ログ'!A1:Q1000",
+    body: "'体組成ログ'!A1:L1000"
+  };
+  var CACHE = { staleTime: 60 * 1000, gcTime: 7 * 24 * 3600 * 1000 };
+  var isGas = !!(window.google && google.script && google.script.run);
+  var mcp = null, watching = false, got = {}, stamps = {};
+
+  function showLoading(text) {
+    $('loading-text').textContent = text || 'ぼうけんの きろくを よみこんでいます……';
+    $('loading').hidden = false;
+    if (!state) { $('main').hidden = true; document.querySelector('.cmd').hidden = true; }
+  }
+  function showProblem(message, action) {
+    $('loading').hidden = true;
+    var box = $('notice');
+    box.innerHTML = '';
+    var w = document.createElement('div');
+    w.className = 'win notice';
+    w.innerHTML = '<div class="win-title">おしらせ</div>';
+    var p = document.createElement('p');
+    p.textContent = message;
+    w.appendChild(p);
+    if (action) {
+      var b = document.createElement('button');
+      b.type = 'button'; b.className = 'refresh'; b.textContent = action.label;
+      b.addEventListener('click', function () { b.disabled = true; action.run(); });
+      w.appendChild(b);
+    }
+    box.appendChild(w);
+  }
+  function retract() {   // 権限がなくなったときは、表示していた数字を消す
+    state = null;
+    $('main').hidden = true;
+    document.querySelector('.cmd').hidden = true;
+  }
+
+  function handleMcpError(err, fromWatch) {
+    var code = err && err.code;
+    if (code === 'server_not_connected' || code === 'selection_required' || code === 'server_not_found') {
+      retract();
+      showProblem('Google Sheets がつながっていません。claude.ai の 設定 → コネクタ で Google Sheets を追加（または選択）してから、このページを開き直してください。');
+    } else if (code === 'needs_reauth') {
+      retract();
+      showProblem('Google Sheets の接続が切れています。claude.ai の 設定 → コネクタ で Google Sheets をつなぎ直してください。');
+    } else if (code === 'not_in_manifest' || code === 'approval_required' || code === 'consent_required') {
+      retract();
+      showProblem('このページが スプシを読むには、Google Sheets の利用を許可する必要があります。', { label: 'スプシの読みこみを許可する', run: firstCall });
+    } else if (code === 'blocked_by_policy') {
+      retract();
+      showProblem('組織の設定で、このページから Google Sheets を読むことが止められています。');
+    } else if (code === 'tool_error') {
+      showProblem('スプシを読めませんでした。いまの Google アカウントで『食事・運動・体組成ログ_まとめ』を開けるか確かめてください。（' + (err.message || '').slice(0, 120) + '）',
+        { label: 'もういちど よみこむ', run: refreshAll });
+    } else if (code === 'not_granted' || code === 'capability_disabled' || code === 'capability_removed') {
+      render(demo());
+      showProblem('このページでは スプシを読めないため、見本データを表示しています。');
+    } else {   // server_unavailable / upstream_error / rate_limited など一時的なもの
+      if (fromWatch && state) return;   // 前のデータを出したまま、次の更新を待つ
+      showProblem('スプシに つながりにくい状態です。しばらくしてから もういちど よみこんでください。', { label: 'もういちど よみこむ', run: refreshAll });
+    }
+  }
+
+  function payloadValues(result) {
+    var p = result && result.payload;
+    if (typeof p === 'string') { try { p = JSON.parse(p); } catch (e) { p = null; } }
+    return (p && p.values) || [];
+  }
+  function tryRender() {
+    var keys = Object.keys(RANGES);
+    if (!keys.every(function (k) { return k in got; })) return;
+    var d;
+    try { d = QSWeb.compute(got); } catch (e) { showProblem('スプシの中身を読みとれませんでした（' + e.message + '）'); return; }
+    d.fetchedAt = Math.min.apply(null, keys.map(function (k) { return stamps[k]; }));
+    render(d);
+  }
+  function startWatches() {
+    if (watching) return;
+    watching = true;
+    Object.keys(RANGES).forEach(function (k) {
+      mcp.watchTool(SERVER, 'get_values', { spreadsheetId: SHEET_ID, range: RANGES[k] }, function (ev) {
+        if (ev.type === 'data') {
+          got[k] = payloadValues(ev.result);
+          stamps[k] = ev.result.cache ? ev.result.cache.storedAt : Date.now();
+          tryRender();
+        } else {
+          handleMcpError(ev.error, true);
+        }
+      }, { cache: CACHE });
+    });
+  }
+  // 最初の1回は callTool で読む（ここで Google Sheets の利用許可を聞かれる）。そのあと監視に切り替える
+  function firstCall() {
+    showLoading();
+    mcp.callTool(SERVER, 'get_values', { spreadsheetId: SHEET_ID, range: RANGES.status }, { cache: CACHE })
+      .then(function () { $('notice').innerHTML = ''; startWatches(); })
+      .catch(function (e) { handleMcpError(e, false); });
+  }
+  function refreshAll() {
+    var btn = $('refresh');
+    btn.disabled = true; btn.textContent = 'よみこみちゅう……';
+    var done = function () { btn.disabled = false; btn.textContent = 'さいしんの じょうほう'; };
+    if (!watching) { firstCall(); done(); return; }
+    mcp.invalidate(SERVER).then(done, function () {
+      Promise.all(Object.keys(RANGES).map(function (k) {
+        return mcp.callTool(SERVER, 'get_values', { spreadsheetId: SHEET_ID, range: RANGES[k] }, { cache: { staleTime: CACHE.staleTime, gcTime: CACHE.gcTime, refresh: true } })
+          .then(function (r) { got[k] = payloadValues(r); stamps[k] = Date.now(); });
+      })).then(function () { done(); tryRender(); }, function (e) { done(); handleMcpError(e, false); });
+    });
+  }
+
+  $('refresh').addEventListener('click', function () {
+    var btn = this;
+    if (isGas) {
+      btn.disabled = true; btn.textContent = 'よみこみちゅう……';
+      google.script.run
+        .withSuccessHandler(function (json) { btn.disabled = false; btn.textContent = 'さいしんの じょうほう'; render(JSON.parse(json)); })
+        .withFailureHandler(function (e) { btn.disabled = false; btn.textContent = 'さいしんの じょうほう'; render({ error: e && e.message || String(e) }); })
+        .getStatusJson();
+    } else if (mcp) {
+      refreshAll();
+    } else if (window.QS_STANDALONE) {
+      btn.disabled = true; btn.textContent = 'よみこみちゅう……';
+      loadApi(function () { btn.disabled = false; btn.textContent = 'さいしんの じょうほう'; });
+    } else {
+      render(demo());
+    }
+  });
+
+  // ---------- 専用アプリ（ホーム画面に置く版）：GAS の合言葉つきURLから読む ----------
+  var API_KEY = 'qs.api';
+  function getApi() { try { return localStorage.getItem(API_KEY) || ''; } catch (e) { return ''; } }
+  function askApi(msg) {
+    $('loading').hidden = true;
+    var box = $('notice'); box.innerHTML = '';
+    var w = document.createElement('div'); w.className = 'win notice';
+    w.innerHTML = '<div class="win-title">さいしょの せってい</div><p></p>' +
+      '<input id="api-in" type="url" inputmode="url" autocomplete="off" placeholder="https://script.google.com/macros/s/…/exec?format=json&key=…" style="width:100%;font:inherit;font-size:13px;padding:8px;border-radius:6px;border:2px solid var(--line);background:#0a1030;color:var(--text);margin-bottom:8px">' +
+      '<button type="button" class="refresh" id="api-save">ほぞんして よみこむ</button>';
+    w.querySelector('p').textContent = msg || 'Apps Script の setupAppKey で出た「合言葉つきURL」を はりつけてください。';
+    box.appendChild(w);
+    $('api-in').value = getApi();
+    $('api-save').addEventListener('click', function () {
+      var v = $('api-in').value.trim();
+      if (!/^https:\/\/script\.google\.com\/macros\/s\/[\w-]+\/exec\?/.test(v) || v.indexOf('key=') < 0) { w.querySelector('p').textContent = 'URLの形が ちがうようです。「https://script.google.com/macros/s/…/exec?format=json&key=…」を まるごと はりつけてください。'; return; }
+      try { localStorage.setItem(API_KEY, v); } catch (e) {}
+      box.innerHTML = ''; loadApi();
+    });
+  }
+  function loadApi(done) {
+    var api = getApi();
+    if (!api) { if (!state) { $('main').hidden = true; document.querySelector('.cmd').hidden = true; } askApi(); if (done) done(); return; }
+    if (!state) showLoading();
+    fetch(api, { redirect: 'follow' }).then(function (r) { return r.json(); }).then(function (d) {
+      if (done) done();
+      if (d && d.error) { if (!state) retract(); askApi('よみこめませんでした（' + d.error + '）。URLを たしかめてください。'); return; }
+      d.fetchedAt = Date.now(); render(d);
+    }).catch(function () {
+      if (done) done();
+      showProblem('スプシに つながりませんでした。電波を たしかめて、もういちど よみこんでください。', { label: 'もういちど よみこむ', run: function () { $('notice').innerHTML = ''; loadApi(); } });
+      var b = document.createElement('button'); b.type = 'button'; b.className = 'refresh'; b.style.marginLeft = '8px'; b.textContent = 'URLを いれなおす';
+      b.addEventListener('click', function () { askApi(); }); $('notice').firstChild.appendChild(b);
+    });
+  }
+
+  // ---------- 起動 ----------
+  if (window.QS_STANDALONE) {
+    loadApi();
+  } else if (isGas) {
+    var boot = null;
+    try { boot = JSON.parse($('boot').textContent); } catch (e) { boot = demo(); }
+    render(boot);
+  } else if (window.claude && typeof window.claude.use === 'function' && typeof QSWeb !== 'undefined') {
+    showLoading();
+    window.claude.use('mcp').then(function (m) {
+      if (!m) { render(demo()); showProblem('このページでは スプシを読めないため、見本データを表示しています。claude.ai で開くと、ご自身のスプシの数字が出ます。'); return; }
+      mcp = m;
+      firstCall();
+    }, function () { render(demo()); });
+  } else {
+    render(demo());
+  }
+
+  // ---------- 見本データ（GASの外で開いたとき用） ----------
+  function demo() {
+    var trend = [], base = [1650, 1700, 1780, 1780, 1930, 1990, 2010, 2010, 2105, 2150, 2150, 2230, 2300, 2300, 2290, 2350, 2420, 2440, 2440, 2520, 2560, 2560, 2600, 2650, 2680, 2690, 2720, 2740, 2760, 2786];
+    for (var i = 0; i < 30; i++) trend.push({ d: (i < 26 ? '10/' + (i + 6) : '11/' + (i - 25)), eff: base[i], lv: Math.floor(Math.pow(base[i] / 19.5, 1 / 1.5)) + 1 });
+    var M = function (key, kana, icon, lv, eff, cum, last, el, cond, label) {
+      var ret = el <= 7 ? 100 : Math.max(0, 100 - (el - 7) * 5);
+      return { key: key, kana: kana, icon: icon, lv: lv, eff: eff, cum: cum, last: last, elapsed: el, retention: ret, daysToDecay: el <= 7 ? 8 - el : null, cond: cond, condLabel: label };
+    };
+    var F = function (name, major, lv, eff, cond, last) { return { name: name, major: major, lv: lv, eff: eff, cond: cond, condLabel: '', last: last }; };
+    return {
+      demo: true, player: 'ちゃんズ', asOf: '2026/11/04',
+      settings: { keepDays: 7, decayPct: 5, zeroDay: 27 },
+      titles: [{ lv: 1, name: 'みならい冒険者', exp: 0 }, { lv: 10, name: 'かけだし武闘家', exp: 430 }, { lv: 20, name: '歴戦の戦士', exp: 1317 }, { lv: 30, name: '剛腕バトルマスター', exp: 2484 }, { lv: 40, name: '無敵のパラディン', exp: 3873 }, { lv: 50, name: '神域のゴッドハンド', exp: 5454 }],
+      latest: { last: '2026/11/03', elapsed: 1, toZero: 26 },
+      total: { lv: 28, title: '剛腕バトルマスター', job: '剛腕の剣士', upperJob: false, eff: 2786, cum: 3092, lost: 306, curLvExp: 2736, nextLvExp: 2994, need: 208, progress: 0.19 },
+      majors: [
+        M('肩', 'かた', '🛡️', 24, 512, 512, '11/3', 1, 'good', '🔥 絶好調'),
+        M('胸', 'むね', '💠', 25, 548, 548, '11/2', 2, 'good', '🔥 絶好調'),
+        M('背中', 'せなか', '🦅', 17, 290, 400, '10/24', 11, 'warn', '⚠️ EXP減少中'),
+        M('腕', 'うで', '⚔️', 27, 640, 640, '11/3', 1, 'good', '🔥 絶好調'),
+        M('脚', 'あし', '🦵', 23, 470, 500, '10/27', 6, 'good', '🔥 絶好調'),
+        M('腹筋', 'ふっきん', '🔥', 15, 236, 380, '10/20', 15, 'warn', '⚠️ EXP減少中'),
+      ],
+      fines: [
+        F('僧帽筋(上部)', '肩', 15, 92, 'good', '11/3'), F('三角筋(前部)', '肩', 17, 118, 'good', '11/3'), F('三角筋(中部)', '肩', 20, 196, 'good', '11/3'), F('三角筋(後部)', '肩', 13, 75, 'good', '11/3'),
+        F('大胸筋(上部)', '胸', 18, 160, 'good', '11/2'), F('大胸筋(中部)', '胸', 21, 238, 'good', '11/2'), F('大胸筋(下部)', '胸', 17, 150, 'good', '11/2'),
+        F('広背筋', '背中', 18, 190, 'warn', '10/24'), F('僧帽筋(中下部)/起立筋', '背中', 14, 100, 'warn', '10/24'),
+        F('上腕二頭筋', '腕', 21, 250, 'good', '11/3'), F('上腕三頭筋', '腕', 20, 230, 'good', '11/3'), F('前腕/腕橈骨筋', '腕', 15, 160, 'good', '11/3'),
+        F('大腿四頭筋', '脚', 17, 210, 'good', '10/27'), F('ハム/大臀筋', '脚', 15, 170, 'good', '10/27'), F('ふくらはぎ', '脚', 12, 90, 'good', '10/27'),
+        F('腹直筋', '腹筋', 14, 140, 'warn', '10/20'), F('腹斜筋/腹横筋', '腹筋', 12, 96, 'warn', '10/20'),
+      ],
+      trend: trend,
+      forecast: [{ days: 3, eff: 2786, lv: 28 }, { days: 7, eff: 2602, lv: 27 }, { days: 14, eff: 1980, lv: 23 }, { days: 20, eff: 1150, lv: 17 }],
+      log: [
+        { type: 'gain', text: 'ちゃんズは 11/3に かたと うでを きたえた！ 864ポイントの けいけんちを かくとく！' },
+        { type: 'levelup', text: 'ちゃんズの レベルが あがった！ Lv.26 → Lv.28' },
+        { type: 'warn', text: 'ちゃんズは 11日の あいだ せなかの きたえを おこたった！ 広背筋の けいけんちが 110ポイント へってしまった！' },
+        { type: 'warn', text: 'ちゃんズは 15日の あいだ ふっきんの きたえを おこたった！ 腹直筋の けいけんちが 88ポイント へってしまった！' },
+        { type: 'warn', text: 'あしの けいけんちが あと2日で へりはじめる！ はやく きたえよう！' },
+        { type: 'info', text: 'つぎの レベルまで あと 208ポイント！' },
+      ],
+      body: { date: '2026/11/04', weight: 72.4, fat: 18.6, weightFromStart: -2.1, fatFromStart: -1.8, startDate: '2026/09/01' },
+      warnings: [],
+    };
+  }
+})();
+</script>
+</body>
+</html>

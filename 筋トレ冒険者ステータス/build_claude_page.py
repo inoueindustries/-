@@ -31,3 +31,22 @@ assert "/*@@SPRITES@@*/null" in s
 s = s.replace("/*@@SPRITES@@*/null", json.dumps(sprites))
 (here / "claude-page.html").write_text(s, encoding="utf-8")
 print("claude-page.html", len(s.encode()), "bytes")
+
+# ---- 専用アプリ版（GitHub Pages の quest/ に置く。ホーム画面に置くと全画面で開く） ----
+q = (here / "index.html").read_text(encoding="utf-8")
+q = q.replace("<?!= boot ?>", "").replace("/*@@COMPUTE@@*/", "")
+head = """<title>筋トレクエスト</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="icon-180.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="筋トレクエスト">
+<meta name="apple-mobile-web-app-status-bar-style" content="black">
+<script>window.QS_STANDALONE = true;</script>"""
+assert "<title>筋トレ冒険者ステータス</title>" in q
+q = q.replace("<title>筋トレ冒険者ステータス</title>", head, 1)
+out = here.parent / "quest"
+out.mkdir(exist_ok=True)
+(out / "index.html").write_text(q, encoding="utf-8")
+print("quest/index.html", len(q.encode()), "bytes")
