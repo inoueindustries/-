@@ -104,13 +104,13 @@ var QSWeb = (function () {
   }
 
   function loadMaster(v) {
-    var master = {}, multipliers = {}, labels = {}, guides = {}, hows = {};
+    var master = {}, multipliers = {}, labels = {}, guides = {}, hows = {}, names = {}, parts = {};
     var hr = findHeaderRow(v, function (h) {
       return h.some(function (x) { return /種目/.test(x); }) &&
         h.filter(function (x) { return FINE_MATCHERS.some(function (m) { return m[1](x); }); }).length >= 5;
     }, 15);
-    if (hr < 0) return { master: master, multipliers: multipliers, labels: labels, guides: guides, hows: hows, partCols: 0 };
-    var header = v[hr].map(norm), exCol = findCol(header, /種目/, 0), mulCol = findCol(header, /倍率/, -1), guideCol = findCol(header, /目安/, -1), howCol = findCol(header, /コツ/, -1);
+    if (hr < 0) return { master: master, multipliers: multipliers, labels: labels, guides: guides, hows: hows, names: names, parts: parts, partCols: 0 };
+    var header = v[hr].map(norm), exCol = findCol(header, /種目/, 0), mulCol = findCol(header, /倍率/, -1), guideCol = findCol(header, /目安/, -1), howCol = findCol(header, /コツ/, -1), partCol = findCol(header, /^大部位$/, -1);
     var cols = [], used = {};
     header.forEach(function (h, i) {
       if (i === exCol || i === mulCol || i === guideCol || i === howCol || !h) return;
@@ -124,6 +124,8 @@ var QSWeb = (function () {
     v.slice(hr + 1).forEach(function (row) {
       var ex = norm(cell(row, exCol));
       if (!ex) return;
+      names[ex] = String(cell(row, exCol)).trim();
+      if (partCol >= 0) parts[ex] = String(cell(row, partCol)).trim();
       var ratios = {}, sum = 0;
       cols.forEach(function (c) { var x = num(cell(row, c[0])) || 0; if (x > 1.5) x /= 100; if (x > 0) { ratios[c[1]] = x; sum += x; } });
       if (sum > 0) master[ex] = ratios;
@@ -132,7 +134,7 @@ var QSWeb = (function () {
       if (guideCol >= 0 && String(cell(row, guideCol)).trim()) guides[ex] = String(cell(row, guideCol)).trim();
       if (howCol >= 0 && String(cell(row, howCol)).trim()) hows[ex] = String(cell(row, howCol)).trim();
     });
-    return { master: master, multipliers: multipliers, labels: labels, guides: guides, hows: hows, partCols: cols.length };
+    return { master: master, multipliers: multipliers, labels: labels, guides: guides, hows: hows, names: names, parts: parts, partCols: cols.length };
   }
 
   function loadLog(v, multipliers) {
@@ -140,18 +142,24 @@ var QSWeb = (function () {
     var header = hr >= 0 ? v[hr].map(norm) : [];
     var col = {
       date: findCol(header, /日付/, 1), part: findCol(header, /^(大)?部位$|^部位/, 2), ex: findCol(header, /種目/, 3),
-      vol: findCol(header, /総ボリューム/, 10), exp: findCol(header, /基礎.*EXP|獲得EXP/, 13)
+      vol: findCol(header, /総ボリューム/, 10), exp: findCol(header, /基礎.*EXP|獲得EXP/, 13),
+      w: findCol(header, /^重量/, 5), r: findCol(header, /^回数/, 6), s: findCol(header, /^セット/, 7)
     };
     var entries = [];
+    entries.last = {};   // 種目ごとの さいごの記録（記録フォームの初期値に使う）
     v.slice(hr + 1).forEach(function (row) {
       var day = toDayNum(cell(row, col.date));
       if (day == null) return;
+      var exn = norm(cell(row, col.ex)), prev = entries.last[exn];
+      if (exn && (!prev || day >= prev.day)) entries.last[exn] = { day: day, date: fmt(day), w: num(cell(row, col.w)) || 0, r: num(cell(row, col.r)) || null, s: num(cell(row, col.s)) || 1 };
       var ex = norm(cell(row, col.ex)), exp = num(cell(row, col.exp)), vol = num(cell(row, col.vol));
       if (!(exp > 0) && multipliers[ex] && vol > 0) exp = vol * multipliers[ex];
       if (!(exp > 0)) return;
       entries.push({ day: day, ex: ex, part: norm(cell(row, col.part)), exp: exp });
     });
+    var last = entries.last;
     entries.sort(function (a, b) { return a.day - b.day; });
+    entries.last = last;
     return entries;
   }
 
@@ -313,6 +321,10 @@ var QSWeb = (function () {
       latest: latest,
       titles: C.TITLES.map(function (x) { return { lv: x[0], name: x[1], exp: Math.max(0, expForLv(x[0])) || 0 }; }),
       tips: tipsOf(m),
+      exercises: Object.keys(m.names).map(function (k) {
+        var l = data.entries.last[k];
+        return { name: m.names[k], part: m.parts[k] || '', plan: m.guides[k] || '', how: m.hows[k] || '', last: l ? { date: l.date, w: l.w, r: l.r, s: l.s } : null };
+      }),
       total: {
         lv: lv, title: titleOf(lv), job: job, upperJob: upper,
         eff: Math.round(s.eff), cum: Math.round(s.cum), lost: Math.round(s.cum - s.eff),

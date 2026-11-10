@@ -168,7 +168,9 @@
   .lvup.out { animation: fadeout .5s forwards; }
   @keyframes fadeout { to { opacity: 0; } }
 
-  .dlg { max-width: min(420px, calc(100vw - 32px)); width: 100%; color: var(--text); padding-top: 20px; }
+  .dlg { max-width: min(420px, calc(100vw - 32px)); width: 100%; color: var(--text); padding-top: 10px; max-height: calc(100dvh - 24px); overflow: auto; }
+  .dlg .win-title { position: static; display: block; padding: 0; margin-bottom: 8px; }
+  .rec-img { max-height: min(170px, 24dvh); }
   .dlg::backdrop { background: rgba(2,4,12,.7); }
   .dlg-next { font-size: 13px; margin: 4px 0 8px; color: var(--gold); }
   .dlg form { text-align: center; margin-top: 10px; }
@@ -211,6 +213,24 @@
   .fine-tip .pct { margin-left: 6px; font-size: 11px; color: var(--cyan); }
   .fine-tip .plan, .fine-tip .how { display: block; color: var(--muted); line-height: 1.5; }
   .fine-tip .plan { color: #cfd6f0; }
+  .fine-tip ol { list-style: none; padding-left: 0; }
+  .fine-tip li { display: grid; grid-template-columns: 84px minmax(0, 1fr); gap: 8px; align-items: start; padding-top: 6px; border-top: 1px dashed #262d55; }
+  .eximg { width: 84px; height: 64px; object-fit: contain; background: #fff; border-radius: 6px; }
+  .eximg.none { background: #10173a; }
+  .recbtn { font: inherit; font-size: 12px; color: #2a1600; background: var(--gold); border: 0; border-radius: 6px; padding: 4px 10px; margin-top: 4px; cursor: pointer; }
+  .recbtn:focus-visible, .fld input:focus-visible, .fld select:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
+  .fine-hint { font-size: 11px; color: var(--muted); margin: 0 0 6px; }
+  .recopen { display: block; width: 100%; margin-top: 10px; color: var(--gold); border-color: var(--gold); }
+  .rec-img { display: block; width: 100%; max-height: 170px; object-fit: contain; background: #fff; border-radius: 8px; margin-bottom: 8px; }
+  .fld { display: grid; gap: 2px; font-size: 12px; color: var(--muted); margin-bottom: 8px; min-width: 0; }
+  .fld input, .fld select { font: inherit; font-size: 16px; color: var(--text); background: #0a1030; border: 2px solid #2a3366; border-radius: 6px; padding: 7px 8px; width: 100%; min-width: 0; }
+  .fld3 { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+  .rec-plan { font-size: 12px; color: #cfd6f0; margin: -2px 0 8px; }
+  .rec-msg { font-size: 12px; min-height: 1.4em; margin: 0 0 6px; color: var(--warn); }
+  .rec-btns { display: flex; gap: 8px; justify-content: center; }
+  .refresh.rec-save { color: #2a1600; background: var(--gold); border-color: var(--gold); }
+  .toast { position: fixed; left: 50%; transform: translateX(-50%); bottom: calc(84px + env(safe-area-inset-bottom, 0px)); z-index: 20; max-width: calc(100% - 32px);
+    background: #06301f; color: #c8ffe6; border: 2px solid var(--good); border-radius: 8px; padding: 8px 14px; font-size: 13px; }
   .fine .dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 6px; vertical-align: 1px; }
   .fine .l { color: var(--gold); text-align: right; }
   .fine .e { text-align: right; color: var(--muted); }
@@ -407,8 +427,31 @@
       </div>
       <div class="win">
         <div class="win-title">こまかい ぶい（17）</div>
+        <p class="fine-hint">ぶいを おすと、きたえる しゅもくが でます。「きろくする」で そのまま 記録できます。</p>
         <div id="fines"></div>
+        <button type="button" class="refresh recopen" id="rec-open">＋ きんトレを きろくする</button>
       </div>
+      <dialog class="win dlg" id="rec-dlg">
+        <div class="win-title">きんトレの きろく</div>
+        <form id="rec-form" novalidate>
+          <img class="rec-img" id="rec-img" alt="" hidden>
+          <label class="fld">しゅもく<select id="rec-ex" required></select></label>
+          <p class="rec-plan" id="rec-plan"></p>
+          <label class="fld">ひづけ<input type="date" id="rec-date" required></label>
+          <div class="fld3" id="rec-nums">
+            <label class="fld">重量(kg)<input type="number" id="rec-w" inputmode="decimal" min="0" max="500" step="0.5"></label>
+            <label class="fld">回数<input type="number" id="rec-r" inputmode="numeric" min="1" max="1000" step="1"></label>
+            <label class="fld">セット<input type="number" id="rec-s" inputmode="numeric" min="1" max="50" step="1"></label>
+          </div>
+          <label class="fld" id="rec-memo-f" hidden>じかん・きょり（メモ）<input type="text" id="rec-memo" maxlength="60" placeholder="30分 など"></label>
+          <p class="rec-msg" id="rec-msg" role="status"></p>
+          <div class="rec-btns">
+            <button type="submit" class="refresh rec-save" id="rec-save">きろくする</button>
+            <button type="button" class="refresh" id="rec-close">とじる</button>
+          </div>
+        </form>
+      </dialog>
+      <div class="toast" id="toast" role="status" hidden></div>
     </section>
 
     <section class="panel" data-tab="log">
@@ -568,6 +611,98 @@
     });
   }
 
+  // ---------- 種目の画像と、きんトレの記録 ----------
+  // 画像：images/exercises/（スプシ『筋トレマスタ』の画像を小さくしたもの）。公開ページでは data URI に置きかえる
+  var EX_BASE = 'https://raw.githubusercontent.com/inoueindustries/-/main/%E7%AD%8B%E3%83%88%E3%83%AC%E5%86%92%E9%99%BA%E8%80%85%E3%82%B9%E3%83%86%E3%83%BC%E3%82%BF%E3%82%B9/images/exercises/';
+  var EX_FILES = /*EXFILES-BEGIN*/{"サイドレイズ": "01.webp", "ダンベルショルダープレス": "02.webp", "ダンベルベンチプレス": "05.webp", "加重ディップス": "07.webp", "プッシュアップ": "08.webp", "懸垂": "09.webp", "ダンベルロウ": "10.webp", "インクラインダンベルカール": "12.webp", "ベンチディップス": "15.webp", "スクワット": "16.webp", "カーフレイズ": "18.webp", "クランチ": "19.webp", "バイシクルクランチ": "20.webp", "ハンギングレッグレイズ": "21.webp", "プランク": "22.webp", "ロードサイクリング": "23.webp", "ウォーキング": "24.webp", "サウナ・温冷交代浴": "25.webp", "インクラインサイドレイズ": "26.webp", "ダンベルシュラッグ": "27.webp", "アブローラー": "29.webp", "ダンベルプルオーバー": "35.webp", "ダンベルルーマニアンデッドリフト": "36.webp", "サイドプランク": "38.webp", "ライイングレッグレイズ": "39.webp", "フラッターキック": "40.webp", "ロシアンツイスト": "42.webp"}/*EXFILES-END*/;
+  var EX_DATA = /*@@EXDATA@@*/null;
+  var nrm = function (v) { return String(v == null ? '' : v).replace(/（/g, '(').replace(/）/g, ')').replace(/[\s　]/g, ''); };
+  function exName(k) { var hit = ((state && state.exercises) || []).filter(function (e) { return e.name === k || nrm(e.name) === nrm(k); })[0]; return hit ? hit.name : k; }
+  function exImg(name) { if (EX_DATA) return EX_DATA[name] || ''; return EX_FILES[name] ? EX_BASE + EX_FILES[name] : ''; }
+  function exInfo(name) { return ((state && state.exercises) || []).filter(function (e) { return e.name === name; })[0] || null; }
+  var toastTimer = null;
+  function toast(msg) { var t = $('toast'); t.textContent = msg; t.hidden = false; clearTimeout(toastTimer); toastTimer = setTimeout(function () { t.hidden = true; }, 5000); }
+  function isCardio(e) { return !!e && /有酸素|リカバリー/.test(e.part); }
+  function fillRec(name) {
+    var e = exInfo(name), img = $('rec-img'), src = exImg(name);
+    img.hidden = !src; if (src) { img.src = src; img.alt = name + 'の フォーム'; }
+    $('rec-plan').textContent = e ? [e.plan ? 'めやす：' + e.plan : '', e.last ? 'ぜんかい ' + e.last.date + '：' + (e.last.r ? e.last.w + 'kg × ' + e.last.r + '回 × ' + e.last.s + 'セット' : 'きろくあり') : 'はじめての しゅもく'].filter(Boolean).join('　／　') : '';
+    var cardio = isCardio(e);
+    $('rec-nums').hidden = cardio; $('rec-memo-f').hidden = !cardio;
+    $('rec-w').value = e && e.last ? e.last.w : 0;
+    $('rec-r').value = e && e.last && e.last.r ? e.last.r : '';
+    $('rec-s').value = e && e.last ? e.last.s : 2;
+    $('rec-msg').textContent = '';
+  }
+  function openRec(name) {
+    if (!state || state.error) return;
+    var list = state.exercises || [];
+    if (!list.length) { toast('しゅもくの いちらんを よみこめませんでした'); return; }
+    var groups = {}, order = [];
+    list.forEach(function (e) { var k = e.part || 'そのた'; if (!groups[k]) { groups[k] = []; order.push(k); } groups[k].push(e.name); });
+    $('rec-ex').innerHTML = order.map(function (k) { return '<optgroup label="' + esc(k) + '">' + groups[k].map(function (n) { return '<option>' + esc(n) + '</option>'; }).join('') + '</optgroup>'; }).join('');
+    if (!name || !exInfo(name)) name = list[0].name;
+    $('rec-ex').value = name;
+    var n = new Date(), pad = function (x) { return ('0' + x).slice(-2); };
+    $('rec-date').value = n.getFullYear() + '-' + pad(n.getMonth() + 1) + '-' + pad(n.getDate());
+    fillRec(name);
+    $('rec-save').disabled = false;
+    var dlg = $('rec-dlg'); if (dlg.showModal) dlg.showModal(); else dlg.setAttribute('open', '');
+  }
+  $('rec-ex').addEventListener('change', function () { fillRec(this.value); });
+  ['rec-w', 'rec-r', 'rec-s'].forEach(function (id) { $(id).addEventListener('input', function () { $('rec-msg').textContent = ''; }); });
+  $('rec-open').addEventListener('click', function () { openRec(null); });
+  $('rec-close').addEventListener('click', function () { $('rec-dlg').close(); });
+  $('rec-form').addEventListener('submit', function (ev) {
+    ev.preventDefault();
+    var name = $('rec-ex').value, e = exInfo(name), msg = $('rec-msg'), cardio = isCardio(e);
+    var dm = $('rec-date').value.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+    if (!e || !dm) { msg.textContent = 'しゅもくと ひづけを えらんでください。'; return; }
+    var rec = { date: dm[1] + '/' + dm[2] + '/' + dm[3], ex: name, part: e.part, w: 0, r: '', s: 1, memo: '' };
+    if (cardio) { rec.memo = $('rec-memo').value.trim(); }
+    else {
+      rec.w = parseFloat($('rec-w').value || '0'); rec.r = parseInt($('rec-r').value, 10); rec.s = parseInt($('rec-s').value || '1', 10);
+      if (!(rec.r >= 1 && rec.r <= 1000)) { msg.textContent = '回数を いれてください。'; return; }
+      if (!(rec.w >= 0 && rec.w <= 500) || !(rec.s >= 1 && rec.s <= 50)) { msg.textContent = '重量は 0〜500kg、セットは 1〜50 で いれてください。'; return; }
+    }
+    var btn = $('rec-save'); btn.disabled = true; msg.textContent = 'かきこみちゅう……';
+    var ok = function () { $('rec-dlg').close(); toast(name + ' を きろくした！ けいけんちを けいさんしています……'); };
+    var ng = function (text, unsure) { btn.disabled = false; msg.textContent = text + (unsure ? ' もういちど おす前に、スプシに 行が ふえていないか たしかめてください。' : ''); };
+    if (isGas) {
+      google.script.run.withSuccessHandler(function (json) { var d = JSON.parse(json); if (d.error) return ng(d.error); ok(); render(d); })
+        .withFailureHandler(function (er) { ng('かきこめませんでした（' + (er && er.message || er) + '）', true); }).addLogEntry(rec);
+    } else if (mcp) {
+      saveViaMcp(rec, ok, ng);
+    } else if (window.QS_STANDALONE && getApi()) {
+      var q = '&action=add&date=' + encodeURIComponent(rec.date) + '&ex=' + encodeURIComponent(rec.ex) + '&w=' + rec.w + '&r=' + rec.r + '&s=' + rec.s + '&memo=' + encodeURIComponent(rec.memo);
+      fetch(getApi() + q, { redirect: 'follow' }).then(function (r) { return r.json(); })
+        .then(function (d) { if (d && d.error) return ng(d.error); ok(); d.fetchedAt = Date.now(); render(d); }, function () { ng('つながりませんでした。', true); });
+    } else {
+      ng('見本データでは きろくできません。');
+    }
+  });
+  // claude.ai のページ：閲覧者の Google Sheets 連携で、ログの最初の空き行に書く（式の列には さわらない）
+  var LOG_SHEET = "'トレーニング・運動ログ'";
+  function saveViaMcp(rec, ok, ng) {
+    mcp.callTool(SERVER, 'get_values', { spreadsheetId: SHEET_ID, range: LOG_SHEET + '!B1:D1000' }, { cache: false }).then(function (res) {
+      var v = payloadValues(res), row = -1;
+      for (var i = 1; i < 1000; i++) { var r = v[i] || []; if (!String(r[0] == null ? '' : r[0]).trim() && !String(r[2] == null ? '' : r[2]).trim()) { row = i + 1; break; } }
+      if (row < 2) { ng('ログの行が いっぱいです。'); return null; }
+      var cardio = rec.r === '';
+      var vals = [rec.date, rec.part, rec.ex, null, rec.w, cardio ? null : rec.r, rec.s, null, null, null, rec.memo || null];
+      return mcp.callTool(SERVER, 'update_values', { spreadsheetId: SHEET_ID, range: LOG_SHEET + '!B' + row + ':L' + row, values: [vals] }, { cache: false }).then(function () {
+        ok();
+        mcp.invalidate(SERVER).catch(function () {});
+      }, function (er) {
+        var c = er && er.code;
+        if (c === 'not_in_manifest' || c === 'approval_required' || c === 'consent_required' || c === 'blocked_by_policy') ng('スプシへの 書きこみが 許可されていません。許可してから もういちど おしてください。');
+        else if (c === 'needs_reauth' || c === 'server_not_connected') ng('Google Sheets の接続が 切れています。claude.ai の 設定 → コネクタ で つなぎ直してください。');
+        else if (c === 'tool_error') ng('かきこめませんでした。スプシを 編集できる アカウントか たしかめてください。');
+        else ng('かきこみの 結果が わかりませんでした。', true);
+      });
+    }, function () { ng('スプシを よみこめませんでした。すこし まってから もういちど おしてください。'); });
+  }
+
   // 17部位：タップ（PCはカーソルを当てる／クリック）で、その部位を きたえる しゅぎょうを ひらく
   function renderFines(fines) {
     var max = Math.max.apply(null, fines.map(function (f) { return f.eff; }).concat([1]));
@@ -583,9 +718,11 @@
         var id = 'ft-' + esc(f.key).replace(/[^\w]/g, '') + n + g.k.length;
         var list = tips[f.key] || [];
         var body = list.length ? '<ol>' + list.map(function (x) {
-          return '<li><b>' + esc(x.ex) + '</b>' + (x.ratio ? '<span class="pct">この部位に ' + Math.round(x.ratio * 100) + '%</span>' : '') +
+          var nm = exName(x.ex), src = exImg(nm);
+          return '<li>' + (src ? '<img class="eximg" loading="lazy" alt="' + esc(nm) + 'の フォーム" src="' + esc(src) + '">' : '<span class="eximg none"></span>') + '<div><b>' + esc(nm) + '</b>' + (x.ratio ? '<span class="pct">この部位に ' + Math.round(x.ratio * 100) + '%</span>' : '') +
             (x.plan || x.guide ? '<span class="plan">' + esc(x.plan || x.guide) + '</span>' : '') +
-            (x.how ? '<span class="how">コツ：' + esc(x.how) + '</span>' : '') + '</li>';
+            (x.how ? '<span class="how">コツ：' + esc(x.how) + '</span>' : '') +
+            '<button type="button" class="recbtn" data-ex="' + esc(nm) + '">きろくする</button></div></li>';
         }).join('') + '</ol>' : '<p class="muted">この部位に 経験値が入る種目が マスタに ありません</p>';
         var head = (f.next != null && f.lv < 999 ? 'あと ' + fmt(f.next) + ' EXP で Lv.' + (f.lv + 1) + '！' : '') + (f.last ? '（さいご ' + esc(f.last) + '）' : '（まだ きたえていない）');
         return '<div class="fine-row">' +
@@ -600,6 +737,8 @@
     requestAnimationFrame(function () {
       document.querySelectorAll('#fines .mini i').forEach(function (i) { i.style.width = i.getAttribute('data-w') + '%'; });
     });
+    document.querySelectorAll('#fines .recbtn').forEach(function (b) { b.addEventListener('click', function () { openRec(b.getAttribute('data-ex')); }); });
+    document.querySelectorAll('#fines .eximg').forEach(function (i) { i.addEventListener('error', function () { i.classList.add('none'); i.removeAttribute('src'); }); });
     var hover = window.matchMedia('(hover: hover) and (pointer: fine)').matches;
     document.querySelectorAll('#fines .fine-row').forEach(function (row) {
       var btn = row.querySelector('.fine'), tip = row.querySelector('.fine-tip'), pinned = false;

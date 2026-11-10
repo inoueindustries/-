@@ -8,6 +8,13 @@ import base64
 import json
 from pathlib import Path
 here = Path(__file__).resolve().parent
+# 種目の画像の一覧（images/exercises/index.json）を index.html に書きこむ
+import re
+ex_files = json.loads((here / "images" / "exercises" / "index.json").read_text(encoding="utf-8"))
+src_html = (here / "index.html").read_text(encoding="utf-8")
+src_html2 = re.sub(r"/\*EXFILES-BEGIN\*/.*?/\*EXFILES-END\*/", lambda m: "/*EXFILES-BEGIN*/" + json.dumps(ex_files, ensure_ascii=False) + "/*EXFILES-END*/", src_html, count=1, flags=re.S)
+if src_html2 != src_html:
+    (here / "index.html").write_text(src_html2, encoding="utf-8")
 s = (here / "index.html").read_text(encoding="utf-8")
 head_end = s.index("<title>")
 s = s[head_end:]
@@ -27,6 +34,9 @@ scenes = {k: "data:image/webp;base64," + base64.b64encode((here / "images" / "sc
           for k in ("mountain", "waterfall", "sunset", "night")}
 assert "/*@@SCENES@@*/null" in s
 s = s.replace("/*@@SCENES@@*/null", json.dumps(scenes))
+ex_data = {n: "data:image/webp;base64," + base64.b64encode((here / "images" / "exercises" / f).read_bytes()).decode() for n, f in ex_files.items()}
+assert "/*@@EXDATA@@*/null" in s
+s = s.replace("/*@@EXDATA@@*/null", json.dumps(ex_data, ensure_ascii=False))
 assert "/*@@SPRITES@@*/null" in s
 s = s.replace("/*@@SPRITES@@*/null", json.dumps(sprites))
 (here / "claude-page.html").write_text(s, encoding="utf-8")

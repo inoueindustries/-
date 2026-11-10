@@ -67,6 +67,10 @@ function doGet(e) {
     return ContentService.createTextOutput(JSON.stringify({ error: '合言葉がちがいます' }))
       .setMimeType(ContentService.MimeType.JSON);
   }
+  if (p.action === 'add') {   // 専用アプリからの記録（合言葉つきURLのときだけ）
+    if (!appKey) return ContentService.createTextOutput(JSON.stringify({ error: '先に setupAppKey を実行してください' })).setMimeType(ContentService.MimeType.JSON);
+    return ContentService.createTextOutput(addLogEntry(p)).setMimeType(ContentService.MimeType.JSON);
+  }
   if (p.format === 'json') {
     return ContentService.createTextOutput(getStatusJson())
       .setMimeType(ContentService.MimeType.JSON);
@@ -87,6 +91,37 @@ function setupAppKey() {
   const url = ScriptApp.getService().getUrl();
   Logger.log(url ? '▼ このURLをアプリに貼ってください\n' + url + '?format=json&key=' + key
     : '合言葉を作りました。先に「デプロイ → 新しいデプロイ → ウェブアプリ」をしてから、もう一度実行してください');
+}
+
+/** トレーニングログに1行足す。{date:'2026/11/10', ex:'種目名', w:重量, r:回数, s:セット数, memo:'時間・距離'}。足したあとの最新ステータスを返す */
+function addLogEntry(p) {
+  try {
+    const sh = SpreadsheetApp.openById(QS_CONFIG.SPREADSHEET_ID).getSheetByName(QS_CONFIG.SHEET_LOG);
+    const ex = String(p.ex || '').trim();
+    const m = String(p.date || '').match(/^(\d{4})[\/-](\d{1,2})[\/-](\d{1,2})$/);
+    if (!ex || !m) throw new Error('日付か種目が正しくありません');
+    const data = QS.loadData();
+    const key = Object.keys(data.names).filter(k => data.names[k] === ex)[0];
+    if (!key) throw new Error('マスタにない種目です：' + ex);
+    const num = v => (v === '' || v == null || isNaN(Number(v)) ? '' : Number(v));
+    const w = num(p.w), r = num(p.r), s = num(p.s);
+    if ((w !== '' && (w < 0 || w > 500)) || (r !== '' && (r < 0 || r > 1000)) || (s !== '' && (s < 1 || s > 50))) throw new Error('数字が大きすぎます');
+    // 日付(B)と種目(D)が空の最初の行に書く。式の入った列（E・I〜K・M〜Q）には さわらない
+    const bd = sh.getRange(2, 2, sh.getMaxRows() - 1, 3).getValues();
+    let row = -1;
+    for (let i = 0; i < bd.length; i++) if (bd[i][0] === '' && bd[i][2] === '') { row = i + 2; break; }
+    if (row < 0) throw new Error('ログの行が いっぱいです');
+    const lock = LockService.getScriptLock(); lock.waitLock(10000);
+    try {
+      sh.getRange(row, 2, 1, 3).setValues([[new Date(+m[1], +m[2] - 1, +m[3]), data.parts[key] || '', ex]]);
+      sh.getRange(row, 6, 1, 3).setValues([[w === '' ? 0 : w, r, s === '' ? 1 : s]]);
+      if (p.memo) sh.getRange(row, 12).setValue(String(p.memo).slice(0, 100));
+      SpreadsheetApp.flush();
+    } finally { lock.releaseLock(); }
+    return getStatusJson();
+  } catch (err) {
+    return JSON.stringify({ error: String(err && err.message || err) });
+  }
 }
 
 function getStatusJson() {
@@ -203,16 +238,19 @@ const QS = (() => {
     const labels = {};   // 17部位の表示名（マスタの見出しをそのまま使う）
     const guides = {};   // 種目ごとの推奨負荷の目安
     const hows = {};     // 種目ごとのフォームのコツ
-    if (!sh) return { master, multipliers, labels, guides, hows, partCols: 0 };
+    const names = {};    // 種目名（表示用）
+    const parts = {};    // 種目の大部位
+    if (!sh) return { master, multipliers, labels, guides, hows, names, parts, partCols: 0 };
     const v = sh.getDataRange().getValues();
     const hr = findHeaderRow(v, h => h.some(x => /種目/.test(x)) &&
       h.filter(x => FINE_MATCHERS.some(m => m[1](x))).length >= 5, 15);
-    if (hr < 0) return { master, multipliers, labels, guides, hows, partCols: 0 };
+    if (hr < 0) return { master, multipliers, labels, guides, hows, names, parts, partCols: 0 };
     const header = v[hr].map(norm);
     const exCol = findCol(header, /種目/, 0);
     const mulCol = findCol(header, /倍率/, -1);
     const guideCol = findCol(header, /目安/, -1);
     const howCol = findCol(header, /コツ/, -1);
+    const partCol = findCol(header, /^大部位$/, -1);
     const cols = [];   // [colIndex, fineName]
     const used = {};
     header.forEach((h, i) => {
@@ -229,6 +267,8 @@ const QS = (() => {
     v.slice(hr + 1).forEach(row => {
       const ex = norm(row[exCol]);
       if (!ex) return;
+      names[ex] = String(row[exCol]).trim();
+      if (partCol >= 0) parts[ex] = String(row[partCol] || '').trim();
       const ratios = {};
       let sum = 0;
       cols.forEach(([i, f]) => {
@@ -241,7 +281,7 @@ const QS = (() => {
       if (guideCol >= 0 && String(row[guideCol] || '').trim()) guides[ex] = String(row[guideCol]).trim();
       if (howCol >= 0 && String(row[howCol] || '').trim()) hows[ex] = String(row[howCol]).trim();
     });
-    return { master, multipliers, labels, guides, hows, partCols: cols.length };
+    return { master, multipliers, labels, guides, hows, names, parts, partCols: cols.length };
   }
 
   function loadLog(book, multipliers) {
@@ -257,11 +297,15 @@ const QS = (() => {
       ex: findCol(header, /種目/, 3),
       vol: findCol(header, /総ボリューム/, 10),
       exp: findCol(header, /基礎.*EXP|獲得EXP/, 13),
+      w: findCol(header, /^重量/, 5), r: findCol(header, /^回数/, 6), s: findCol(header, /^セット/, 7),
     };
     const entries = [];
+    const last = {};   // 種目ごとの さいごの記録（記録フォームの初期値に使う）
     v.slice(hr + 1).forEach(row => {
       const day = toDayNum(row[col.date]);
       if (day == null) return;
+      const exn = norm(row[col.ex]);
+      if (exn && (!last[exn] || day >= last[exn].day)) last[exn] = { day, date: fmt(day), w: Number(row[col.w]) || 0, r: Number(row[col.r]) || null, s: Number(row[col.s]) || 1 };
       const ex = norm(row[col.ex]);
       let exp = Number(row[col.exp]);
       if (!(exp > 0) && multipliers[ex] && Number(row[col.vol]) > 0) {
@@ -271,6 +315,7 @@ const QS = (() => {
       entries.push({ day, ex, part: norm(row[col.part]), exp });
     });
     entries.sort((a, b) => a.day - b.day);
+    entries.last = last;
     return entries;
   }
 
@@ -343,7 +388,7 @@ const QS = (() => {
     const book = openBook();
     loadSettings(book);
     const m = loadMaster(book);
-    return { master: m.master, labels: m.labels, guides: m.guides, hows: m.hows, entries: loadLog(book, m.multipliers), body: loadBody(book), partCols: m.partCols };
+    return { master: m.master, labels: m.labels, guides: m.guides, hows: m.hows, names: m.names, parts: m.parts, entries: loadLog(book, m.multipliers), body: loadBody(book), partCols: m.partCols };
   }
 
   // ---------- 計算 ----------
@@ -481,6 +526,10 @@ const QS = (() => {
       latest,
       titles: C.TITLES.map(([lvl, name]) => ({ lv: lvl, name, exp: Math.max(0, expForLv(lvl, A)) || 0 })),
       tips: tipsOf(data),
+      exercises: Object.keys(data.names || {}).map(k => {
+        const l = (data.entries.last || {})[k];
+        return { name: data.names[k], part: data.parts[k] || '', plan: (data.guides || {})[k] || '', how: (data.hows || {})[k] || '', last: l ? { date: l.date, w: l.w, r: l.r, s: l.s } : null };
+      }),
       total: {
         lv, title: titleOf(lv), job, upperJob: upper,
         eff: Math.round(s.eff), cum: Math.round(s.cum), lost: Math.round(s.cum - s.eff),
