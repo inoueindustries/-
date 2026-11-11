@@ -266,9 +266,9 @@
   .pfc div { border: 1px solid #2a3366; border-radius: 6px; padding: 5px 2px; }
   .pfc small { display: block; color: var(--muted); font-size: 11px; }
   .pfc b { font-weight: normal; font-size: 15px; }
-  .nut { width: 100%; margin: 0 0 8px; font-size: 12px; white-space: normal; }
-  .nut th, .nut td { padding: 5px 3px; }
-  .nut td.num { white-space: nowrap; }
+  .tbl.nut { width: 100%; margin: 0 0 8px; font-size: 12px; table-layout: fixed; }
+  .tbl.nut th, .tbl.nut td { padding: 5px 3px; white-space: normal; overflow-wrap: anywhere; }
+  .tbl.nut th:nth-child(1) { width: 32%; } .tbl.nut th:nth-child(2) { width: 30%; }
   .nut .nbad { color: var(--danger); } .nut .nok { color: var(--good); }
   .adv { font-size: 13px; line-height: 1.6; margin: 0 0 8px; }
   .adv b { display: block; font-weight: normal; font-size: 12px; color: var(--gold); }
@@ -1356,8 +1356,8 @@ if (typeof module !== 'undefined') module.exports = QSWeb;
     var a = m.advice, adv = '';
     if (a && a.rows.length) {
       var line = function (label, text, cls) { return text ? '<p class="adv' + (cls ? ' ' + cls : '') + '"><b>' + label + '</b>' + esc(text).replace(/\n/g, '<br>') + '</p>' : ''; };
-      adv = '<table class="tbl nut"><thead><tr><th class="l">えいようそ</th><th>きょう / もくひょう</th><th class="l">はんてい</th></tr></thead><tbody>' +
-        a.rows.map(function (x) { var bad = /⚠/.test(x.judge), ok = /✅/.test(x.judge); return '<tr><td class="l">' + esc(x.name) + '</td><td class="num">' + esc(x.intake) + ' / ' + esc(x.target) + '</td><td class="l ' + (bad ? 'nbad' : ok ? 'nok' : '') + '">' + esc(x.judge) + '</td></tr>'; }).join('') + '</tbody></table>' +
+      adv = '<table class="tbl nut"><thead><tr><th class="l">えいようそ</th><th>きょう/目標</th><th class="l">はんてい</th></tr></thead><tbody>' +
+        a.rows.map(function (x) { var bad = /⚠/.test(x.judge), ok = /✅/.test(x.judge); return '<tr><td class="l">' + esc(x.name.replace(/\s*[（(].*$/, '')) + '</td><td class="num">' + esc(x.intake) + ' / ' + esc(x.target) + '</td><td class="l ' + (bad ? 'nbad' : ok ? 'nok' : '') + '">' + esc(x.judge) + '</td></tr>'; }).join('') + '</tbody></table>' +
         line('たりない えいよう', a.lack, /なし/.test(a.lack || '') ? 'good' : 'warn') + line('とりすぎ ちゅうい', a.over, /^なし/.test(a.over || '') ? 'good' : 'bad') + line('アドバイス', a.text) + line('きろくからの おすすめ', a.suggest);
     }
     $('meal-today').innerHTML = gauge('カロリー', t.kcal, m.targetKcal, 'kcal', 'limit') + gauge('たんぱくしつ', t.p, m.targetP, 'g', 'goal') + (adv ? adv +
