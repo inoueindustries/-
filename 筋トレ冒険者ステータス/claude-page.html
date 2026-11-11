@@ -266,6 +266,13 @@
   .pfc div { border: 1px solid #2a3366; border-radius: 6px; padding: 5px 2px; }
   .pfc small { display: block; color: var(--muted); font-size: 11px; }
   .pfc b { font-weight: normal; font-size: 15px; }
+  .nut { width: 100%; margin: 0 0 8px; font-size: 12px; white-space: normal; }
+  .nut th, .nut td { padding: 5px 3px; }
+  .nut td.num { white-space: nowrap; }
+  .nut .nbad { color: var(--danger); } .nut .nok { color: var(--good); }
+  .adv { font-size: 13px; line-height: 1.6; margin: 0 0 8px; }
+  .adv b { display: block; font-weight: normal; font-size: 12px; color: var(--gold); }
+  .adv.good { color: var(--good); } .adv.warn { color: var(--warn); } .adv.bad { color: var(--danger); }
   .mealmsg { font-size: 13px; margin: 0 0 8px; }
   .mealmsg.good { color: var(--good); } .mealmsg.warn { color: var(--warn); }
   .ml-row { padding: 6px 0; border-top: 1px dashed #262d55; font-size: 13px; }
@@ -871,6 +878,18 @@ var QSWeb = (function () {
         break;
       }
     });
+    // ダッシュボードの「きょうの栄養バランス＆食事アドバイス」（スプシの式が作った文を そのまま使う）
+    var advice = null, txt = function (row, i) { return String(cell(row, i) == null ? '' : cell(row, i)).trim(); };
+    (dash || []).forEach(function (row, r) {
+      var lab = norm(cell(row, 1));
+      if (lab === '栄養素') {
+        advice = advice || { rows: [] };
+        for (var k = r + 1; k < dash.length && norm(cell(dash[k], 1)); k++) advice.rows.push({ name: txt(dash[k], 1), target: txt(dash[k], 2), intake: txt(dash[k], 3), diff: txt(dash[k], 4), judge: txt(dash[k], 5) });
+      } else if (/^不足している栄養素/.test(lab)) (advice = advice || { rows: [] }).lack = txt(row, 2);
+      else if (/^とりすぎ注意/.test(lab)) (advice = advice || { rows: [] }).over = txt(row, 2);
+      else if (/^アドバイス/.test(lab)) (advice = advice || { rows: [] }).text = txt(row, 2);
+      else if (/^記録からのおすすめ/.test(lab)) (advice = advice || { rows: [] }).suggest = txt(row, 2);
+    });
     var r1 = function (x) { return Math.round(x * 10) / 10; };
     var days = [];
     for (var d = t - 6; d <= t; d++) {
@@ -883,7 +902,7 @@ var QSWeb = (function () {
     items.forEach(function (it) { if (it.kind && kinds.indexOf(it.kind) < 0) kinds.push(it.kind); });
     var strip = function (it) { return { row: it.row, date: it.date, kind: it.kind, menu: it.menu, kcal: it.kcal, p: it.p, f: it.f, c: it.c, fiber: it.fiber, salt: it.salt }; };
     return {
-      targetKcal: target.kcal, targetP: target.p, today: fmt(t, true), days: days,
+      targetKcal: target.kcal, targetP: target.p, today: fmt(t, true), days: days, advice: advice,
       items: items.filter(function (it) { return it.day === t; }).map(strip),
       recent: items.slice(-15).reverse().map(strip), kinds: kinds,
       nextRow: lastRow + 1, nextDailyRow: lastDaily + 1, dailyDates: Object.keys(dailyHas),
@@ -1333,9 +1352,18 @@ if (typeof module !== 'undefined') module.exports = QSWeb;
       msg += t.p >= m.targetP ? '<p class="mealmsg good">たんぱくしつの もくひょうを たっせい！</p>' : '<p class="mealmsg">たんぱくしつが あと ' + f1(m.targetP - t.p) + 'g たりない！</p>';
       msg += t.kcal > m.targetKcal ? '<p class="mealmsg warn">カロリーが ' + f1(t.kcal - m.targetKcal) + 'kcal オーバーしている！</p>' : '<p class="mealmsg">カロリーは あと ' + f1(m.targetKcal - t.kcal) + 'kcal たべられる。</p>';
     }
-    $('meal-today').innerHTML = gauge('カロリー', t.kcal, m.targetKcal, 'kcal', 'limit') + gauge('たんぱくしつ', t.p, m.targetP, 'g', 'goal') +
+    // スプシのダッシュボードに「きょうの栄養バランス＆食事アドバイス」が あれば、その中身を そのまま出す
+    var a = m.advice, adv = '';
+    if (a && a.rows.length) {
+      var line = function (label, text, cls) { return text ? '<p class="adv' + (cls ? ' ' + cls : '') + '"><b>' + label + '</b>' + esc(text).replace(/\n/g, '<br>') + '</p>' : ''; };
+      adv = '<table class="tbl nut"><thead><tr><th class="l">えいようそ</th><th>きょう / もくひょう</th><th class="l">はんてい</th></tr></thead><tbody>' +
+        a.rows.map(function (x) { var bad = /⚠/.test(x.judge), ok = /✅/.test(x.judge); return '<tr><td class="l">' + esc(x.name) + '</td><td class="num">' + esc(x.intake) + ' / ' + esc(x.target) + '</td><td class="l ' + (bad ? 'nbad' : ok ? 'nok' : '') + '">' + esc(x.judge) + '</td></tr>'; }).join('') + '</tbody></table>' +
+        line('たりない えいよう', a.lack, /なし/.test(a.lack || '') ? 'good' : 'warn') + line('とりすぎ ちゅうい', a.over, /^なし/.test(a.over || '') ? 'good' : 'bad') + line('アドバイス', a.text) + line('きろくからの おすすめ', a.suggest);
+    }
+    $('meal-today').innerHTML = gauge('カロリー', t.kcal, m.targetKcal, 'kcal', 'limit') + gauge('たんぱくしつ', t.p, m.targetP, 'g', 'goal') + (adv ? adv +
+      m.items.map(function (x) { return '<div class="ml-row"><b>' + esc(x.kind || 'ごはん') + '</b>' + esc(x.menu) + '<small>' + f1(x.kcal) + 'kcal・たんぱく質 ' + f1(x.p) + 'g</small></div>'; }).join('') :
       '<div class="pfc"><div><small>脂質</small><b class="num">' + f1(t.f) + '</b>g</div><div><small>炭水化物</small><b class="num">' + f1(t.c) + '</b>g</div><div><small>食物繊維</small><b class="num">' + f1(t.fiber) + '</b>g</div><div><small>塩分</small><b class="num">' + f1(t.salt) + '</b>g</div></div>' + msg +
-      m.items.map(function (x) { return '<div class="ml-row"><b>' + esc(x.kind || 'ごはん') + '</b>' + esc(x.menu) + '<small>' + f1(x.kcal) + 'kcal・たんぱく質 ' + f1(x.p) + 'g</small></div>'; }).join('');
+      m.items.map(function (x) { return '<div class="ml-row"><b>' + esc(x.kind || 'ごはん') + '</b>' + esc(x.menu) + '<small>' + f1(x.kcal) + 'kcal・たんぱく質 ' + f1(x.p) + 'g</small></div>'; }).join(''));
     requestAnimationFrame(function () { document.querySelectorAll('#meal-today .gb i').forEach(function (i) { i.style.width = i.getAttribute('data-w') + '%'; }); });
     $('meal-chart').innerHTML = '<h3 class="mc-h">カロリー（kcal）</h3>' + mealBars(m.days, 'kcal', m.targetKcal, '#6fd3ff', 'カロリーの7日推移', 'kcal') +
       '<h3 class="mc-h">たんぱくしつ（g）</h3>' + mealBars(m.days, 'p', m.targetP, '#7be08a', 'たんぱく質の7日推移', 'g');
@@ -1956,7 +1984,7 @@ if (typeof module !== 'undefined') module.exports = QSWeb;
     log: "'トレーニング・運動ログ'!A1:Q1000",
     body: "'体組成ログ'!A1:L1000",
     meal: "'食事・PFCログ'!A1:U1000",
-    dash: "'ダッシュボード'!A1:D8"
+    dash: "'ダッシュボード'!A1:H40"
   };
   var CACHE = { staleTime: 60 * 1000, gcTime: 7 * 24 * 3600 * 1000 };
   var isGas = !!(window.google && google.script && google.script.run);

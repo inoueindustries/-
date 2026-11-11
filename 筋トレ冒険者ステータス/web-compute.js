@@ -224,6 +224,18 @@ var QSWeb = (function () {
         break;
       }
     });
+    // ダッシュボードの「きょうの栄養バランス＆食事アドバイス」（スプシの式が作った文を そのまま使う）
+    var advice = null, txt = function (row, i) { return String(cell(row, i) == null ? '' : cell(row, i)).trim(); };
+    (dash || []).forEach(function (row, r) {
+      var lab = norm(cell(row, 1));
+      if (lab === '栄養素') {
+        advice = advice || { rows: [] };
+        for (var k = r + 1; k < dash.length && norm(cell(dash[k], 1)); k++) advice.rows.push({ name: txt(dash[k], 1), target: txt(dash[k], 2), intake: txt(dash[k], 3), diff: txt(dash[k], 4), judge: txt(dash[k], 5) });
+      } else if (/^不足している栄養素/.test(lab)) (advice = advice || { rows: [] }).lack = txt(row, 2);
+      else if (/^とりすぎ注意/.test(lab)) (advice = advice || { rows: [] }).over = txt(row, 2);
+      else if (/^アドバイス/.test(lab)) (advice = advice || { rows: [] }).text = txt(row, 2);
+      else if (/^記録からのおすすめ/.test(lab)) (advice = advice || { rows: [] }).suggest = txt(row, 2);
+    });
     var r1 = function (x) { return Math.round(x * 10) / 10; };
     var days = [];
     for (var d = t - 6; d <= t; d++) {
@@ -236,7 +248,7 @@ var QSWeb = (function () {
     items.forEach(function (it) { if (it.kind && kinds.indexOf(it.kind) < 0) kinds.push(it.kind); });
     var strip = function (it) { return { row: it.row, date: it.date, kind: it.kind, menu: it.menu, kcal: it.kcal, p: it.p, f: it.f, c: it.c, fiber: it.fiber, salt: it.salt }; };
     return {
-      targetKcal: target.kcal, targetP: target.p, today: fmt(t, true), days: days,
+      targetKcal: target.kcal, targetP: target.p, today: fmt(t, true), days: days, advice: advice,
       items: items.filter(function (it) { return it.day === t; }).map(strip),
       recent: items.slice(-15).reverse().map(strip), kinds: kinds,
       nextRow: lastRow + 1, nextDailyRow: lastDaily + 1, dailyDates: Object.keys(dailyHas),
