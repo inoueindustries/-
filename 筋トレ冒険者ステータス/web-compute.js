@@ -189,6 +189,61 @@ var QSWeb = (function () {
     };
   }
 
+  /** 食事・PFCログ。左がわ（日付〜食塩）が1食ごとの きろく、右がわ（2つめの「日付」から）が1日ごとの合計表 */
+  function loadMeals(v, dash, t) {
+    var hr = findHeaderRow(v, function (h) { return h.some(function (x) { return /日付/.test(x); }) && h.some(function (x) { return /カロリー/.test(x); }); }, 10);
+    if (hr < 0) return null;
+    var header = v[hr].map(norm);
+    var c = {
+      date: findCol(header, /日付/, 1), kind: findCol(header, /区分/, 2), menu: findCol(header, /メニュー|摂取内容/, 3),
+      kcal: findCol(header, /カロリー/, 4), p: findCol(header, /タンパク質/, 5), f: findCol(header, /脂質/, 6),
+      c: findCol(header, /炭水化物/, 7), fiber: findCol(header, /繊維/, 8), salt: findCol(header, /食塩|塩分/, 9)
+    };
+    var dcol = 13;   // 1日ごとの合計表の「日付」の列（2つめの 日付）
+    for (var i = c.date + 1; i < header.length; i++) if (/日付/.test(header[i])) { dcol = i; break; }
+    var n0 = function (x) { var k = num(x); return isNaN(k) ? 0 : k; };
+    var items = [], lastRow = hr + 1, lastDaily = hr + 1, dailyHas = {};
+    v.slice(hr + 1).forEach(function (row, i) {
+      var r = hr + i + 2;
+      var dd = toDayNum(cell(row, dcol));
+      if (dd != null) { dailyHas[fmt(dd, true)] = true; lastDaily = r; }
+      var day = toDayNum(cell(row, c.date));
+      if (day == null) return;
+      lastRow = r;
+      items.push({ row: r, day: day, date: fmt(day, true), kind: String(cell(row, c.kind) || '').trim(), menu: String(cell(row, c.menu) || '').trim(),
+        kcal: n0(cell(row, c.kcal)), p: n0(cell(row, c.p)), f: n0(cell(row, c.f)), c: n0(cell(row, c.c)), fiber: n0(cell(row, c.fiber)), salt: n0(cell(row, c.salt)) });
+    });
+    var target = { kcal: 1800, p: 130 };
+    (dash || []).forEach(function (row) {
+      var name = norm((row || []).slice(0, 3).join(' '));
+      for (var j = 0; j < (row || []).length; j++) {
+        var k = num(row[j]);
+        if (isNaN(k) || !(k > 0)) continue;
+        if (/日次カロリー|カロリー/.test(norm(row[j - 1]))) target.kcal = k;
+        if (/タンパク質/.test(norm(row[j - 1]))) target.p = k;
+        break;
+      }
+    });
+    var r1 = function (x) { return Math.round(x * 10) / 10; };
+    var days = [];
+    for (var d = t - 6; d <= t; d++) {
+      var o = { day: d, d: fmt(d), date: fmt(d, true), kcal: 0, p: 0, f: 0, c: 0, fiber: 0, salt: 0, count: 0 };
+      items.forEach(function (it) { if (it.day === d) { o.kcal += it.kcal; o.p += it.p; o.f += it.f; o.c += it.c; o.fiber += it.fiber; o.salt += it.salt; o.count++; } });
+      ['kcal', 'p', 'f', 'c', 'fiber', 'salt'].forEach(function (k) { o[k] = r1(o[k]); });
+      days.push(o);
+    }
+    var kinds = ['朝食', '昼食', '夕食', '間食', '晩酌'];
+    items.forEach(function (it) { if (it.kind && kinds.indexOf(it.kind) < 0) kinds.push(it.kind); });
+    var strip = function (it) { return { row: it.row, date: it.date, kind: it.kind, menu: it.menu, kcal: it.kcal, p: it.p, f: it.f, c: it.c, fiber: it.fiber, salt: it.salt }; };
+    return {
+      targetKcal: target.kcal, targetP: target.p, today: fmt(t, true), days: days,
+      items: items.filter(function (it) { return it.day === t; }).map(strip),
+      recent: items.slice(-15).reverse().map(strip), kinds: kinds,
+      nextRow: lastRow + 1, nextDailyRow: lastDaily + 1, dailyDates: Object.keys(dailyHas),
+      cols: { first: c.date, daily: dcol }
+    };
+  }
+
   function retention(el) { return el < 0 ? 0 : el <= C.KEEP_DAYS ? 1 : Math.max(0, 1 - (el - C.KEEP_DAYS) * C.DECAY_PER_DAY); }
   function majorOfPart(part) { for (var i = 0; i < MAJORS.length; i++) if (MAJORS[i].words.test(part)) return MAJORS[i].key; return null; }
 
@@ -326,6 +381,7 @@ var QSWeb = (function () {
         curveA: C.CURVE_A, curveP: C.CURVE_P, maxLv: C.MAX_LV },
       latest: latest,
       recent: data.entries.recent || [],
+      meals: ranges.meal ? loadMeals(ranges.meal, ranges.dash || [], t) : null,
       titles: C.TITLES.map(function (x) { return { lv: x[0], name: x[1], exp: Math.max(0, expForLv(x[0])) || 0 }; }),
       tips: tipsOf(m),
       exercises: Object.keys(m.names).map(function (k) {

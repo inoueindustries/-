@@ -112,6 +112,70 @@ function setupAppKey() {
     '\n\n① に貼るURLは「デプロイ → デプロイを管理」に出る、/exec で終わる「ウェブアプリ URL」です');
 }
 
+/**
+ * 専用アプリ用の 書きこみ口（POST）。本文は JSON：{ key, sheet, ops:[{ row, set, guard, unlessDate, flushAfter }] }
+ *  - sheet：書きこむシート名（トレーニングログ・体組成ログ・食事ログ だけ）
+ *  - row：行番号、または "append:列番号"（その列に値が入っている最後の行の 次の行）
+ *  - set：{ 列番号: 値 }。値が "date:2026/11/11" なら日付、"" なら空にする、"=" で始まれば式（{r} は行番号に置きかわる）
+ *  - guard：{ 列番号: 値 }。書く前に その行の中身が これと同じか たしかめる（ちがえば 何もしない）
+ *  - unlessDate：{ col, date }。その列に その日付が もう あれば、この op は とばす
+ * アプリの機能を足しても このスクリプトを貼りかえなくて すむように、中身を知らない はんよう的な作りに してある
+ */
+function doPost(e) {
+  const out = o => ContentService.createTextOutput(JSON.stringify(o)).setMimeType(ContentService.MimeType.JSON);
+  try {
+    const body = JSON.parse((e && e.postData && e.postData.contents) || '{}');
+    const appKey = PropertiesService.getScriptProperties().getProperty('APP_KEY');
+    if (!appKey) return out({ error: '先に setupAppKey を実行してください' });
+    if (body.key !== appKey) return out({ error: '合言葉がちがいます' });
+    const allowed = [QS_CONFIG.SHEET_LOG, QS_CONFIG.SHEET_BODY, '食事・PFCログ'];
+    if (allowed.indexOf(body.sheet) < 0) return out({ error: 'このシートには書きこめません' });
+    const book = SpreadsheetApp.openById(QS_CONFIG.SPREADSHEET_ID);
+    const sh = book.getSheetByName(body.sheet);
+    if (!sh) return out({ error: 'シートが見つかりません' });
+    const tz = book.getSpreadsheetTimeZone();
+    const asText = v => (v instanceof Date ? 'date:' + Utilities.formatDate(v, tz, 'yyyy/MM/dd') : String(v).trim());
+    const toValue = (v, r) => {
+      const m = typeof v === 'string' && v.match(/^date:(\d{4})\/(\d{1,2})\/(\d{1,2})$/);
+      if (m) return new Date(+m[1], +m[2] - 1, +m[3]);
+      return typeof v === 'string' ? v.replace(/\{r\}/g, String(r)) : v;
+    };
+    const lock = LockService.getScriptLock(); lock.waitLock(10000);
+    const rows = [];
+    try {
+      (body.ops || []).slice(0, 10).forEach(op => {
+        if (op.unlessDate) {
+          const col = sh.getRange(1, Number(op.unlessDate.col), sh.getMaxRows(), 1).getValues();
+          if (col.some(x => asText(x[0]) === 'date:' + op.unlessDate.date)) { rows.push(null); return; }
+        }
+        let row = Number(op.row);
+        const ap = String(op.row).match(/^append:(\d+)$/);
+        if (ap) {
+          const col = sh.getRange(1, Number(ap[1]), sh.getMaxRows(), 1).getValues();
+          let last = 0;
+          for (let i = 0; i < col.length; i++) if (String(col[i][0]).trim() !== '') last = i + 1;
+          row = last + 1;
+        }
+        if (!(row >= 2 && row <= sh.getMaxRows())) throw new Error('行が正しくありません');
+        Object.keys(op.guard || {}).forEach(c => {
+          if (asText(sh.getRange(row, Number(c)).getValue()) !== String(op.guard[c]).trim()) throw new Error('きろくが かわっています。よみこみ直してから もういちど ためしてください');
+        });
+        const flushAfter = (op.flushAfter || []).map(Number);
+        Object.keys(op.set || {}).map(Number).sort((a, b) => a - b).forEach(c => {
+          const v = op.set[c];
+          if (v === '' || v == null) sh.getRange(row, c).clearContent(); else putCell_(sh, row, c, toValue(v, row));
+          if (flushAfter.indexOf(c) >= 0) SpreadsheetApp.flush();
+        });
+        rows.push(row);
+      });
+      SpreadsheetApp.flush();
+    } finally { lock.releaseLock(); }
+    return out({ ok: true, rows });
+  } catch (err) {
+    return out({ error: String(err && err.message || err) });
+  }
+}
+
 /** ---- トレーニングログへの書きこみ（足す・なおす・とりけす）。式の入った列（E・I〜K・M〜Q）には さわらない ---- */
 function logSheet_() {
   return SpreadsheetApp.openById(QS_CONFIG.SPREADSHEET_ID).getSheetByName(QS_CONFIG.SHEET_LOG);

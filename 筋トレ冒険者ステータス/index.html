@@ -259,6 +259,28 @@
   .rc-row button.sure { color: #fff; background: #7a1f2b; border-color: var(--danger); }
   .rc-row button:disabled { opacity: .5; }
   .rc-row button:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
+  /* ごはん */
+  .gauge { margin: 0 0 10px; }
+  .gauge .gh { display: flex; justify-content: space-between; align-items: baseline; font-size: 13px; }
+  .gauge .gh b { font-weight: normal; font-size: 18px; }
+  .gauge .gh small { color: var(--muted); font-size: 12px; }
+  .gauge .gb { height: 12px; border: 2px solid var(--line); border-radius: 4px; background: #1a1f3a; overflow: hidden; margin-top: 3px; }
+  .gauge .gb i { display: block; height: 100%; width: 0; background: linear-gradient(90deg, var(--gold2), var(--gold)); transition: width .8s ease-out; }
+  .gauge.ok .gb i { background: linear-gradient(90deg, #2bb673, var(--good)); }
+  .gauge.over .gb i { background: linear-gradient(90deg, #c2413a, var(--danger)); }
+  .pfc { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; text-align: center; margin: 0 0 8px; }
+  .pfc div { border: 1px solid #2a3366; border-radius: 6px; padding: 5px 2px; }
+  .pfc small { display: block; color: var(--muted); font-size: 11px; }
+  .pfc b { font-weight: normal; font-size: 15px; }
+  .mealmsg { font-size: 13px; margin: 0 0 8px; }
+  .mealmsg.good { color: var(--good); } .mealmsg.warn { color: var(--warn); }
+  .ml-row { padding: 6px 0; border-top: 1px dashed #262d55; font-size: 13px; }
+  .ml-row b { font-weight: normal; color: var(--gold); margin-right: 6px; }
+  .ml-row small { display: block; color: var(--muted); font-size: 12px; }
+  .mealopen { width: 100%; margin-top: 8px; }
+  .fld4 { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+  @media (min-width: 420px) { .fld4 { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
+  .mc-h { margin: 6px 0 2px; font-size: 12px; font-weight: normal; color: var(--muted); }
   .rec-btns { display: flex; gap: 8px; justify-content: center; }
   .refresh.rec-save { color: #2a1600; background: var(--gold); border-color: var(--gold); }
   .toast { position: fixed; left: 50%; transform: translateX(-50%); bottom: calc(84px + env(safe-area-inset-bottom, 0px)); z-index: 20; max-width: calc(100% - 32px);
@@ -329,17 +351,17 @@
     position: fixed; left: 50%; transform: translateX(-50%);
     bottom: calc(10px + env(safe-area-inset-bottom));
     width: min(560px, calc(100% - 20px));
-    display: grid; grid-template-columns: repeat(4, 1fr) .6fr;
+    display: grid; grid-template-columns: 1fr .8fr 1.15fr 1fr 1fr .5fr;
     background: var(--win); border: 3px solid var(--line); border-radius: var(--r);
     box-shadow: 0 0 0 3px var(--win), 0 6px 20px rgba(0,0,0,.6);
     z-index: 10;
   }
   .cmd button {
     font: inherit; color: var(--text); background: none; border: 0;
-    padding: 11px 2px 10px; font-size: 14px; cursor: pointer; position: relative;
+    padding: 11px 0 10px 8px; font-size: 13px; cursor: pointer; position: relative; white-space: nowrap;
   }
   .cmd button[aria-selected="true"] { color: var(--gold); }
-  .cmd button[aria-selected="true"]::before { content: "▶"; position: absolute; left: 2px; font-size: 10px; top: 14px; animation: blink 1s steps(1) infinite; }
+  .cmd button[aria-selected="true"]::before { content: "▶"; position: absolute; left: 0; font-size: 9px; top: 14px; animation: blink 1s steps(1) infinite; }
 
   .foot { display: flex; justify-content: space-between; align-items: center; gap: 8px; font-size: 12px; color: var(--muted); padding: 4px 4px 0; }
   .refresh { font: inherit; color: var(--text); background: var(--win); border: 2px solid var(--line); border-radius: 8px; padding: 6px 12px; cursor: pointer; font-size: 13px; }
@@ -375,7 +397,8 @@
     .grid { display: grid; grid-template-columns: 1.05fr 1fr 1fr; gap: 0 20px; align-items: start; }
     .panel { display: block !important; animation: none; }
     .msg { min-height: 0; }
-    .panel[data-tab="exp"] { grid-column: 1 / -1; }
+    .panel[data-tab="exp"], .panel[data-tab="meal"] { grid-column: 1 / -1; }
+    .meal-side { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0 20px; align-items: start; }
     .exp-side { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0 20px; align-items: start; }
   }
   @media (prefers-reduced-motion: reduce) {
@@ -577,6 +600,46 @@
         </div>
       </div>
     </section>
+    <section class="panel" data-tab="meal">
+      <div class="meal-side">
+        <div class="win">
+          <div class="win-title">きょうの ごはん</div>
+          <div id="meal-today"></div>
+          <button type="button" class="refresh mealopen" id="meal-open">＋ ごはんを きろくする</button>
+        </div>
+        <div class="win chart">
+          <div class="win-title">ごはんの すいい（7日）</div>
+          <div id="meal-chart"></div>
+        </div>
+        <div class="win">
+          <div class="win-title">さいきんの ごはん</div>
+          <div id="meal-recent"></div>
+        </div>
+      </div>
+      <dialog class="win dlg" id="meal-dlg">
+        <div class="win-title" id="meal-title">ごはんの きろく</div>
+        <form id="meal-form" novalidate>
+          <label class="fld">ひづけ<input type="date" id="meal-date" required></label>
+          <label class="fld">くぶん<select id="meal-kind"></select></label>
+          <label class="fld">メニュー<input type="text" id="meal-menu" maxlength="200" placeholder="白米・納豆・味噌汁 など"></label>
+          <div class="fld4">
+            <label class="fld">カロリー(kcal)<input type="number" id="meal-kcal" inputmode="decimal" min="0" max="9999" step="1"></label>
+            <label class="fld">たんぱく質(g)<input type="number" id="meal-p" inputmode="decimal" min="0" max="999" step="0.1"></label>
+            <label class="fld">脂質(g)<input type="number" id="meal-f" inputmode="decimal" min="0" max="999" step="0.1"></label>
+            <label class="fld">炭水化物(g)<input type="number" id="meal-c" inputmode="decimal" min="0" max="999" step="0.1"></label>
+          </div>
+          <div class="fld4">
+            <label class="fld">食物繊維(g)<input type="number" id="meal-fiber" inputmode="decimal" min="0" max="999" step="0.1"></label>
+            <label class="fld">塩分(g)<input type="number" id="meal-salt" inputmode="decimal" min="0" max="99" step="0.1"></label>
+          </div>
+          <p class="rec-msg" id="meal-msg" role="status"></p>
+          <div class="rec-btns">
+            <button type="submit" class="refresh rec-save" id="meal-save">きろくする</button>
+            <button type="button" class="refresh" id="meal-close">とじる</button>
+          </div>
+        </form>
+      </dialog>
+    </section>
   </div>
 </div>
 
@@ -585,6 +648,7 @@
   <button role="tab" aria-selected="false" data-go="parts">ぶい</button>
   <button role="tab" aria-selected="false" data-go="exp">けいけん</button>
   <button role="tab" aria-selected="false" data-go="log">きろく</button>
+  <button role="tab" aria-selected="false" data-go="meal">ごはん</button>
   <button role="tab" aria-selected="false" data-go="top" aria-label="いちばん うえへ">▲</button>
 </nav>
 
@@ -681,6 +745,7 @@
     renderFines(d.fines);
     renderForecast(d);
     renderRecent(d);
+    renderMeals(d);
     $('trend').innerHTML = trendSvg(d.trend);
     renderBody(d.body);
     renderExp(d);
@@ -731,7 +796,7 @@
     $('rec-msg').textContent = '';
   }
   // きろくの入力画面と おしらせは、どの画面（ぶい・きろく）からでも 出せるように、画面の外がわへ うつす
-  ['rec-dlg', 'toast'].forEach(function (id) { document.querySelector('.wrap').appendChild($(id)); });
+  ['rec-dlg', 'meal-dlg', 'toast'].forEach(function (id) { document.querySelector('.wrap').appendChild($(id)); });
   var editing = null, dupOk = null;   // editing：なおしている きろく（なければ 新しい きろく）
   function recKey(x) { return [x.date, x.ex, x.w || 0, x.r || '', x.s || 1, x.memo || ''].join('|'); }
   function openRec(name, item) {
@@ -834,6 +899,143 @@
     sendLog('delete', { row: x.row, ex0: x.ex, date0: x.date }, function () { introState = 2; toast(x.ex + ' の きろくを けした'); },
       function (text) { toast(text); renderRecent(state); });
   });
+  // ---------- ごはん（食事・PFCログ） ----------
+  var MEAL_SHEET = "'食事・PFCログ'", MEAL_NAME = '食事・PFCログ';
+  function colA1(i) { var s = ''; i++; while (i > 0) { var m = (i - 1) % 26; s = String.fromCharCode(65 + m) + s; i = (i - m - 1) / 26; } return s; }
+  function mealBars(days, key, target, color, label, unit) {
+    var W = 340, H = 120, L = 36, Rr = 8, T = 14, B = 22, n = days.length;
+    var max = Math.max.apply(null, days.map(function (x) { return x[key]; }).concat([target * 1.15, 1]));
+    var bw = (W - L - Rr) / n, y = function (v) { return T + (H - T - B) * (1 - v / max); };
+    var s = '<svg viewBox="0 0 ' + W + ' ' + H + '" role="img" aria-label="' + label + '">';
+    [0, 0.5, 1].forEach(function (k) { var v = max * k, yy = y(v); s += '<line x1="' + L + '" x2="' + (W - Rr) + '" y1="' + yy + '" y2="' + yy + '" stroke="#1f2650"/><text x="' + (L - 6) + '" y="' + (yy + 4) + '" text-anchor="end">' + Math.round(v) + '</text>'; });
+    days.forEach(function (d, i) {
+      var x = L + bw * i + bw * 0.18, h = Math.max(0, y(0) - y(d[key]));
+      if (d[key] > 0) s += '<rect x="' + x.toFixed(1) + '" y="' + y(d[key]).toFixed(1) + '" width="' + (bw * 0.64).toFixed(1) + '" height="' + h.toFixed(1) + '" rx="2" fill="' + color + '"' + (i === n - 1 ? '' : ' opacity=".7"') + '/>';
+      s += '<text x="' + (L + bw * i + bw / 2).toFixed(1) + '" y="' + (H - 6) + '" text-anchor="middle">' + esc(d.d) + '</text>';
+    });
+    var ty = y(target);
+    s += '<line x1="' + L + '" x2="' + (W - Rr) + '" y1="' + ty + '" y2="' + ty + '" stroke="#ffd75e" stroke-dasharray="4 3"/><text x="' + (W - Rr) + '" y="' + (ty - 4) + '" text-anchor="end" style="fill:#ffd75e">もくひょう ' + target + unit + '</text>';
+    return s + '</svg>';
+  }
+  function renderMeals(d) {
+    var m = d.meals;
+    if (!m) {
+      $('meal-today').innerHTML = '<p class="rule">ごはんの きろくを よみこめませんでした。</p>'; $('meal-chart').innerHTML = ''; $('meal-recent').innerHTML = ''; $('meal-open').hidden = true;
+      return;
+    }
+    $('meal-open').hidden = !!d.demo;
+    var t = m.days[m.days.length - 1], f1 = function (v) { return (Math.round(v * 10) / 10).toLocaleString('ja-JP'); };
+    var gauge = function (label, val, target, unit, mode) {
+      var cls = mode === 'limit' ? (val > target ? ' over' : '') : (val >= target ? ' ok' : '');
+      return '<div class="gauge' + cls + '"><div class="gh"><span>' + label + '</span><span><b class="num">' + f1(val) + '</b> <small>/ ' + target + ' ' + unit + '</small></span></div>' +
+        '<div class="gb" role="progressbar" aria-label="' + label + '" aria-valuemin="0" aria-valuemax="' + target + '" aria-valuenow="' + Math.round(val) + '"><i data-w="' + Math.min(100, val / target * 100).toFixed(1) + '"></i></div></div>';
+    };
+    var msg = '';
+    if (!t.count) msg = '<p class="mealmsg">きょうの ごはんは まだ きろくされていない。</p>';
+    else {
+      msg += t.p >= m.targetP ? '<p class="mealmsg good">たんぱくしつの もくひょうを たっせい！</p>' : '<p class="mealmsg">たんぱくしつが あと ' + f1(m.targetP - t.p) + 'g たりない！</p>';
+      msg += t.kcal > m.targetKcal ? '<p class="mealmsg warn">カロリーが ' + f1(t.kcal - m.targetKcal) + 'kcal オーバーしている！</p>' : '<p class="mealmsg">カロリーは あと ' + f1(m.targetKcal - t.kcal) + 'kcal たべられる。</p>';
+    }
+    $('meal-today').innerHTML = gauge('カロリー', t.kcal, m.targetKcal, 'kcal', 'limit') + gauge('たんぱくしつ', t.p, m.targetP, 'g', 'goal') +
+      '<div class="pfc"><div><small>脂質</small><b class="num">' + f1(t.f) + '</b>g</div><div><small>炭水化物</small><b class="num">' + f1(t.c) + '</b>g</div><div><small>食物繊維</small><b class="num">' + f1(t.fiber) + '</b>g</div><div><small>塩分</small><b class="num">' + f1(t.salt) + '</b>g</div></div>' + msg +
+      m.items.map(function (x) { return '<div class="ml-row"><b>' + esc(x.kind || 'ごはん') + '</b>' + esc(x.menu) + '<small>' + f1(x.kcal) + 'kcal・たんぱく質 ' + f1(x.p) + 'g</small></div>'; }).join('');
+    requestAnimationFrame(function () { document.querySelectorAll('#meal-today .gb i').forEach(function (i) { i.style.width = i.getAttribute('data-w') + '%'; }); });
+    $('meal-chart').innerHTML = '<h3 class="mc-h">カロリー（kcal）</h3>' + mealBars(m.days, 'kcal', m.targetKcal, '#6fd3ff', 'カロリーの7日推移', 'kcal') +
+      '<h3 class="mc-h">たんぱくしつ（g）</h3>' + mealBars(m.days, 'p', m.targetP, '#7be08a', 'たんぱく質の7日推移', 'g');
+    $('meal-recent').innerHTML = m.recent.length ? m.recent.map(function (x, i) {
+      return '<div class="rc-row"><div class="rc-main"><b>' + esc(x.date.slice(5)) + '　' + esc(x.kind) + '　' + esc(x.menu) + '</b><small>' + f1(x.kcal) + 'kcal・P ' + f1(x.p) + 'g・F ' + f1(x.f) + 'g・C ' + f1(x.c) + 'g</small></div>' +
+        (d.demo ? '' : '<button type="button" data-medit="' + i + '">なおす</button><button type="button" data-mdel="' + i + '">けす</button>') + '</div>';
+    }).join('') : '<p class="rule">まだ きろくが ありません。</p>';
+  }
+  var mealEditing = null;
+  function openMeal(item) {
+    if (!state || state.error || !state.meals) return;
+    var m = state.meals; mealEditing = item || null;
+    $('meal-kind').innerHTML = m.kinds.map(function (k) { return '<option>' + esc(k) + '</option>'; }).join('');
+    var n = new Date(), pad = function (x) { return ('0' + x).slice(-2); }, h = n.getHours();
+    $('meal-date').value = item ? item.date.replace(/\//g, '-') : n.getFullYear() + '-' + pad(n.getMonth() + 1) + '-' + pad(n.getDate());
+    $('meal-kind').value = item ? item.kind : (h < 10 ? '朝食' : h < 15 ? '昼食' : h < 21 ? '夕食' : '間食');
+    $('meal-menu').value = item ? item.menu : '';
+    ['kcal', 'p', 'f', 'c', 'fiber', 'salt'].forEach(function (k) { $('meal-' + k).value = item ? item[k] : ''; });
+    $('meal-title').textContent = item ? 'ごはんを なおす' : 'ごはんの きろく';
+    $('meal-save').textContent = item ? 'なおして ほぞん' : 'きろくする';
+    $('meal-msg').textContent = ''; $('meal-save').disabled = false;
+    var dlg = $('meal-dlg'); if (dlg.showModal) dlg.showModal(); else dlg.setAttribute('open', '');
+  }
+  $('meal-open').addEventListener('click', function () { openMeal(null); });
+  $('meal-close').addEventListener('click', function () { $('meal-dlg').close(); });
+  $('meal-form').addEventListener('submit', function (ev) {
+    ev.preventDefault();
+    var msg = $('meal-msg'), dm = $('meal-date').value.match(/^(\d{4})-(\d{2})-(\d{2})$/), menu = $('meal-menu').value.trim();
+    if (!dm || !menu) { msg.textContent = 'ひづけと メニューを いれてください。'; return; }
+    var val = function (id) { var v = $(id).value.trim(); return v === '' ? '' : Number(v); };
+    var rec = { date: dm[1] + '/' + dm[2] + '/' + dm[3], kind: $('meal-kind').value, menu: menu, kcal: val('meal-kcal'), p: val('meal-p'), f: val('meal-f'), c: val('meal-c'), fiber: val('meal-fiber'), salt: val('meal-salt') };
+    if (rec.kcal === '' || isNaN(rec.kcal) || rec.kcal < 0) { msg.textContent = 'カロリーを いれてください。'; return; }
+    if (['p', 'f', 'c', 'fiber', 'salt'].some(function (k) { return rec[k] !== '' && (isNaN(rec[k]) || rec[k] < 0); })) { msg.textContent = '数字を たしかめてください。'; return; }
+    var btn = $('meal-save'); btn.disabled = true; msg.textContent = 'かきこみちゅう……';
+    var was = mealEditing;
+    sendMeal(was ? 'update' : 'add', rec, was, function () { $('meal-dlg').close(); toast(was ? 'ごはんの きろくを なおした！' : rec.kind + ' を きろくした！'); },
+      function (text, unsure) { btn.disabled = false; msg.textContent = text + (unsure ? ' もういちど おす前に、スプシに 行が ふえていないか たしかめてください。' : ''); });
+  });
+  var mdelTimer = null;
+  $('meal-recent').addEventListener('click', function (ev) {
+    var b = ev.target.closest('button'); if (!b || !state || !state.meals) return;
+    var list = state.meals.recent;
+    if (b.hasAttribute('data-medit')) { var it = list[+b.getAttribute('data-medit')]; if (it) openMeal(it); return; }
+    var x = list[+b.getAttribute('data-mdel')]; if (!x) return;
+    if (!b.classList.contains('sure')) {
+      b.classList.add('sure'); b.textContent = 'ほんとうに けす';
+      clearTimeout(mdelTimer); mdelTimer = setTimeout(function () { b.classList.remove('sure'); b.textContent = 'けす'; }, 4000);
+      return;
+    }
+    clearTimeout(mdelTimer);
+    document.querySelectorAll('#meal-recent button').forEach(function (q) { q.disabled = true; });
+    b.textContent = 'けしています……';
+    sendMeal('delete', null, x, function () { toast('ごはんの きろくを けした'); }, function (text) { toast(text); renderMeals(state); });
+  });
+  // 1食ぶんの行（日付〜食塩）と、その日が 1日ごとの合計表に まだ なければ 合計の行も 書く
+  function sendMeal(action, rec, old, ok, ng) {
+    var m = state.meals, c0 = m.cols.first, dc = m.cols.daily;
+    var vals = action === 'delete' ? ['', '', '', '', '', '', '', '', '', '', ''] : [rec.date, rec.kind, rec.menu, rec.kcal, rec.p, rec.f, rec.c, rec.fiber, rec.salt];
+    var L = function (i) { return colA1(c0 + i); };   // 1食の表の i 番めの列（0＝日付）
+    var dailyRow = function (r) {   // 1日ごとの合計の行（式）
+      var D = colA1(dc), sum = function (i) { return '=SUMIFS(' + L(i) + ':' + L(i) + ', ' + L(0) + ':' + L(0) + ', ' + D + r + ')'; };
+      return [rec.date, sum(3), sum(4), sum(5), sum(6), sum(7), sum(8), '=' + colA1(dc + 1) + r + '-' + m.targetKcal];
+    };
+    var needDaily = action !== 'delete' && m.dailyDates.indexOf(rec.date) < 0;
+    if (mcp) {
+      var write = function (range, values) { return mcp.callTool(SERVER, 'update_values', { spreadsheetId: SHEET_ID, range: range, values: [values] }, { cache: false }); };
+      mcp.callTool(SERVER, 'get_values', { spreadsheetId: SHEET_ID, range: RANGES.meal }, { cache: false }).then(function (res) {
+        var fresh = QSWeb.compute({ status: got.status, master: got.master, log: got.log, body: got.body, meal: payloadValues(res), dash: got.dash }).meals;
+        var row;
+        if (action === 'add') row = fresh.nextRow;
+        else {
+          row = old.row;
+          var cur = fresh.recent.filter(function (x) { return x.row === row; })[0];
+          if (!cur || cur.date !== old.date || cur.menu !== old.menu) { ng('きろくが かわっています。よみこみ直してから もういちど ためしてください。'); return null; }
+        }
+        var p = write(MEAL_SHEET + '!' + L(0) + row + ':' + colA1(c0 + vals.length - 1) + row, vals);
+        if (needDaily && fresh.dailyDates.indexOf(rec.date) < 0) p = p.then(function () { var r = fresh.nextDailyRow; return write(MEAL_SHEET + '!' + colA1(dc) + r + ':' + colA1(dc + 7) + r, dailyRow(r).map(function (x) { return String(x).replace(/\{r\}/g, r); })); });
+        return p.then(function () { ok(); mcp.invalidate(SERVER).catch(function () {}); }, function (er) { mcpErr(er, ng); });
+      }, function () { ng('スプシを よみこめませんでした。すこし まってから もういちど おしてください。'); });
+    } else if (window.QS_STANDALONE && getApi()) {
+      var api = getApi(), km = api.match(/[?&]key=([\w-]+)/);
+      var set = {}; vals.forEach(function (v, i) { set[c0 + i + 1] = (i === 0 && v) ? 'date:' + v : v; });
+      var op = { row: action === 'add' ? 'append:' + (c0 + 1) : old.row, set: set };
+      if (action !== 'add') { op.guard = {}; op.guard[c0 + 1] = 'date:' + old.date; op.guard[c0 + 3] = old.menu; }
+      var ops = [op];
+      if (needDaily) {
+        var ds = {}; dailyRow('{r}').forEach(function (v, i) { ds[dc + i + 1] = i === 0 ? 'date:' + v : v; });
+        ops.push({ row: 'append:' + (dc + 1), set: ds, unlessDate: { col: dc + 1, date: rec.date } });
+      }
+      fetch(api.split('?')[0], { method: 'POST', redirect: 'follow', body: JSON.stringify({ key: km ? km[1] : '', sheet: MEAL_NAME, ops: ops }) })
+        .then(function (r) { return r.json(); })
+        .then(function (d) { if (d && d.error) return ng(d.error); if (!d || !d.ok) return ng('Apps Script が 古いようです。さいしんの Code.gs に 貼りかえて、再デプロイしてください。'); ok(); loadApi(); },
+          function () { ng('かきこめませんでした。Apps Script が 古いか、つながっていません。さいしんの Code.gs に 貼りかえて 再デプロイすると つかえます。', true); });
+    } else {
+      ng('この開きかたでは ごはんを きろくできません。');
+    }
+  }
   function mcpErr(er, ng) {
     var c = er && er.code;
     if (c === 'not_in_manifest' || c === 'approval_required' || c === 'consent_required' || c === 'blocked_by_policy') ng('スプシへの 書きこみが 許可されていません。許可してから もういちど おしてください。');
@@ -1355,7 +1557,9 @@
     status: "'ドラクエ風ステータス・EXP'!A1:N40",
     master: "'経験値・部位負荷マスタ'!A1:X100",
     log: "'トレーニング・運動ログ'!A1:Q1000",
-    body: "'体組成ログ'!A1:L1000"
+    body: "'体組成ログ'!A1:L1000",
+    meal: "'食事・PFCログ'!A1:U1000",
+    dash: "'ダッシュボード'!A1:D8"
   };
   var CACHE = { staleTime: 60 * 1000, gcTime: 7 * 24 * 3600 * 1000 };
   var isGas = !!(window.google && google.script && google.script.run);
@@ -1521,7 +1725,7 @@
     if (!state) showLoading();
     // スプシの生の値を もらって、このページで計算する（アプリの機能を足しても Apps Script の再デプロイが いらない）。
     // 古い Apps Script（生の値を返せない版）のときは、いままで通り 計算ずみの結果を もらう
-    var keys = ['status', 'master', 'log', 'body'];
+    var keys = Object.keys(RANGES);
     var raw = api.replace('format=json', 'format=ranges') + keys.map(function (k) { return '&r=' + encodeURIComponent(RANGES[k]); }).join('');
     var old = function () { return fetch(api, { redirect: 'follow' }).then(function (r) { return r.json(); }); };
     var first = (typeof QSWeb === 'undefined') ? old() : fetch(raw, { redirect: 'follow' }).then(function (r) { return r.json(); }).then(function (j) {
