@@ -267,6 +267,21 @@ var QSWeb = (function () {
     };
   }
 
+  /** 食材マスタ（1回量あたりの栄養）。カロリーが数字の行だけ使う */
+  function loadFoods(v) {
+    var hr = findHeaderRow(v, function (h) { return h.some(function (x) { return /食材/.test(x); }) && h.some(function (x) { return /カロリー/.test(x); }); }, 5);
+    if (hr < 0) return [];
+    var h = v[hr].map(norm), c = {
+      cat: findCol(h, /カテゴリ/, 0), name: findCol(h, /食材/, 1), unit: findCol(h, /1回量|量/, 2), kcal: findCol(h, /カロリー/, 3),
+      p: findCol(h, /タンパク質/, 4), f: findCol(h, /脂質/, 5), c: findCol(h, /炭水化物/, 6), fiber: findCol(h, /繊維/, 7), salt: findCol(h, /食塩|塩分/, 8)
+    };
+    var n0 = function (x) { var k = num(x); return isNaN(k) ? 0 : k; };
+    return v.slice(hr + 1).filter(function (r) { return String(cell(r, c.name) || '').trim() && !isNaN(num(cell(r, c.kcal))); }).map(function (r) {
+      return { cat: String(cell(r, c.cat) || 'そのた').trim() || 'そのた', name: String(cell(r, c.name)).trim(), unit: String(cell(r, c.unit) || '').trim(),
+        kcal: n0(cell(r, c.kcal)), p: n0(cell(r, c.p)), f: n0(cell(r, c.f)), c: n0(cell(r, c.c)), fiber: n0(cell(r, c.fiber)), salt: n0(cell(r, c.salt)) };
+    });
+  }
+
   function retention(el) { return el < 0 ? 0 : el <= C.KEEP_DAYS ? 1 : Math.max(0, 1 - (el - C.KEEP_DAYS) * C.DECAY_PER_DAY); }
   function majorOfPart(part) { for (var i = 0; i < MAJORS.length; i++) if (MAJORS[i].words.test(part)) return MAJORS[i].key; return null; }
 
@@ -405,6 +420,7 @@ var QSWeb = (function () {
       latest: latest,
       recent: data.entries.recent || [],
       meals: ranges.meal ? loadMeals(ranges.meal, ranges.dash || [], t) : null,
+      foods: loadFoods(ranges.food || []),
       titles: C.TITLES.map(function (x) { return { lv: x[0], name: x[1], exp: Math.max(0, expForLv(x[0])) || 0 }; }),
       tips: tipsOf(m),
       exercises: Object.keys(m.names).map(function (k) {
