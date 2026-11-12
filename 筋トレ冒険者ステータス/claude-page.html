@@ -273,6 +273,8 @@
   .adv { font-size: 13px; line-height: 1.6; margin: 0 0 8px; }
   .adv b { display: block; font-weight: normal; font-size: 12px; color: var(--gold); }
   .adv.good { color: var(--good); } .adv.warn { color: var(--warn); } .adv.bad { color: var(--danger); }
+  .pickhelp { margin: -4px 0 8px; }
+  .linkbtn { font: inherit; color: var(--cyan); background: none; border: 0; padding: 4px 0; margin-left: 6px; text-decoration: underline; cursor: pointer; }
   .mealmsg { font-size: 13px; margin: 0 0 8px; }
   .mealmsg.good { color: var(--good); } .mealmsg.warn { color: var(--warn); }
   .ml-row { padding: 6px 0; border-top: 1px dashed #262d55; font-size: 13px; }
@@ -620,6 +622,8 @@
         <form id="meal-form" novalidate>
           <label class="fld">ひづけ<input type="date" id="meal-date" required></label>
           <label class="fld">くぶん<select id="meal-kind"></select></label>
+          <label class="fld">まえに たべた ものから えらぶ<select id="meal-pick"></select></label>
+          <p class="rule pickhelp">えらぶと メニューと 数字が 入ります。もう1つ えらぶと、いまの 入力に 足します。<button type="button" class="linkbtn" id="meal-clear">入力を からにする</button></p>
           <label class="fld">メニュー<input type="text" id="meal-menu" maxlength="200" placeholder="白米・納豆・味噌汁 など"></label>
           <div class="fld4">
             <label class="fld">カロリー(kcal)<input type="number" id="meal-kcal" inputmode="decimal" min="0" max="9999" step="1"></label>
@@ -900,11 +904,22 @@ var QSWeb = (function () {
     }
     var kinds = ['朝食', '昼食', '夕食', '間食', '晩酌'];
     items.forEach(function (it) { if (it.kind && kinds.indexOf(it.kind) < 0) kinds.push(it.kind); });
+    // 過去の きろくから作る「たべたものの一覧」。同じメニューは 1つに まとめ、いちばん新しい数字を使う
+    var dbMap = {}, menuDb = [];
+    items.forEach(function (it) {
+      if (!it.menu || !(it.kcal > 0)) return;
+      var e = dbMap[it.menu];
+      if (!e) { e = dbMap[it.menu] = { menu: it.menu, count: 0, day: -1 }; menuDb.push(e); }
+      e.count++;
+      if (it.day >= e.day) { e.day = it.day; e.kind = it.kind; e.kcal = it.kcal; e.p = it.p; e.f = it.f; e.c = it.c; e.fiber = it.fiber; e.salt = it.salt; }
+    });
+    menuDb.sort(function (a, b) { return b.count - a.count || b.day - a.day; });
+    menuDb = menuDb.slice(0, 200).map(function (e) { return { menu: e.menu, kind: e.kind, kcal: e.kcal, p: e.p, f: e.f, c: e.c, fiber: e.fiber, salt: e.salt, count: e.count, last: fmt(e.day) }; });
     var strip = function (it) { return { row: it.row, date: it.date, kind: it.kind, menu: it.menu, kcal: it.kcal, p: it.p, f: it.f, c: it.c, fiber: it.fiber, salt: it.salt }; };
     return {
       targetKcal: target.kcal, targetP: target.p, today: fmt(t, true), days: days, advice: advice,
       items: items.filter(function (it) { return it.day === t; }).map(strip),
-      recent: items.slice(-15).reverse().map(strip), kinds: kinds,
+      recent: items.slice(-15).reverse().map(strip), kinds: kinds, menuDb: menuDb,
       nextRow: lastRow + 1, nextDailyRow: lastDaily + 1, dailyDates: Object.keys(dailyHas),
       cols: { first: c.date, daily: dcol }
     };
@@ -1377,6 +1392,10 @@ if (typeof module !== 'undefined') module.exports = QSWeb;
     if (!state || state.error || !state.meals) return;
     var m = state.meals; mealEditing = item || null;
     $('meal-kind').innerHTML = m.kinds.map(function (k) { return '<option>' + esc(k) + '</option>'; }).join('');
+    var cut = function (t) { return t.length > 26 ? t.slice(0, 25) + '…' : t; };
+    $('meal-pick').innerHTML = '<option value="">― えらぶ（' + (m.menuDb || []).length + '件）―</option>' + (m.menuDb || []).map(function (x, i) {
+      return '<option value="' + i + '">' + esc(cut(x.menu)) + '｜' + Math.round(x.kcal) + 'kcal・P' + x.p + (x.count > 1 ? '（' + x.count + '回）' : '') + '</option>';
+    }).join('');
     var n = new Date(), pad = function (x) { return ('0' + x).slice(-2); }, h = n.getHours();
     $('meal-date').value = item ? item.date.replace(/\//g, '-') : n.getFullYear() + '-' + pad(n.getMonth() + 1) + '-' + pad(n.getDate());
     $('meal-kind').value = item ? item.kind : (h < 10 ? '朝食' : h < 15 ? '昼食' : h < 21 ? '夕食' : '間食');
@@ -1387,6 +1406,20 @@ if (typeof module !== 'undefined') module.exports = QSWeb;
     $('meal-msg').textContent = ''; $('meal-save').disabled = false;
     var dlg = $('meal-dlg'); if (dlg.showModal) dlg.showModal(); else dlg.setAttribute('open', '');
   }
+  // まえに たべた ものを えらぶ：入力が からなら そのまま入れる。もう 入っていれば、メニューを つなげて 数字を 足す
+  $('meal-pick').addEventListener('change', function () {
+    var x = state && state.meals && (state.meals.menuDb || [])[+this.value];
+    if (this.value === '' || !x) return;
+    var keys = ['kcal', 'p', 'f', 'c', 'fiber', 'salt'], had = $('meal-menu').value.trim();
+    var r1 = function (v) { return Math.round(v * 10) / 10; };
+    keys.forEach(function (k) { var cur = had ? (parseFloat($('meal-' + k).value) || 0) : 0; $('meal-' + k).value = r1(cur + (x[k] || 0)); });
+    $('meal-menu').value = (had ? had + '・' : '') + x.menu;
+    $('meal-msg').textContent = had ? '「' + x.menu.slice(0, 14) + '」を 足しました。' : '';
+    this.value = '';
+  });
+  $('meal-clear').addEventListener('click', function () {
+    $('meal-menu').value = ''; ['kcal', 'p', 'f', 'c', 'fiber', 'salt'].forEach(function (k) { $('meal-' + k).value = ''; }); $('meal-msg').textContent = '';
+  });
   $('meal-open').addEventListener('click', function () { openMeal(null); });
   $('meal-close').addEventListener('click', function () { $('meal-dlg').close(); });
   $('meal-form').addEventListener('submit', function (ev) {
