@@ -224,6 +224,18 @@ var QSWeb = (function () {
         break;
       }
     });
+    // ダッシュボードの「きょうの栄養バランス＆食事アドバイス」（スプシの式が作った文を そのまま使う）
+    var advice = null, txt = function (row, i) { return String(cell(row, i) == null ? '' : cell(row, i)).trim(); };
+    (dash || []).forEach(function (row, r) {
+      var lab = norm(cell(row, 1));
+      if (lab === '栄養素') {
+        advice = advice || { rows: [] };
+        for (var k = r + 1; k < dash.length && norm(cell(dash[k], 1)); k++) advice.rows.push({ name: txt(dash[k], 1), target: txt(dash[k], 2), intake: txt(dash[k], 3), diff: txt(dash[k], 4), judge: txt(dash[k], 5) });
+      } else if (/^不足している栄養素/.test(lab)) (advice = advice || { rows: [] }).lack = txt(row, 2);
+      else if (/^とりすぎ注意/.test(lab)) (advice = advice || { rows: [] }).over = txt(row, 2);
+      else if (/^アドバイス/.test(lab)) (advice = advice || { rows: [] }).text = txt(row, 2);
+      else if (/^記録からのおすすめ/.test(lab)) (advice = advice || { rows: [] }).suggest = txt(row, 2);
+    });
     var r1 = function (x) { return Math.round(x * 10) / 10; };
     var days = [];
     for (var d = t - 6; d <= t; d++) {
@@ -234,11 +246,22 @@ var QSWeb = (function () {
     }
     var kinds = ['朝食', '昼食', '夕食', '間食', '晩酌'];
     items.forEach(function (it) { if (it.kind && kinds.indexOf(it.kind) < 0) kinds.push(it.kind); });
+    // 過去の きろくから作る「たべたものの一覧」。同じメニューは 1つに まとめ、いちばん新しい数字を使う
+    var dbMap = {}, menuDb = [];
+    items.forEach(function (it) {
+      if (!it.menu || !(it.kcal > 0)) return;
+      var e = dbMap[it.menu];
+      if (!e) { e = dbMap[it.menu] = { menu: it.menu, count: 0, day: -1 }; menuDb.push(e); }
+      e.count++;
+      if (it.day >= e.day) { e.day = it.day; e.kind = it.kind; e.kcal = it.kcal; e.p = it.p; e.f = it.f; e.c = it.c; e.fiber = it.fiber; e.salt = it.salt; }
+    });
+    menuDb.sort(function (a, b) { return b.count - a.count || b.day - a.day; });
+    menuDb = menuDb.slice(0, 200).map(function (e) { return { menu: e.menu, kind: e.kind, kcal: e.kcal, p: e.p, f: e.f, c: e.c, fiber: e.fiber, salt: e.salt, count: e.count, last: fmt(e.day) }; });
     var strip = function (it) { return { row: it.row, date: it.date, kind: it.kind, menu: it.menu, kcal: it.kcal, p: it.p, f: it.f, c: it.c, fiber: it.fiber, salt: it.salt }; };
     return {
-      targetKcal: target.kcal, targetP: target.p, today: fmt(t, true), days: days,
+      targetKcal: target.kcal, targetP: target.p, today: fmt(t, true), days: days, advice: advice,
       items: items.filter(function (it) { return it.day === t; }).map(strip),
-      recent: items.slice(-15).reverse().map(strip), kinds: kinds,
+      recent: items.slice(-15).reverse().map(strip), kinds: kinds, menuDb: menuDb,
       nextRow: lastRow + 1, nextDailyRow: lastDaily + 1, dailyDates: Object.keys(dailyHas),
       cols: { first: c.date, daily: dcol }
     };

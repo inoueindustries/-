@@ -280,6 +280,15 @@
   .pfc div { border: 1px solid #2a3366; border-radius: 6px; padding: 5px 2px; }
   .pfc small { display: block; color: var(--muted); font-size: 11px; }
   .pfc b { font-weight: normal; font-size: 15px; }
+  .tbl.nut { width: 100%; margin: 0 0 8px; font-size: 12px; table-layout: fixed; }
+  .tbl.nut th, .tbl.nut td { padding: 5px 3px; white-space: normal; overflow-wrap: anywhere; }
+  .tbl.nut th:nth-child(1) { width: 32%; } .tbl.nut th:nth-child(2) { width: 30%; }
+  .nut .nbad { color: var(--danger); } .nut .nok { color: var(--good); }
+  .adv { font-size: 13px; line-height: 1.6; margin: 0 0 8px; }
+  .adv b { display: block; font-weight: normal; font-size: 12px; color: var(--gold); }
+  .adv.good { color: var(--good); } .adv.warn { color: var(--warn); } .adv.bad { color: var(--danger); }
+  .pickhelp { margin: -4px 0 8px; }
+  .linkbtn { font: inherit; color: var(--cyan); background: none; border: 0; padding: 4px 0; margin-left: 6px; text-decoration: underline; cursor: pointer; }
   .mealmsg { font-size: 13px; margin: 0 0 8px; }
   .mealmsg.good { color: var(--good); } .mealmsg.warn { color: var(--warn); }
   .ml-row { padding: 6px 0; border-top: 1px dashed #262d55; font-size: 13px; }
@@ -629,6 +638,8 @@
         <form id="meal-form" novalidate>
           <label class="fld">ひづけ<input type="date" id="meal-date" required></label>
           <label class="fld">くぶん<select id="meal-kind"></select></label>
+          <label class="fld">まえに たべた ものから えらぶ<select id="meal-pick"></select></label>
+          <p class="rule pickhelp">えらぶと メニューと 数字が 入ります。もう1つ えらぶと、いまの 入力に 足します。<button type="button" class="linkbtn" id="meal-clear">入力を からにする</button></p>
           <label class="fld">メニュー<input type="text" id="meal-menu" maxlength="200" placeholder="白米・納豆・味噌汁 など"></label>
           <div class="fld4">
             <label class="fld">カロリー(kcal)<input type="number" id="meal-kcal" inputmode="decimal" min="0" max="9999" step="1"></label>
@@ -887,6 +898,18 @@ var QSWeb = (function () {
         break;
       }
     });
+    // ダッシュボードの「きょうの栄養バランス＆食事アドバイス」（スプシの式が作った文を そのまま使う）
+    var advice = null, txt = function (row, i) { return String(cell(row, i) == null ? '' : cell(row, i)).trim(); };
+    (dash || []).forEach(function (row, r) {
+      var lab = norm(cell(row, 1));
+      if (lab === '栄養素') {
+        advice = advice || { rows: [] };
+        for (var k = r + 1; k < dash.length && norm(cell(dash[k], 1)); k++) advice.rows.push({ name: txt(dash[k], 1), target: txt(dash[k], 2), intake: txt(dash[k], 3), diff: txt(dash[k], 4), judge: txt(dash[k], 5) });
+      } else if (/^不足している栄養素/.test(lab)) (advice = advice || { rows: [] }).lack = txt(row, 2);
+      else if (/^とりすぎ注意/.test(lab)) (advice = advice || { rows: [] }).over = txt(row, 2);
+      else if (/^アドバイス/.test(lab)) (advice = advice || { rows: [] }).text = txt(row, 2);
+      else if (/^記録からのおすすめ/.test(lab)) (advice = advice || { rows: [] }).suggest = txt(row, 2);
+    });
     var r1 = function (x) { return Math.round(x * 10) / 10; };
     var days = [];
     for (var d = t - 6; d <= t; d++) {
@@ -897,11 +920,22 @@ var QSWeb = (function () {
     }
     var kinds = ['朝食', '昼食', '夕食', '間食', '晩酌'];
     items.forEach(function (it) { if (it.kind && kinds.indexOf(it.kind) < 0) kinds.push(it.kind); });
+    // 過去の きろくから作る「たべたものの一覧」。同じメニューは 1つに まとめ、いちばん新しい数字を使う
+    var dbMap = {}, menuDb = [];
+    items.forEach(function (it) {
+      if (!it.menu || !(it.kcal > 0)) return;
+      var e = dbMap[it.menu];
+      if (!e) { e = dbMap[it.menu] = { menu: it.menu, count: 0, day: -1 }; menuDb.push(e); }
+      e.count++;
+      if (it.day >= e.day) { e.day = it.day; e.kind = it.kind; e.kcal = it.kcal; e.p = it.p; e.f = it.f; e.c = it.c; e.fiber = it.fiber; e.salt = it.salt; }
+    });
+    menuDb.sort(function (a, b) { return b.count - a.count || b.day - a.day; });
+    menuDb = menuDb.slice(0, 200).map(function (e) { return { menu: e.menu, kind: e.kind, kcal: e.kcal, p: e.p, f: e.f, c: e.c, fiber: e.fiber, salt: e.salt, count: e.count, last: fmt(e.day) }; });
     var strip = function (it) { return { row: it.row, date: it.date, kind: it.kind, menu: it.menu, kcal: it.kcal, p: it.p, f: it.f, c: it.c, fiber: it.fiber, salt: it.salt }; };
     return {
-      targetKcal: target.kcal, targetP: target.p, today: fmt(t, true), days: days,
+      targetKcal: target.kcal, targetP: target.p, today: fmt(t, true), days: days, advice: advice,
       items: items.filter(function (it) { return it.day === t; }).map(strip),
-      recent: items.slice(-15).reverse().map(strip), kinds: kinds,
+      recent: items.slice(-15).reverse().map(strip), kinds: kinds, menuDb: menuDb,
       nextRow: lastRow + 1, nextDailyRow: lastDaily + 1, dailyDates: Object.keys(dailyHas),
       cols: { first: c.date, daily: dcol }
     };
@@ -1188,7 +1222,7 @@ if (typeof module !== 'undefined') module.exports = QSWeb;
   // ---------- 種目の画像と、きんトレの記録 ----------
   // 画像：images/exercises/（スプシ『筋トレマスタ』の画像を小さくしたもの）。公開ページでは data URI に置きかえる
   var EX_BASE = 'https://raw.githubusercontent.com/inoueindustries/-/main/%E7%AD%8B%E3%83%88%E3%83%AC%E5%86%92%E9%99%BA%E8%80%85%E3%82%B9%E3%83%86%E3%83%BC%E3%82%BF%E3%82%B9/images/exercises/';
-  var EX_FILES = /*EXFILES-BEGIN*/{"サイドレイズ": "01.webp", "ダンベルショルダープレス": "02.webp", "ダンベルベンチプレス": "05.webp", "加重ディップス": "07.webp", "プッシュアップ": "08.webp", "懸垂": "09.webp", "ダンベルロウ": "10.webp", "ダンベルカール": "11.webp", "インクラインダンベルカール": "12.webp", "ベンチディップス": "15.webp", "スクワット": "16.webp", "カーフレイズ": "18.webp", "クランチ": "19.webp", "バイシクルクランチ": "20.webp", "ハンギングレッグレイズ": "21.webp", "プランク": "22.webp", "ロードサイクリング": "23.webp", "ウォーキング": "24.webp", "サウナ・温冷交代浴": "25.webp", "インクラインサイドレイズ": "26.webp", "ダンベルシュラッグ": "27.webp", "アブローラー": "29.webp", "ダンベルプルオーバー": "35.webp", "ダンベルルーマニアンデッドリフト": "36.webp", "サイドプランク": "38.webp", "ライイングレッグレイズ": "39.webp", "フラッターキック": "40.webp", "ロシアンツイスト": "42.webp", "リアデルトレイズ": "04.webp", "ハンマーカール": "13.webp", "トライセプスエクステンション": "14.webp", "ブルガリアンスクワット": "17.webp", "コンセントレーションカール": "31.webp", "ゾットマンカール": "32.webp", "キューバンプレス": "33.webp", "ダンベルサイドベンド": "41.webp", "インクラインダンベルプレス": "06.webp", "アップライトロウ": "28.webp", "スプリットスクワット": "30.webp", "ダンベルリアデルトロウ": "34.webp", "スーパーマン": "37.webp", "フロントレイズ": "03.webp"}/*EXFILES-END*/;
+  var EX_FILES = /*EXFILES-BEGIN*/{"サイドレイズ": "01.webp", "ダンベルショルダープレス": "02.webp", "ダンベルベンチプレス": "05.webp", "加重ディップス": "07.webp", "プッシュアップ": "08.webp", "懸垂": "09.webp", "ダンベルロウ": "10.webp", "ダンベルカール": "11.webp", "インクラインダンベルカール": "12.webp", "ベンチディップス": "15.webp", "スクワット": "16.webp", "カーフレイズ": "18.webp", "クランチ": "19.webp", "バイシクルクランチ": "20.webp", "ハンギングレッグレイズ": "21.webp", "プランク": "22.webp", "ロードサイクリング": "23.webp", "ウォーキング": "24.webp", "サウナ・温冷交代浴": "25.webp", "インクラインサイドレイズ": "26.webp", "ダンベルシュラッグ": "27.webp", "アブローラー": "29.webp", "ダンベルプルオーバー": "35.webp", "ダンベルルーマニアンデッドリフト": "36.webp", "サイドプランク": "38.webp", "ライイングレッグレイズ": "39.webp", "フラッターキック": "40.webp", "ロシアンツイスト": "42.webp", "リアデルトレイズ": "04.webp", "ハンマーカール": "13.webp", "トライセプスエクステンション": "14.webp", "ブルガリアンスクワット": "17.webp", "コンセントレーションカール": "31.webp", "ゾットマンカール": "32.webp", "キューバンプレス": "33.webp", "ダンベルサイドベンド": "41.webp", "インクラインダンベルプレス": "06.webp", "アップライトロウ": "28.webp", "スプリットスクワット": "30.webp", "ダンベルリアデルトロウ": "34.webp", "スーパーマン": "37.webp", "フロントレイズ": "03.webp", "ダンベルデッドリフト": "36.webp"}/*EXFILES-END*/;
   var EX_DATA = /*@@EXDATA@@*/null;
   var nrm = function (v) { return String(v == null ? '' : v).replace(/（/g, '(').replace(/）/g, ')').replace(/[\s　]/g, ''); };
   function exName(k) { var hit = ((state && state.exercises) || []).filter(function (e) { return e.name === k || nrm(e.name) === nrm(k); })[0]; return hit ? hit.name : k; }
@@ -1349,9 +1383,18 @@ if (typeof module !== 'undefined') module.exports = QSWeb;
       msg += t.p >= m.targetP ? '<p class="mealmsg good">たんぱくしつの もくひょうを たっせい！</p>' : '<p class="mealmsg">たんぱくしつが あと ' + f1(m.targetP - t.p) + 'g たりない！</p>';
       msg += t.kcal > m.targetKcal ? '<p class="mealmsg warn">カロリーが ' + f1(t.kcal - m.targetKcal) + 'kcal オーバーしている！</p>' : '<p class="mealmsg">カロリーは あと ' + f1(m.targetKcal - t.kcal) + 'kcal たべられる。</p>';
     }
-    $('meal-today').innerHTML = gauge('カロリー', t.kcal, m.targetKcal, 'kcal', 'limit') + gauge('たんぱくしつ', t.p, m.targetP, 'g', 'goal') +
+    // スプシのダッシュボードに「きょうの栄養バランス＆食事アドバイス」が あれば、その中身を そのまま出す
+    var a = m.advice, adv = '';
+    if (a && a.rows.length) {
+      var line = function (label, text, cls) { return text ? '<p class="adv' + (cls ? ' ' + cls : '') + '"><b>' + label + '</b>' + esc(text).replace(/\n/g, '<br>') + '</p>' : ''; };
+      adv = '<table class="tbl nut"><thead><tr><th class="l">えいようそ</th><th>きょう/目標</th><th class="l">はんてい</th></tr></thead><tbody>' +
+        a.rows.map(function (x) { var bad = /⚠/.test(x.judge), ok = /✅/.test(x.judge); return '<tr><td class="l">' + esc(x.name.replace(/\s*[（(].*$/, '')) + '</td><td class="num">' + esc(x.intake) + ' / ' + esc(x.target) + '</td><td class="l ' + (bad ? 'nbad' : ok ? 'nok' : '') + '">' + esc(x.judge) + '</td></tr>'; }).join('') + '</tbody></table>' +
+        line('たりない えいよう', a.lack, /なし/.test(a.lack || '') ? 'good' : 'warn') + line('とりすぎ ちゅうい', a.over, /^なし/.test(a.over || '') ? 'good' : 'bad') + line('アドバイス', a.text) + line('きろくからの おすすめ', a.suggest);
+    }
+    $('meal-today').innerHTML = gauge('カロリー', t.kcal, m.targetKcal, 'kcal', 'limit') + gauge('たんぱくしつ', t.p, m.targetP, 'g', 'goal') + (adv ? adv +
+      m.items.map(function (x) { return '<div class="ml-row"><b>' + esc(x.kind || 'ごはん') + '</b>' + esc(x.menu) + '<small>' + f1(x.kcal) + 'kcal・たんぱく質 ' + f1(x.p) + 'g</small></div>'; }).join('') :
       '<div class="pfc"><div><small>脂質</small><b class="num">' + f1(t.f) + '</b>g</div><div><small>炭水化物</small><b class="num">' + f1(t.c) + '</b>g</div><div><small>食物繊維</small><b class="num">' + f1(t.fiber) + '</b>g</div><div><small>塩分</small><b class="num">' + f1(t.salt) + '</b>g</div></div>' + msg +
-      m.items.map(function (x) { return '<div class="ml-row"><b>' + esc(x.kind || 'ごはん') + '</b>' + esc(x.menu) + '<small>' + f1(x.kcal) + 'kcal・たんぱく質 ' + f1(x.p) + 'g</small></div>'; }).join('');
+      m.items.map(function (x) { return '<div class="ml-row"><b>' + esc(x.kind || 'ごはん') + '</b>' + esc(x.menu) + '<small>' + f1(x.kcal) + 'kcal・たんぱく質 ' + f1(x.p) + 'g</small></div>'; }).join(''));
     requestAnimationFrame(function () { document.querySelectorAll('#meal-today .gb i').forEach(function (i) { i.style.width = i.getAttribute('data-w') + '%'; }); });
     $('meal-chart').innerHTML = '<h3 class="mc-h">カロリー（kcal）</h3>' + mealBars(m.days, 'kcal', m.targetKcal, '#6fd3ff', 'カロリーの7日推移', 'kcal') +
       '<h3 class="mc-h">たんぱくしつ（g）</h3>' + mealBars(m.days, 'p', m.targetP, '#7be08a', 'たんぱく質の7日推移', 'g');
@@ -1365,6 +1408,10 @@ if (typeof module !== 'undefined') module.exports = QSWeb;
     if (!state || state.error || !state.meals) return;
     var m = state.meals; mealEditing = item || null;
     $('meal-kind').innerHTML = m.kinds.map(function (k) { return '<option>' + esc(k) + '</option>'; }).join('');
+    var cut = function (t) { return t.length > 26 ? t.slice(0, 25) + '…' : t; };
+    $('meal-pick').innerHTML = '<option value="">― えらぶ（' + (m.menuDb || []).length + '件）―</option>' + (m.menuDb || []).map(function (x, i) {
+      return '<option value="' + i + '">' + esc(cut(x.menu)) + '｜' + Math.round(x.kcal) + 'kcal・P' + x.p + (x.count > 1 ? '（' + x.count + '回）' : '') + '</option>';
+    }).join('');
     var n = new Date(), pad = function (x) { return ('0' + x).slice(-2); }, h = n.getHours();
     $('meal-date').value = item ? item.date.replace(/\//g, '-') : n.getFullYear() + '-' + pad(n.getMonth() + 1) + '-' + pad(n.getDate());
     $('meal-kind').value = item ? item.kind : (h < 10 ? '朝食' : h < 15 ? '昼食' : h < 21 ? '夕食' : '間食');
@@ -1375,6 +1422,20 @@ if (typeof module !== 'undefined') module.exports = QSWeb;
     $('meal-msg').textContent = ''; $('meal-save').disabled = false;
     var dlg = $('meal-dlg'); if (dlg.showModal) dlg.showModal(); else dlg.setAttribute('open', '');
   }
+  // まえに たべた ものを えらぶ：入力が からなら そのまま入れる。もう 入っていれば、メニューを つなげて 数字を 足す
+  $('meal-pick').addEventListener('change', function () {
+    var x = state && state.meals && (state.meals.menuDb || [])[+this.value];
+    if (this.value === '' || !x) return;
+    var keys = ['kcal', 'p', 'f', 'c', 'fiber', 'salt'], had = $('meal-menu').value.trim();
+    var r1 = function (v) { return Math.round(v * 10) / 10; };
+    keys.forEach(function (k) { var cur = had ? (parseFloat($('meal-' + k).value) || 0) : 0; $('meal-' + k).value = r1(cur + (x[k] || 0)); });
+    $('meal-menu').value = (had ? had + '・' : '') + x.menu;
+    $('meal-msg').textContent = had ? '「' + x.menu.slice(0, 14) + '」を 足しました。' : '';
+    this.value = '';
+  });
+  $('meal-clear').addEventListener('click', function () {
+    $('meal-menu').value = ''; ['kcal', 'p', 'f', 'c', 'fiber', 'salt'].forEach(function (k) { $('meal-' + k).value = ''; }); $('meal-msg').textContent = '';
+  });
   $('meal-open').addEventListener('click', function () { openMeal(null); });
   $('meal-close').addEventListener('click', function () { $('meal-dlg').close(); });
   $('meal-form').addEventListener('submit', function (ev) {
@@ -1972,7 +2033,7 @@ if (typeof module !== 'undefined') module.exports = QSWeb;
     log: "'トレーニング・運動ログ'!A1:Q1000",
     body: "'体組成ログ'!A1:L1000",
     meal: "'食事・PFCログ'!A1:U1000",
-    dash: "'ダッシュボード'!A1:D8"
+    dash: "'ダッシュボード'!A1:H40"
   };
   var CACHE = { staleTime: 60 * 1000, gcTime: 7 * 24 * 3600 * 1000 };
   var isGas = !!(window.google && google.script && google.script.run);
