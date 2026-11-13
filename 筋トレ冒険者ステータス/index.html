@@ -280,7 +280,18 @@
   .adv b { display: block; font-weight: normal; font-size: 12px; color: var(--gold); }
   .adv.good { color: var(--good); } .adv.warn { color: var(--warn); } .adv.bad { color: var(--danger); }
   .pickhelp { margin: -4px 0 8px; }
+  .foodrow { display: grid; grid-template-columns: minmax(0, 1fr) 78px; gap: 8px; }
   .linkbtn { font: inherit; color: var(--cyan); background: none; border: 0; padding: 4px 0; margin-left: 6px; text-decoration: underline; cursor: pointer; }
+  .sg-row { display: grid; grid-template-columns: 64px minmax(0, 1fr); gap: 10px; align-items: center; padding: 8px 0; border-top: 1px dashed #262d55; }
+  .sg-row:first-child { border-top: 0; padding-top: 2px; }
+  .sg-row img { width: 64px; height: 64px; object-fit: contain; background: #fff; border-radius: 6px; }
+  .sg-row .noimg { width: 64px; height: 64px; border-radius: 6px; background: #0b1236; display: grid; place-items: center; font-size: 26px; }
+  .sg-part { font-size: 12px; color: var(--muted); }
+  .sg-part b { font-weight: normal; color: var(--gold); }
+  .sg-why { display: block; font-size: 12px; }
+  .sg-why.bad { color: var(--danger); } .sg-why.warn { color: var(--warn); } .sg-why.info { color: var(--cyan); }
+  .sg-ex { font-size: 15px; margin: 2px 0; }
+  .sg-plan { font-size: 12px; color: var(--muted); }
   .mealmsg { font-size: 13px; margin: 0 0 8px; }
   .mealmsg.good { color: var(--good); } .mealmsg.warn { color: var(--warn); }
   .ml-row { padding: 6px 0; border-top: 1px dashed #262d55; font-size: 13px; }
@@ -512,6 +523,10 @@
     </section>
 
     <section class="panel" data-tab="parts">
+      <div class="win" id="sugwin" hidden>
+        <div class="win-title">きょうの おすすめ しゅぎょう</div>
+        <div id="suggest"></div>
+      </div>
       <div class="win radar">
         <div class="win-title">ぶいの バランス</div>
         <div id="radar"></div>
@@ -630,8 +645,12 @@
         <form id="meal-form" novalidate>
           <label class="fld">ひづけ<input type="date" id="meal-date" required></label>
           <label class="fld">くぶん<select id="meal-kind"></select></label>
+          <div class="foodrow">
+            <label class="fld">しょくざいから えらぶ<select id="meal-food"></select></label>
+            <label class="fld">りょう<select id="meal-qty"><option value="0.5">×0.5</option><option value="1" selected>×1</option><option value="1.5">×1.5</option><option value="2">×2</option><option value="3">×3</option></select></label>
+          </div>
           <label class="fld">まえに たべた ものから えらぶ<select id="meal-pick"></select></label>
-          <p class="rule pickhelp">えらぶと メニューと 数字が 入ります。もう1つ えらぶと、いまの 入力に 足します。<button type="button" class="linkbtn" id="meal-clear">入力を からにする</button></p>
+          <p class="rule pickhelp">しょくざいや まえの ごはんを えらぶと、メニューと 数字が 入ります。いくつでも 足せます（しょくざいは「りょう」の 倍で 足します）。<button type="button" class="linkbtn" id="meal-clear">入力を からにする</button></p>
           <label class="fld">メニュー<input type="text" id="meal-menu" maxlength="200" placeholder="白米・納豆・味噌汁 など"></label>
           <div class="fld4">
             <label class="fld">カロリー(kcal)<input type="number" id="meal-kcal" inputmode="decimal" min="0" max="9999" step="1"></label>
@@ -754,6 +773,7 @@
     $('radar').innerHTML = radarSvg(d.majors);
     renderMajors(d.majors);
     renderFines(d.fines);
+    renderSuggest(d);
     renderForecast(d);
     renderRecent(d);
     renderMeals(d);
@@ -973,6 +993,12 @@
     var m = state.meals; mealEditing = item || null;
     $('meal-kind').innerHTML = m.kinds.map(function (k) { return '<option>' + esc(k) + '</option>'; }).join('');
     var cut = function (t) { return t.length > 26 ? t.slice(0, 25) + '…' : t; };
+    var foods = state.foods || [], cats = [];
+    foods.forEach(function (f) { if (cats.indexOf(f.cat) < 0) cats.push(f.cat); });
+    $('meal-food').innerHTML = '<option value="">― えらぶ（' + foods.length + 'しゅるい）―</option>' + cats.map(function (c) {
+      return '<optgroup label="' + esc(c) + '">' + foods.map(function (f, i) { return f.cat !== c ? '' : '<option value="' + i + '">' + esc(f.name) + (f.unit ? '（' + esc(f.unit) + '）' : '') + '｜' + Math.round(f.kcal) + 'kcal・P' + f.p + '</option>'; }).join('') + '</optgroup>';
+    }).join('');
+    $('meal-food').disabled = !foods.length; $('meal-qty').value = '1';
     $('meal-pick').innerHTML = '<option value="">― えらぶ（' + (m.menuDb || []).length + '件）―</option>' + (m.menuDb || []).map(function (x, i) {
       return '<option value="' + i + '">' + esc(cut(x.menu)) + '｜' + Math.round(x.kcal) + 'kcal・P' + x.p + (x.count > 1 ? '（' + x.count + '回）' : '') + '</option>';
     }).join('');
@@ -987,15 +1013,25 @@
     var dlg = $('meal-dlg'); if (dlg.showModal) dlg.showModal(); else dlg.setAttribute('open', '');
   }
   // まえに たべた ものを えらぶ：入力が からなら そのまま入れる。もう 入っていれば、メニューを つなげて 数字を 足す
+  function addToMeal(label, x, mult) {
+    var keys = ['kcal', 'p', 'f', 'c', 'fiber', 'salt'], had = $('meal-menu').value.trim();
+    var r1 = function (v) { return Math.round(v * 10) / 10; };
+    keys.forEach(function (k) { var cur = had ? (parseFloat($('meal-' + k).value) || 0) : 0; $('meal-' + k).value = r1(cur + (x[k] || 0) * mult); });
+    $('meal-menu').value = (had ? had + '・' : '') + label;
+    $('meal-msg').textContent = had ? '「' + label.slice(0, 16) + '」を 足しました。' : '';
+  }
   $('meal-pick').addEventListener('change', function () {
     var x = state && state.meals && (state.meals.menuDb || [])[+this.value];
     if (this.value === '' || !x) return;
-    var keys = ['kcal', 'p', 'f', 'c', 'fiber', 'salt'], had = $('meal-menu').value.trim();
-    var r1 = function (v) { return Math.round(v * 10) / 10; };
-    keys.forEach(function (k) { var cur = had ? (parseFloat($('meal-' + k).value) || 0) : 0; $('meal-' + k).value = r1(cur + (x[k] || 0)); });
-    $('meal-menu').value = (had ? had + '・' : '') + x.menu;
-    $('meal-msg').textContent = had ? '「' + x.menu.slice(0, 14) + '」を 足しました。' : '';
+    addToMeal(x.menu, x, 1);
     this.value = '';
+  });
+  $('meal-food').addEventListener('change', function () {
+    var f = state && (state.foods || [])[+this.value];
+    if (this.value === '' || !f) return;
+    var q = parseFloat($('meal-qty').value) || 1;
+    addToMeal(f.name + (q !== 1 ? '×' + q : ''), f, q);
+    this.value = ''; $('meal-qty').value = '1';
   });
   $('meal-clear').addEventListener('click', function () {
     $('meal-menu').value = ''; ['kcal', 'p', 'f', 'c', 'fiber', 'salt'].forEach(function (k) { $('meal-' + k).value = ''; }); $('meal-msg').textContent = '';
@@ -1121,6 +1157,44 @@
   }
 
   // 17部位：タップ（PCはカーソルを当てる／クリック）で、その部位を きたえる しゅぎょうを ひらく
+  // 部位の経験値から「きょう やると いい 修行」を 3つ えらぶ。
+  // ゆうせん：EXPが へっている部位 → まだ きたえていない部位 → もうすぐ げんすいする部位 → Lvが ひくい部位。きょう きたえた部位は 休ませる
+  function renderSuggest(d) {
+    var fines = d.fines || [], tips = d.tips || {};
+    if (!fines.length) { $('sugwin').hidden = true; return; }
+    var maxLv = Math.max.apply(null, fines.map(function (f) { return f.lv; }));
+    var scored = fines.map(function (f) {
+      var s, why, cls;
+      if (f.cond === 'danger') { s = 300 + f.elapsed; why = 'EXPが どんどん へっている（' + f.elapsed + '日 やすみ）'; cls = 'bad'; }
+      else if (f.cond === 'warn') { s = 250 + f.elapsed; why = 'EXPが へりはじめた（' + f.elapsed + '日 やすみ）'; cls = 'warn'; }
+      else if (f.elapsed == null) { s = 150 + (maxLv - f.lv); why = 'まだ いちども きたえていない'; cls = 'info'; }
+      else if (f.cond === 'sleep') { s = 140 + (maxLv - f.lv); why = 'ながく やすんでいて EXPが のこっていない'; cls = 'bad'; }
+      else if (f.daysToDecay != null && f.daysToDecay <= 2) { s = 100 + (3 - f.daysToDecay) * 10; why = 'あと ' + f.daysToDecay + '日で げんすいが はじまる'; cls = 'warn'; }
+      else if (f.lv < maxLv - 1) { s = (maxLv - f.lv) * 2; why = 'ほかより Lvが ひくい（Lv' + f.lv + '／いちばん Lv' + maxLv + '）'; cls = 'info'; }
+      else { s = 0; why = 'とくいな部位。さらに Lvを のばす'; cls = 'info'; }
+      if (f.elapsed === 0) s -= 500;   // きょう きたえた部位は 休ませる
+      return { f: f, s: s, why: why, cls: cls };
+    }).sort(function (a, b) { return b.s - a.s; });
+    var used = {}, picks = [];
+    scored.forEach(function (x) {
+      if (picks.length >= 3) return;
+      var t = (tips[x.f.key] || []).filter(function (y) { var nm = exName(y.ex), e = exInfo(nm); return !used[nm] && !(e && isCardio(e)); })[0];
+      if (!t) return;
+      var nm = exName(t.ex); used[nm] = true;
+      picks.push({ x: x, ex: nm, ratio: t.ratio, plan: t.plan });
+    });
+    $('sugwin').hidden = !picks.length;
+    $('suggest').innerHTML = picks.map(function (p) {
+      var src = exImg(p.ex);
+      return '<div class="sg-row">' + (src ? '<img src="' + src + '" alt="' + esc(p.ex) + 'の フォーム" loading="lazy">' : '<span class="noimg" aria-hidden="true">💪</span>') +
+        '<div><div class="sg-part"><b>' + esc(p.x.f.name) + '</b> Lv' + p.x.f.lv + '<span class="sg-why ' + p.x.cls + '">' + esc(p.x.why) + '</span></div>' +
+        '<div class="sg-ex">' + esc(p.ex) + ' <small class="muted">（この部位に ' + Math.round(p.ratio * 100) + '%）</small></div>' +
+        (p.plan ? '<div class="sg-plan">めやす：' + esc(p.plan) + '</div>' : '') +
+        (d.demo ? '' : '<button type="button" class="recbtn" data-sgex="' + esc(p.ex) + '">これを きろくする</button>') + '</div></div>';
+    }).join('');
+  }
+  $('suggest').addEventListener('click', function (e) { var b = e.target.closest('button[data-sgex]'); if (b) openRec(b.getAttribute('data-sgex')); });
+
   function renderFines(fines) {
     var max = Math.max.apply(null, fines.map(function (f) { return f.eff; }).concat([1]));
     var tips = (state && state.tips) || {};
@@ -1597,7 +1671,8 @@
     log: "'トレーニング・運動ログ'!A1:Q1000",
     body: "'体組成ログ'!A1:L1000",
     meal: "'食事・PFCログ'!A1:U1000",
-    dash: "'ダッシュボード'!A1:H40"
+    dash: "'ダッシュボード'!A1:H40",
+    food: "'食材マスタ'!A1:J300"
   };
   var CACHE = { staleTime: 60 * 1000, gcTime: 7 * 24 * 3600 * 1000 };
   var isGas = !!(window.google && google.script && google.script.run);
