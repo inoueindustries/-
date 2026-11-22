@@ -1103,9 +1103,15 @@
         ops.push({ row: 'append:' + (dc + 1), set: ds, unlessDate: { col: dc + 1, date: rec.date } });
       }
       fetch(api.split('?')[0], { method: 'POST', redirect: 'follow', body: JSON.stringify({ key: km ? km[1] : '', sheet: MEAL_NAME, ops: ops }) })
-        .then(function (r) { return r.json(); })
-        .then(function (d) { if (d && d.error) return ng(d.error); if (!d || !d.ok) return ng('Apps Script が 古いようです。さいしんの Code.gs に 貼りかえて、再デプロイしてください。'); ok(); loadApi(); },
-          function () { ng('かきこめませんでした。Apps Script が 古いか、つながっていません。さいしんの Code.gs に 貼りかえて 再デプロイすると つかえます。', true); });
+        .then(function (r) { return r.text().then(function (t) { return { status: r.status, text: t }; }); })
+        .then(function (res) {
+          var d = null; try { d = JSON.parse(res.text); } catch (e) {}
+          if (d && d.error) return ng(d.error);
+          if (d && d.ok) { ok(); loadApi(); return; }
+          // JSON 以外が返ってきたとき：中身の一部を見せて、原因が わかるように する
+          var t = res.text.replace(/<style[\s\S]*?<\/style>|<script[\s\S]*?<\/script>/gi, ' ').replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 140);
+          ng('Apps Script から おもわぬ へんじが きました（' + res.status + '）：' + (t || 'からっぽ') + '　→ この画面を そのまま おくってください。', true);
+        }, function (er) { ng('Apps Script に つながりませんでした（' + ((er && er.message) || er) + '）。電波を たしかめてください。', true); });
     } else {
       ng('この開きかたでは ごはんを きろくできません。');
     }
