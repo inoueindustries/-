@@ -13,7 +13,24 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="筋トレクエスト">
 <meta name="apple-mobile-web-app-status-bar-style" content="black">
-<script>window.QS_STANDALONE = true;</script>
+<script>window.QS_STANDALONE = true; window.QS_BUILD = "aaff347d4f";
+// あたらしい版が でていたら 読みなおす（ホーム画面のアプリは 古いページを おぼえたままに なりやすいので）。
+// version.json は キャッシュを使わずに読み、ちがえば ?v=版 を つけて 読みなおす。入力中（ダイアログが開いている）は しない
+(function () {
+  function check() {
+    try {
+      if (document.querySelector && document.querySelector('dialog[open]')) return;
+      fetch('version.json?t=' + Date.now(), { cache: 'no-store' }).then(function (r) { return r.json(); }).then(function (j) {
+        if (!j || !j.v || j.v === window.QS_BUILD) return;
+        try { if (sessionStorage.getItem('qs.reloadFor') === j.v) return; sessionStorage.setItem('qs.reloadFor', j.v); } catch (e) {}
+        location.replace(location.pathname + '?v=' + j.v);
+      }).catch(function () {});
+    } catch (e) {}
+  }
+  check();
+  document.addEventListener('visibilitychange', function () { if (document.visibilityState === 'visible') check(); });
+})();
+</script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=DotGothic16&display=swap" rel="stylesheet">

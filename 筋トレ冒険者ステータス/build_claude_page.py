@@ -61,10 +61,32 @@ head = """<title>筋トレクエスト</title>
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="筋トレクエスト">
 <meta name="apple-mobile-web-app-status-bar-style" content="black">
-<script>window.QS_STANDALONE = true;</script>"""
+<script>window.QS_STANDALONE = true; window.QS_BUILD = "@@BUILD@@";
+// あたらしい版が でていたら 読みなおす（ホーム画面のアプリは 古いページを おぼえたままに なりやすいので）。
+// version.json は キャッシュを使わずに読み、ちがえば ?v=版 を つけて 読みなおす。入力中（ダイアログが開いている）は しない
+(function () {
+  function check() {
+    try {
+      if (document.querySelector && document.querySelector('dialog[open]')) return;
+      fetch('version.json?t=' + Date.now(), { cache: 'no-store' }).then(function (r) { return r.json(); }).then(function (j) {
+        if (!j || !j.v || j.v === window.QS_BUILD) return;
+        try { if (sessionStorage.getItem('qs.reloadFor') === j.v) return; sessionStorage.setItem('qs.reloadFor', j.v); } catch (e) {}
+        location.replace(location.pathname + '?v=' + j.v);
+      }).catch(function () {});
+    } catch (e) {}
+  }
+  check();
+  document.addEventListener('visibilitychange', function () { if (document.visibilityState === 'visible') check(); });
+})();
+</script>"""
 assert "<title>筋トレ冒険者ステータス</title>" in q
 q = q.replace("<title>筋トレ冒険者ステータス</title>", head, 1)
+import hashlib
+build = hashlib.sha1(q.encode("utf-8")).hexdigest()[:10]
+q = q.replace("@@BUILD@@", build)
 out = here.parent / "quest"
 out.mkdir(exist_ok=True)
 (out / "index.html").write_text(q, encoding="utf-8")
+(out / "version.json").write_text(json.dumps({"v": build}), encoding="utf-8")
+print("build", build)
 print("quest/index.html", len(q.encode()), "bytes")
