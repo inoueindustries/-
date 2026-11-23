@@ -13,7 +13,7 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="筋トレクエスト">
 <meta name="apple-mobile-web-app-status-bar-style" content="black">
-<script>window.QS_STANDALONE = true; window.QS_BUILD = "aaff347d4f";
+<script>window.QS_STANDALONE = true; window.QS_BUILD = "c3bead3bc0";
 // あたらしい版が でていたら 読みなおす（ホーム画面のアプリは 古いページを おぼえたままに なりやすいので）。
 // version.json は キャッシュを使わずに読み、ちがえば ?v=版 を つけて 読みなおす。入力中（ダイアログが開いている）は しない
 (function () {
@@ -130,8 +130,15 @@
   .heroart .dress { position: absolute; right: 3px; top: 3px; z-index: 1; width: 30px; height: 30px; border-radius: 50%; border: 1px solid var(--gold); background: rgba(4,5,12,.75); font-size: 14px; line-height: 1; cursor: pointer; padding: 0; }
   .heroart .dress:focus-visible, .outfits button:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
   .stage #pose.pose-outfit { height: 104%; bottom: -3%; }
-  .outfits { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
-  .outfits button { position: relative; font: inherit; color: var(--text); background: #0b1236; border: 2px solid #2a3366; border-radius: 8px; padding: 0 2px 4px; cursor: pointer; overflow: hidden; }
+  .outfits { display: block; }
+  .outfit-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+  .ofh { margin: 10px 0 6px; font-size: 12px; font-weight: normal; color: var(--gold); }
+  .ofh:first-child { margin-top: 0; }
+  .swatches { display: flex; flex-wrap: wrap; gap: 8px; }
+  .swatches .sw { width: 42px; height: 42px; padding: 4px; border-radius: 50%; display: grid; place-items: center; background: #0b1236; border: 2px solid #2a3366; cursor: pointer; }
+  .swatches .sw i { display: block; width: 100%; height: 100%; border-radius: 50%; box-shadow: inset 0 0 0 1px rgba(255,255,255,.25); }
+  .swatches .sw:disabled { opacity: .35; cursor: default; }
+  .outfit-grid button { position: relative; font: inherit; color: var(--text); background: #0b1236; border: 2px solid #2a3366; border-radius: 8px; padding: 0 2px 4px; cursor: pointer; overflow: hidden; }
   .outfits button[aria-pressed="true"] { border-color: var(--gold); box-shadow: 0 0 0 1px var(--gold) inset; }
   .outfits .pic { display: block; height: 100px; overflow: hidden; position: relative; }
   .outfits .pic img { position: absolute; left: 50%; top: -18px; height: 124px; width: auto; transform: translateX(-50%); image-rendering: pixelated; }
@@ -317,6 +324,12 @@
   .sg-why.bad { color: var(--danger); } .sg-why.warn { color: var(--warn); } .sg-why.info { color: var(--cyan); }
   .sg-ex { font-size: 15px; margin: 2px 0; }
   .sg-plan { font-size: 12px; color: var(--muted); }
+  .credits { font-size: 12px; line-height: 1.7; }
+  .credits h3 { margin: 10px 0 4px; font-size: 13px; font-weight: normal; color: var(--gold); }
+  .credits h3:first-child { margin-top: 0; }
+  .credits p { margin: 0 0 6px; }
+  .credits ul { margin: 0; padding-left: 1.2em; }
+  .credits a { color: var(--cyan); overflow-wrap: anywhere; }
   .mealmsg { font-size: 13px; margin: 0 0 8px; }
   .mealmsg.good { color: var(--good); } .mealmsg.warn { color: var(--warn); }
   .ml-row { padding: 6px 0; border-top: 1px dashed #262d55; font-size: 13px; }
@@ -533,10 +546,15 @@
           <button class="refresh" type="submit" id="name-save">けってい</button> <button class="refresh" type="button" id="name-reset">もとに もどす</button> <button class="refresh" type="button" id="name-cancel">やめる</button>
         </form>
       </dialog>
+      <dialog class="win dlg" id="credits-dlg">
+        <div class="win-title">クレジット</div>
+        <div class="credits" id="credits"></div>
+        <form method="dialog"><button class="refresh" type="submit">とじる</button></form>
+      </dialog>
       <dialog class="win dlg" id="outfit-dlg">
-        <div class="win-title">きせかえ</div>
+        <div class="win-title">キャラづくり・きせかえ</div>
         <div class="outfits" id="outfits"></div>
-        <p class="rule">えらんだ ふくは、この たんまつに おぼえます。しゅぎょうの 絵も きがえます。</p>
+        <p class="rule">えらんだ キャラと ふくは、この たんまつに おぼえます。しゅぎょうの 絵も かわります。</p>
         <form method="dialog"><button class="refresh" type="submit">とじる</button></form>
       </dialog>
       <dialog class="win dlg" id="titles-dlg">
@@ -616,6 +634,7 @@
       <div class="foot">
         <span id="asof">―</span>
         <button class="refresh" id="refresh" type="button">さいしんの じょうほう</button>
+        <button class="refresh" id="credits-open" type="button">クレジット</button>
       </div>
     </section>
 
@@ -793,6 +812,11 @@ var QSWeb = (function () {
       }
       return null;
     };
+    // プレイヤー名（ステータスのシートに「プレイヤー名」の欄があれば使う）
+    for (var rr = 0; rr < Math.min(40, v.length); rr++) {
+      var rw = v[rr] || [];
+      for (var ii = 0; ii < rw.length - 1; ii++) if (/^プレイヤー名/.test(norm(rw[ii])) && String(rw[ii + 1] || '').trim()) C.PLAYER_NAME = String(rw[ii + 1]).trim();
+    }
     var a = pick(/^Lv曲線係数/), p = pick(/^Lv曲線乗数/), keep = pick(/^100%維持期間/), decay = pick(/^8日目.*減衰率/);
     if (a > 0) C.CURVE_A = a;
     if (p > 0) C.CURVE_P = p;
@@ -1252,6 +1276,11 @@ if (typeof module !== 'undefined') module.exports = QSWeb;
     $('asof').textContent = '判定基準日 ' + d.asOf + (d.fetchedAt ? '（' + new Date(d.fetchedAt).toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit' }) + ' よみこみ）' : '');
     typed = false;
     if (window.matchMedia('(min-width: 960px)').matches) typeLog();
+    // 配布版：はじめて つながったときに キャラづくりを ひらく
+    if (window.QS_DIST && !d.error && !d.demo) {
+      var first = false; try { first = !localStorage.getItem('qs.designed'); localStorage.setItem('qs.designed', '1'); } catch (e) {}
+      if (first) setTimeout(openOutfits, 600);
+    }
   }
 
   function renderMajors(majors) {
@@ -1296,7 +1325,7 @@ if (typeof module !== 'undefined') module.exports = QSWeb;
     $('rec-msg').textContent = '';
   }
   // きろくの入力画面と おしらせは、どの画面（ぶい・きろく）からでも 出せるように、画面の外がわへ うつす
-  ['rec-dlg', 'meal-dlg', 'toast'].forEach(function (id) { document.querySelector('.wrap').appendChild($(id)); });
+  ['rec-dlg', 'meal-dlg', 'credits-dlg', 'outfit-dlg', 'titles-dlg', 'name-dlg', 'toast'].forEach(function (id) { document.querySelector('.wrap').appendChild($(id)); });
   var editing = null, dupOk = null;   // editing：なおしている きろく（なければ 新しい きろく）
   function recKey(x) { return [x.date, x.ex, x.w || 0, x.r || '', x.s || 1, x.memo || ''].join('|'); }
   function openRec(name, item) {
@@ -1788,6 +1817,7 @@ if (typeof module !== 'undefined') module.exports = QSWeb;
   // きせかえで えらんだ ふくの コマ（images/workout/<衣装ID>/）。赤いよろいは images/workout/ の直下
   var OSPRITES = /*@@OSPRITES@@*/null;
   function spriteUrl(k, i) {
+    if (typeof outfitId === 'string' && isChar(outfitId)) return charSprite(k, i);
     var o = (typeof outfitId === 'string' && outfitId !== 'armor') ? outfitId : null;
     if (o) return OSPRITES ? OSPRITES[o][k][i] : SPRITE_BASE + o + '/' + k + '-' + i + '.png';
     return SPRITES ? SPRITES[k][i] : SPRITE_BASE + k + '-' + i + '.png';
@@ -1806,7 +1836,7 @@ if (typeof module !== 'undefined') module.exports = QSWeb;
     clearTimeout(poseTimer);
     document.querySelectorAll('.pose-tabs button').forEach(function (b) { b.setAttribute('aria-pressed', b.getAttribute('data-pose') === key ? 'true' : 'false'); });
     var P = POSES[key], img = $('pose'), i = 0;
-    img.alt = 'ちゃんズが ' + P.name + 'を している ドット絵';
+    img.alt = (state && state.player ? state.player : '') + 'が ' + P.name + 'を している ドット絵';
     $('pose-text').textContent = (state && state.player ? state.player : '') + '（' + P.name + '）';
     for (var k = 0; k < 4; k++) { var pre = new Image(); pre.src = spriteUrl(key, k); }
     var reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -1817,11 +1847,48 @@ if (typeof module !== 'undefined') module.exports = QSWeb;
       poseTimer = setTimeout(function () { i = (i + 1) % 4; step(); }, P.ms[i]);
     })();
   }
-  // ---------- きせかえ ----------
-  // 画像：images/outfits/（立ち姿の1枚絵。420×460 の共通キャンバス）。えらんだ ふくは localStorage に おぼえる
-  var OUTFIT_BASE = 'https://raw.githubusercontent.com/inoueindustries/-/main/%E7%AD%8B%E3%83%88%E3%83%AC%E5%86%92%E9%99%BA%E8%80%85%E3%82%B9%E3%83%86%E3%83%BC%E3%82%BF%E3%82%B9/images/outfits/';
+  // ---------- クレジット ----------
+  var CREDITS = [{"f": "Abdominal-4-point-drawing-in-1.png", "a": "Everkinetic", "l": "CC BY-SA 3.0"}, {"f": "Alternate-bicep-curl-1.png", "a": "Everkinetic", "l": "CC BY-SA 3.0"}, {"f": "Alternate-hammer-curl-1.png", "a": "Everkinetic", "l": "CC BY-SA 3.0"}, {"f": "Alternating incline curl with dumbbell 1.svg", "a": "Everkinetic", "l": "CC BY-SA 3.0"}, {"f": "Bench-dips-1.png", "a": "Everkinetic", "l": "CC BY-SA 3.0"}, {"f": "Calf-raises-1.png", "a": "Everkinetic", "l": "CC BY-SA 3.0"}, {"f": "Chin-ups-1.png", "a": "Everkinetic", "l": "CC BY-SA 3.0"}, {"f": "Cross-body-crunch-1.png", "a": "Everkinetic", "l": "CC BY-SA 3.0"}, {"f": "Crunches-1.png", "a": "Everkinetic", "l": "CC BY-SA 3.0"}, {"f": "Cuban-press-1.png", "a": "Everkinetic", "l": "CC BY-SA 3.0"}, {"f": "Decline-triceps-extension-1.png", "a": "Everkinetic", "l": "CC BY-SA 3.0"}, {"f": "Dips.png", "a": "Everkinetic at English Wikipedia", "l": "CC BY-SA 3.0"}, {"f": "Dumbbell-bench-press-1.png", "a": "Everkinetic", "l": "CC BY-SA 3.0"}, {"f": "Dumbbell-bent-arm-pullover-1.png", "a": "Everkinetic", "l": "CC BY-SA 3.0"}, {"f": "Dumbbell-front-raises-1.png", "a": "Everkinetic", "l": "CC BY-SA 3.0"}, {"f": "Dumbbell-lateral-raises-1.png", "a": "Everkinetic", "l": "CC BY-SA 3.0"}, {"f": "Dumbbell-shoulder-press-1.png", "a": "Everkinetic", "l": "CC BY-SA 3.0"}, {"f": "Dumbbell-shrugs-1.png", "a": "Everkinetic", "l": "CC BY-SA 3.0"}, {"f": "Dumbbell-upright-row-1.png", "a": "Everkinetic", "l": "CC BY-SA 3.0"}, {"f": "Incline-bench-press-2.png", "a": "Everkinetic", "l": "CC BY-SA 3.0"}, {"f": "Leg-raises-1.png", "a": "Everkinetic", "l": "CC BY-SA 3.0"}, {"f": "Lunges-1.png", "a": "Everkinetic", "l": "CC BY-SA 3.0"}, {"f": "Lying-one-arm-rear-lateral-raise-1.png", "a": "Everkinetic", "l": "CC BY-SA 3.0"}, {"f": "Push-ups-1.png", "a": "Everkinetic", "l": "CC BY-SA 3.0"}, {"f": "Rear-deltoid-row-1.png", "a": "Everkinetic", "l": "CC BY-SA 3.0"}, {"f": "Romanian-deadlift-1.png", "a": "Everkinetic", "l": "CC BY-SA 3.0"}, {"f": "Seated-close-grip-concentration-curls-1.gif", "a": "Everkinetic", "l": "CC BY-SA 3.0"}, {"f": "Side-bend-1.gif", "a": "Everkinetic", "l": "CC BY-SA 3.0"}, {"f": "Side-plank-1.png", "a": "Everkinetic", "l": "CC BY-SA 3.0"}, {"f": "Single-leg-squat-1-877x1024.png", "a": "Everkinetic", "l": "CC BY-SA 3.0"}, {"f": "Squats.svg", "a": "derivative work: Urutseg (talk)", "l": "CC BY-SA 3.0"}, {"f": "Supermans-1.png", "a": "Everkinetic", "l": "CC BY-SA 3.0"}, {"f": "Zottman-curl-1.gif", "a": "Everkinetic", "l": "CC BY-SA 3.0"}];
+  $('credits-open').addEventListener('click', function () {
+    var lic = 'https://creativecommons.org/licenses/by-sa/3.0/deed.ja';
+    $('credits').innerHTML =
+      '<h3>種目の絵</h3><p>Wikimedia Commons の運動イラストを、大きさと形式を変えて使っています。ライセンスは <a href="' + lic + '" target="_blank" rel="noopener">CC BY-SA 3.0</a> です（変えた絵も同じライセンスです）。</p><ul>' +
+      CREDITS.map(function (c) { return '<li><a href="https://commons.wikimedia.org/wiki/File:' + encodeURIComponent(c.f.replace(/ /g, '_')) + '" target="_blank" rel="noopener">' + esc(c.f) + '</a>（作者：' + esc(c.a) + '／' + esc(c.l) + '）</li>'; }).join('') + '</ul>' +
+      '<p>ダンベルロウ・アブローラー・ロードサイクリング・ウォーキング・サウナ・ロシアンツイスト・ライイングレッグレイズ・フラッターキック・ダンベルデッドリフトの絵は、このアプリのために画像生成で作ったものです。</p>' +
+      '<h3>キャラクター・背景</h3><p>キャラクターのドット絵と修行の背景は、このアプリのために画像生成（Codex）で作ったオリジナルです。</p>' +
+      '<h3>フォント</h3><p>DotGothic16（SIL Open Font License 1.1）。Google Fonts から読みこんでいます。</p>';
+    var d = $('credits-dlg'); if (d.showModal) d.showModal(); else d.setAttribute('open', '');
+  });
+  // ---------- きせかえ・キャラづくり ----------
+  // オリジナルキャラ：images/chars/cN/（6人。服は緑で描いてあり、えらんだ色に ぬりかえる）
+  // そのほかの ふく：images/outfits/（立ち姿の1枚絵。配布版には ない）
+  var RAW_BASE = 'https://raw.githubusercontent.com/inoueindustries/-/main/%E7%AD%8B%E3%83%88%E3%83%AC%E5%86%92%E9%99%BA%E8%80%85%E3%82%B9%E3%83%86%E3%83%BC%E3%82%BF%E3%82%B9/images/';
+  var OUTFIT_BASE = RAW_BASE + 'outfits/';
+  var CHAR_BASE = window.QS_STANDALONE ? 'chars/' : RAW_BASE + 'chars/';
   var OUTFITS = /*@@OUTFITS@@*/null;
-  var OUTFIT_LIST = [
+  var CHARS = /*@@CHARS@@*/null;
+  var DIST = !!window.QS_DIST;
+  var CHAR_LIST = [
+    { id: 'c1', name: 'ツンツンがみ', sex: '男性' },
+    { id: 'c2', name: 'ぼうず', sex: '男性' },
+    { id: 'c3', name: 'メガネ', sex: '男性' },
+    { id: 'c4', name: 'ポニーテール', sex: '女性' },
+    { id: 'c5', name: 'ボブ', sex: '女性' },
+    { id: 'c6', name: 'ロングヘア', sex: '女性' }
+  ];
+  // 服の色：緑の部分の 色あい(h)・あざやかさ(s)・明るさ(v) を かえる。null は もとの緑
+  var COLOR_LIST = [
+    { id: 'green', name: 'みどり', sw: '#1faa59', t: null },
+    { id: 'red', name: 'あか', sw: '#c62828', t: [0, 1, 1.15] },
+    { id: 'blue', name: 'あお', sw: '#1e5bd8', t: [215, 1, 1.1] },
+    { id: 'orange', name: 'オレンジ', sw: '#ef7d1a', t: [26, 1, 1.3] },
+    { id: 'yellow', name: 'きいろ', sw: '#f2c230', t: [46, 1, 1.45] },
+    { id: 'purple', name: 'むらさき', sw: '#7e3ad1', t: [275, 0.9, 1.1] },
+    { id: 'pink', name: 'ピンク', sw: '#ec6fa8', t: [330, 0.65, 1.3] },
+    { id: 'black', name: 'くろ', sw: '#2b2d33', t: [0, 0, 0.5] },
+    { id: 'white', name: 'しろ', sw: '#e9ecf1', t: [0, 0, 1.9] }
+  ];
+  var OUTFIT_LIST = DIST ? [] : [
     { id: 'armor', name: 'あかい よろい' },
     { id: 'white_tank', name: '白タンクトップ' },
     { id: 'business_suit', name: 'ビジネススーツ' },
@@ -1829,32 +1896,115 @@ if (typeof module !== 'undefined') module.exports = QSWeb;
     { id: 'hero_cape', name: 'ヒーローマント' },
     { id: 'running', name: 'ランニングウェア' }
   ];
-  var OUTFIT_KEY = 'qs.outfit', outfitId = 'armor';
-  try { var ov = localStorage.getItem(OUTFIT_KEY); if (OUTFIT_LIST.some(function (o) { return o.id === ov; })) outfitId = ov; } catch (e) {}
-  function outfitUrl(id) { return OUTFITS ? OUTFITS[id] : OUTFIT_BASE + id + '.png'; }
-  function outfitName(id) { return OUTFIT_LIST.filter(function (o) { return o.id === id; })[0].name; }
+  var OUTFIT_KEY = 'qs.outfit', COLOR_KEY = 'qs.color', outfitId = DIST ? 'c1' : 'armor', colorId = 'green';
+  function isChar(id) { return /^c\d$/.test(id || ''); }
+  function knownLook(id) { return isChar(id) && CHAR_LIST.some(function (c) { return c.id === id; }) || OUTFIT_LIST.some(function (o) { return o.id === id; }); }
+  try {
+    var ov = localStorage.getItem(OUTFIT_KEY); if (knownLook(ov)) outfitId = ov;
+    var cv = localStorage.getItem(COLOR_KEY); if (COLOR_LIST.some(function (c) { return c.id === cv; })) colorId = cv;
+  } catch (e) {}
+  function charRaw(id, k, i) {
+    if (CHARS && CHARS[id]) return k === 'stand' ? CHARS[id].stand : CHARS[id][k][i];
+    return CHAR_BASE + id + '/' + (k === 'stand' ? 'stand' : k + '-' + i) + '.png';
+  }
+  // ぬりかえ：できた絵は おぼえておく（つぎからは すぐ出る）
+  var tintCache = {}, tintWait = {};
+  function colorOf(id) { return COLOR_LIST.filter(function (c) { return c.id === id; })[0] || COLOR_LIST[0]; }
+  function tintNow(src, cid) { var c = colorOf(cid); return c.t ? (tintCache[src + '|' + cid] || null) : src; }
+  function tint(src, cid, cb) {
+    var c = colorOf(cid), key = src + '|' + cid;
+    if (!c.t) { if (cb) cb(src); return; }
+    if (tintCache[key]) { if (cb) cb(tintCache[key]); return; }
+    if (tintWait[key]) { if (cb) tintWait[key].push(cb); return; }
+    tintWait[key] = cb ? [cb] : [];
+    var img = new Image();
+    if (/^https?:/.test(src)) img.crossOrigin = 'anonymous';
+    img.onload = function () {
+      var out = src;
+      try {
+        var cv = document.createElement('canvas'); cv.width = img.naturalWidth; cv.height = img.naturalHeight;
+        var cx = cv.getContext('2d'); cx.drawImage(img, 0, 0);
+        var d = cx.getImageData(0, 0, cv.width, cv.height), p = d.data, th = c.t[0] / 360, sm = c.t[1], vm = c.t[2];
+        for (var q = 0; q < p.length; q += 4) {
+          if (p[q + 3] < 128) continue;
+          var r = p[q] / 255, g = p[q + 1] / 255, b = p[q + 2] / 255, mx = Math.max(r, g, b), mn = Math.min(r, g, b), v = mx, s = mx ? (mx - mn) / mx : 0, h = 0;
+          if (mx !== mn) { if (mx === r) h = ((g - b) / (mx - mn)) % 6; else if (mx === g) h = (b - r) / (mx - mn) + 2; else h = (r - g) / (mx - mn) + 4; h /= 6; if (h < 0) h += 1; }
+          if (!(h >= 0.25 && h <= 0.49 && s >= 0.28 && v >= 0.12)) continue;   // 服の緑だけ
+          var ns = Math.min(1, s * sm), nv = Math.min(1, v * vm);
+          if (sm === 0 && vm > 1) nv = Math.min(1, 0.55 + v * 0.5);
+          var hi = Math.floor(th * 6), f = th * 6 - hi, pp = nv * (1 - ns), qq = nv * (1 - f * ns), tt = nv * (1 - (1 - f) * ns), rr, gg, bb;
+          switch (hi % 6) { case 0: rr = nv; gg = tt; bb = pp; break; case 1: rr = qq; gg = nv; bb = pp; break; case 2: rr = pp; gg = nv; bb = tt; break; case 3: rr = pp; gg = qq; bb = nv; break; case 4: rr = tt; gg = pp; bb = nv; break; default: rr = nv; gg = pp; bb = qq; }
+          p[q] = Math.round(rr * 255); p[q + 1] = Math.round(gg * 255); p[q + 2] = Math.round(bb * 255);
+        }
+        cx.putImageData(d, 0, 0); out = cv.toDataURL('image/png');
+      } catch (e) {}
+      tintCache[key] = out; var w = tintWait[key]; delete tintWait[key]; w.forEach(function (f) { f(out); });
+    };
+    img.onerror = function () { var w = tintWait[key]; delete tintWait[key]; w.forEach(function (f) { f(src); }); };
+    img.src = src;
+  }
+  // キャラの絵を ぜんぶ 先に ぬっておく（修行の絵が 1コマずつ 色が かわらないように）
+  function warmChar(id, cid, done) {
+    var list = [charRaw(id, 'stand')], left;
+    ['pullup', 'pushup', 'squat'].forEach(function (k) { for (var i = 0; i < 4; i++) list.push(charRaw(id, k, i)); });
+    left = list.length;
+    list.forEach(function (src) { tint(src, cid, function () { if (--left === 0 && done) done(); }); });
+  }
+  function charSprite(k, i) { var raw = charRaw(outfitId, k, i); return tintNow(raw, colorId) || raw; }
+  function outfitUrl(id) {
+    if (isChar(id)) { var raw = charRaw(id, 'stand'); return tintNow(raw, colorId) || raw; }
+    return OUTFITS ? OUTFITS[id] : OUTFIT_BASE + id + '.png';
+  }
+  function lookName(id) {
+    var c = CHAR_LIST.filter(function (x) { return x.id === id; })[0]; if (c) return c.name;
+    var o = OUTFIT_LIST.filter(function (x) { return x.id === id; })[0]; return o ? o.name : '';
+  }
+  function playerName() { return (state && state.player) || 'ぼうけんしゃ'; }
   function applyOutfit() {
     var av = $('avatar'), im = $('outfit'), on = outfitId !== 'armor';
     av.hidden = on; im.hidden = !on;
-    if (on) { im.src = outfitUrl(outfitId); im.alt = outfitName(outfitId) + 'を きた ちゃんズの ドット絵'; }
+    if (on) { im.src = outfitUrl(outfitId); im.alt = playerName() + '（' + lookName(outfitId) + '）の ドット絵'; }
   }
-  function openOutfits() {
-    $('outfits').innerHTML = OUTFIT_LIST.map(function (o) {
+  function renderOutfits() {
+    var chars = CHAR_LIST.map(function (c) {
+      var raw = charRaw(c.id, 'stand');
+      return '<button type="button" data-outfit="' + c.id + '" aria-pressed="' + (c.id === outfitId) + '"><span class="pic"><img data-raw="' + raw + '" src="' + (tintNow(raw, colorId) || raw) + '" alt=""></span><small>' + esc(c.name) + '<br><span class="muted">' + c.sex + '</span></small></button>';
+    }).join('');
+    var colors = COLOR_LIST.map(function (c) {
+      return '<button type="button" class="sw" data-color="' + c.id + '" aria-pressed="' + (c.id === colorId) + '" aria-label="ふくの いろ：' + c.name + '" title="' + c.name + '"><i style="background:' + c.sw + '"></i></button>';
+    }).join('');
+    var others = OUTFIT_LIST.map(function (o) {
       var src = o.id === 'armor' ? $('avatar').src : outfitUrl(o.id);
       return '<button type="button" data-outfit="' + o.id + '" aria-pressed="' + (o.id === outfitId) + '"><span class="pic"><img' + (o.id === 'armor' ? ' class="bust"' : '') + ' src="' + src + '" alt=""></span><small>' + esc(o.name) + '</small></button>';
     }).join('');
+    $('outfits').innerHTML = '<h3 class="ofh">かお・かみがた</h3><div class="outfit-grid">' + chars + '</div>' +
+      '<h3 class="ofh">ふくの いろ</h3><div class="swatches">' + colors + '</div>' +
+      (others ? '<h3 class="ofh">とくべつな ふく</h3><div class="outfit-grid">' + others + '</div>' : '');
+    // サムネイルも えらんだ色に ぬる
+    document.querySelectorAll('#outfits img[data-raw]').forEach(function (im) { tint(im.getAttribute('data-raw'), colorId, function (u) { im.src = u; }); });
+    document.querySelectorAll('#outfits .sw').forEach(function (b) { b.disabled = !isChar(outfitId); });
+  }
+  function openOutfits() {
+    renderOutfits();
     var dlg = $('outfit-dlg');
     if (dlg.showModal) dlg.showModal(); else dlg.setAttribute('open', '');
   }
+  function lookChanged() {
+    try { localStorage.setItem(OUTFIT_KEY, outfitId); localStorage.setItem(COLOR_KEY, colorId); } catch (err) {}
+    var go = function () {
+      applyOutfit();
+      if (poseKey && $('lvup').hidden && $('tc').hidden) playPose(poseKey, null);   // 修行の絵も きがえる
+    };
+    if (isChar(outfitId)) warmChar(outfitId, colorId, go); else go();
+    renderOutfits();
+  }
   $('open-outfits').addEventListener('click', openOutfits);
   $('outfits').addEventListener('click', function (e) {
-    var b = e.target.closest('button[data-outfit]'); if (!b) return;
-    outfitId = b.getAttribute('data-outfit');
-    try { localStorage.setItem(OUTFIT_KEY, outfitId); } catch (err) {}
-    document.querySelectorAll('#outfits button').forEach(function (x) { x.setAttribute('aria-pressed', x === b ? 'true' : 'false'); });
-    applyOutfit();
-    if (poseKey && $('lvup').hidden && $('tc').hidden) playPose(poseKey, null);   // 修行の絵も きがえる
+    var b = e.target.closest('button[data-outfit], button[data-color]'); if (!b || b.disabled) return;
+    if (b.hasAttribute('data-color')) colorId = b.getAttribute('data-color'); else outfitId = b.getAttribute('data-outfit');
+    lookChanged();
   });
+  if (isChar(outfitId)) warmChar(outfitId, colorId, function () { applyOutfit(); if (poseKey) playPose(poseKey, null); });
   applyOutfit();
   // ---------- 修行の場面とレベルアップの演出 ----------
   // 背景：images/scenes/（Codex が作ったドット絵。公開ページでは data URI に置きかえる）。Lv ごとに場面が かわる
@@ -2287,10 +2437,13 @@ if (typeof module !== 'undefined') module.exports = QSWeb;
       '<input id="api-in" type="url" inputmode="url" autocomplete="off" placeholder="https://script.google.com/macros/s/…/exec" style="' + st + '"></label>' +
       '<label style="display:block;font-size:12px">② あいことば（setupAppKey の 実行ログに 出た URL を そのまま はっても OK）' +
       '<input id="key-in" type="text" autocomplete="off" placeholder="…key=…" style="' + st + '"></label>' +
-      '<button type="button" class="refresh" id="api-save">ほぞんして よみこむ</button>';
-    w.querySelector('p').textContent = msg || 'スプシの Apps Script と つなぎます。下の 2つを はりつけてください。';
+      (window.QS_DIST ? '<label style="display:block;font-size:12px">③ あなたの なまえ（12文字まで。あとから かえられます）<input id="name-first" type="text" maxlength="12" autocomplete="off" placeholder="ぼうけんしゃ" style="' + st + '"></label>' : '') +
+      '<button type="button" class="refresh" id="api-save">ほぞんして よみこむ</button>' +
+      (window.QS_DIST ? '<p style="font-size:12px;margin:12px 0 0"><a href="guide.html" style="color:var(--cyan)">はじめての人へ：つかいかた・じゅんびの しかた</a></p>' : '');
+    w.querySelector('p').textContent = msg || (window.QS_DIST ? 'スプシの Apps Script と つなぎます。①と②を はりつけて、③に なまえを いれてください。' : 'スプシの Apps Script と つなぎます。下の 2つを はりつけてください。');
     box.appendChild(w);
     var cur = getApi(), cm = cur.match(/[?&]key=([\w-]+)/);
+    if ($('name-first')) $('name-first').value = customName || '';
     $('api-in').value = cur.split('?')[0];
     $('key-in').value = cm ? cm[1] : '';
     $('api-save').addEventListener('click', function () {
@@ -2304,6 +2457,8 @@ if (typeof module !== 'undefined') module.exports = QSWeb;
       if (!key) { say('② の あいことばが 見つかりません。setupAppKey の 実行ログに 出た URL を はりつけてください。'); return; }
       var v = um[0] + '?format=json&key=' + key;
       try { localStorage.setItem(API_KEY, v); } catch (e) {}
+      var nf = $('name-first'), nv = nf ? nf.value.trim().slice(0, 12) : '';
+      if (nv) { customName = nv; try { localStorage.setItem(NAME_KEY, nv); } catch (e) {} }
       box.innerHTML = ''; loadApi();
     });
   }

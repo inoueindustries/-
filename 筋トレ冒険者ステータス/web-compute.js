@@ -83,6 +83,11 @@ var QSWeb = (function () {
       }
       return null;
     };
+    // プレイヤー名（ステータスのシートに「プレイヤー名」の欄があれば使う）
+    for (var rr = 0; rr < Math.min(40, v.length); rr++) {
+      var rw = v[rr] || [];
+      for (var ii = 0; ii < rw.length - 1; ii++) if (/^プレイヤー名/.test(norm(rw[ii])) && String(rw[ii + 1] || '').trim()) C.PLAYER_NAME = String(rw[ii + 1]).trim();
+    }
     var a = pick(/^Lv曲線係数/), p = pick(/^Lv曲線乗数/), keep = pick(/^100%維持期間/), decay = pick(/^8日目.*減衰率/);
     if (a > 0) C.CURVE_A = a;
     if (p > 0) C.CURVE_P = p;

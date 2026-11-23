@@ -1,8 +1,9 @@
 """ホーム画面用アイコンを作る：青いオーラが放射状に広がる背景（光のすじ・きらめき）＋ キャラのドット絵。
-使い方: python3 tools/make_app_icon.py
-出力: images/app-icon.png（1024）と ../quest/icon-{180,192,512}.png
+使い方: python3 tools/make_app_icon.py            … あなたの版（キャラは images/chanz-source.png）
+        python3 tools/make_app_icon.py --dist     … 配布版（キャラは オリジナルキャラ2人。出力は ../play/）
+出力: images/app-icon.png（1024）と ../quest/icon-{180,192,512}.png（--dist のときは images/app-icon-dist.png と ../play/）
 """
-import math, random
+import math, random, sys
 from pathlib import Path
 from PIL import Image, ImageDraw, ImageFilter, ImageChops
 
@@ -58,6 +59,25 @@ for _ in range(14):
     d.polygon([(x, y - L), (x + t, y - t), (x + L, y), (x + t, y + t), (x, y + L), (x - t, y + t), (x - L, y), (x - t, y - t)], fill=255)
 glow = sp.filter(ImageFilter.GaussianBlur(6))
 bg = Image.composite(Image.new("RGB", (S, S), (255, 255, 255)), bg, ImageChops.lighter(sp, glow))
+
+DIST = "--dist" in sys.argv
+if DIST:
+    # 配布版：オリジナルキャラの 男女2人を ならべる（立ち姿の 上半分を 大きく）
+    ch = Image.new("RGBA", (S, S), (0, 0, 0, 0))
+    for n, x0 in (("1", -70), ("4", 450)):
+        im = Image.open(here / "images" / "chars" / "original" / f"char-{n}.png").convert("RGBA")
+        im = im.crop((100, 60, 320, 280)).resize((640, 640), Image.NEAREST)
+        ch.alpha_composite(im, (x0, S - 640 + 20))
+    pos = (0, 0)
+    alpha = ch.getchannel("A")
+    edge = alpha.filter(ImageFilter.MaxFilter(21)).filter(ImageFilter.GaussianBlur(10))
+    bg = Image.composite(Image.new("RGB", (S, S), (235, 250, 255)), bg, edge.point(lambda v: int(v * 0.85)))
+    bg.paste(ch, pos, ch)
+    bg.save(here / "images" / "app-icon-dist.png")
+    out = here.parent / "play"; out.mkdir(exist_ok=True)
+    for n in (180, 192, 512):
+        bg.resize((n, n), Image.LANCZOS).save(out / f"icon-{n}.png")
+    print("ok dist"); sys.exit(0)
 
 # 4) キャラ（クリーム色の背景を、四すみから つながっている所だけ ぬく）
 src = Image.open(here / "images" / "chanz-source.png").convert("RGB")
