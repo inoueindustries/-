@@ -10,11 +10,22 @@ var QSLocal = (function () {
   var DEFAULT_TARGET = { kcal: 1800, p: 130, f: 50, c: 205, fiber: 22, salt: 7.5 };
   var DEFAULT_BW = 60;   // 体重が まだ ないときに 自重の種目で 使う 仮の体重
 
+  // iPhone アプリ（Capacitor）の中で うごいているときだけ、スマホの機能を つかう
+  var NATIVE = (function () {
+    var C = typeof window !== 'undefined' ? window.Capacitor : null;
+    try { if (!C || !C.isNativePlatform || !C.isNativePlatform()) return null; } catch (e) { return null; }
+    var p = function (n) { try { return (C.Plugins && C.Plugins[n]) || (C.registerPlugin ? C.registerPlugin(n) : null); } catch (e) { return null; } };
+    return { Preferences: p('Preferences'), Share: p('Share'), Filesystem: p('Filesystem'), LocalNotifications: p('LocalNotifications'), Haptics: p('Haptics') };
+  })();
+  var UI_KEYS = ['qs.name', 'qs.outfit', 'qs.color', 'qs.designed', 'qs.started', 'qs.lastBackup', 'qs.remind', 'qs.lastLv'];
   var data = null;
   function blank() { return { v: 1, log: [], body: [], meal: [], target: {}, foods: [], seq: 1, created: Date.now() }; }
   function load() {
     if (data) return data;
     try { data = JSON.parse(localStorage.getItem(KEY) || 'null'); } catch (e) { data = null; }
+    return fix();
+  }
+  function fix() {
     if (!data || typeof data !== 'object') data = blank();
     ['log', 'body', 'meal', 'foods'].forEach(function (k) { if (!Array.isArray(data[k])) data[k] = []; });
     if (!data.target || typeof data.target !== 'object') data.target = {};
@@ -22,8 +33,28 @@ var QSLocal = (function () {
     return data;
   }
   function save() {
-    try { localStorage.setItem(KEY, JSON.stringify(data)); data.savedAt = Date.now(); return true; }
-    catch (e) { return false; }
+    data.savedAt = Date.now();
+    var ui = {}; UI_KEYS.forEach(function (k) { try { var v = localStorage.getItem(k); if (v != null) ui[k] = v; } catch (e) {} });
+    data.ui = ui;
+    var json = JSON.stringify(data), ok = true;
+    try { localStorage.setItem(KEY, json); } catch (e) { ok = false; }
+    // アプリでは、OS が けさない おき場（Preferences）にも しまう
+    if (NATIVE && NATIVE.Preferences) { try { NATIVE.Preferences.set({ key: KEY, value: json }).catch(function () {}); ok = true; } catch (e) {} }
+    return ok;
+  }
+  // アプリを ひらいたとき：Preferences の ほうが あたらしければ、そちらを つかう。
+  // なまえ・キャラの せっていが きえていたら もどす（もどしたら true → ページを 読みなおす）
+  function restoreNative() {
+    if (!NATIVE || !NATIVE.Preferences) return Promise.resolve(false);
+    return NATIVE.Preferences.get({ key: KEY }).then(function (r) {
+      var v = r && r.value; if (!v) { if (hasData()) save(); return false; }
+      var nd; try { nd = JSON.parse(v); } catch (e) { return false; }
+      var cur = load();
+      if (!(cur.savedAt >= (nd.savedAt || 0)) || !hasData()) { data = nd; fix(); try { localStorage.setItem(KEY, v); } catch (e) {} }
+      var fixed = false;
+      Object.keys(nd.ui || {}).forEach(function (k) { try { if (localStorage.getItem(k) == null) { localStorage.setItem(k, nd.ui[k]); fixed = true; } } catch (e) {} });
+      return fixed;
+    }, function () { return false; });
   }
   // iPhone の Safari は しばらく ひらかないと データを けすことがある。「けさないで」と おねがいしておく
   function persist() {
@@ -177,7 +208,7 @@ var QSLocal = (function () {
     var j; try { j = JSON.parse(text); } catch (e) { return 'ファイルの 中身が よめませんでした。'; }
     var d = j && j.app === 'muscle-quest' ? j.data : null;
     if (!d || !Array.isArray(d.log) || !Array.isArray(d.meal) || !Array.isArray(d.body)) return 'この アプリの バックアップでは ないようです。';
-    data = d; load();
+    data = d; fix();
     return save() ? null : 'ほぞんできませんでした。';
   }
   function csvCell(v) { var s = String(v == null ? '' : v); return /[",\n]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s; }
@@ -193,6 +224,6 @@ var QSLocal = (function () {
 
   return { ranges: ranges, addLog: addLog, changeLog: changeLog, changeMeal: changeMeal, addBody: addBody, deleteBody: deleteBody, bodyRecent: bodyRecent,
     target: target, setTarget: setTarget, exportJson: exportJson, importJson: importJson, exportCsv: exportCsv, wipe: wipe, counts: counts,
-    hasData: hasData, persist: persist, todayYmd: todayYmd, calcLog: calcLog, _reset: function () { data = null; } };
+    hasData: hasData, persist: persist, restoreNative: restoreNative, native: NATIVE, todayYmd: todayYmd, calcLog: calcLog, _reset: function () { data = null; } };
 })();
 if (typeof module !== 'undefined') module.exports = QSLocal;

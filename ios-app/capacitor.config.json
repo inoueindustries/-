@@ -1,0 +1,16 @@
+{
+  "appId": "com.inoueindustries.musclequest",
+  "appName": "筋トレクエスト",
+  "webDir": "www",
+  "backgroundColor": "#070b1f",
+  "ios": {
+    "contentInset": "never",
+    "backgroundColor": "#070b1f",
+    "scrollEnabled": true
+  },
+  "plugins": {
+    "LocalNotifications": {
+      "iconColor": "#ffd75e"
+    }
+  }
+}

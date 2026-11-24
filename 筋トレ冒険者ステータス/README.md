@@ -60,6 +60,10 @@ claude.ai のページはホーム画面に置くとアイコンが Claude の�
 - 絵・フォント（DotGothic16）も app/ の中に おいてあるので、ネットが なくても うごく
 - iPhone の Safari は ホーム画面に おいていない サイトの データを、しばらく ひらかないと けすことがある。ホーム画面に おいて つかい、ときどき バックアップを とる
 
+### iPhone アプリ版（ios-app/）
+
+スマホ保存版を Capacitor で包んだもの。Mac での作り方・App Store への出し方は `../ios-app/README.md`。アプリの中では、記録を OS が消さない保存場所にもしまい、バックアップは共有シートで渡し、毎日の修行の通知を出せる（`local/local-store.js` の NATIVE）。プライバシーポリシーは `local/privacy.html`（→ `app/privacy.html`）。お問い合わせ先は `local/contact.txt` に書けば入る。
+
 ## 画面の中身
 
 | 画面 | 内容 |

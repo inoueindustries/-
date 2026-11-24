@@ -1,0 +1,25 @@
+{
+  "name": "muscle-quest-ios",
+  "private": true,
+  "version": "1.0.0",
+  "description": "筋トレクエスト（スマホ保存版）を iPhone アプリにする",
+  "scripts": {
+    "copy": "node scripts/copy-web.mjs",
+    "setup": "npm run copy && npx cap add ios && npx capacitor-assets generate --ios && node scripts/patch-ios.mjs && npx cap sync ios",
+    "sync": "npm run copy && npx cap sync ios",
+    "open": "npx cap open ios"
+  },
+  "dependencies": {
+    "@capacitor/core": "^8.6.2",
+    "@capacitor/ios": "^8.6.2",
+    "@capacitor/filesystem": "^8.1.5",
+    "@capacitor/haptics": "^8.0.2",
+    "@capacitor/local-notifications": "^8.3.1",
+    "@capacitor/preferences": "^8.0.1",
+    "@capacitor/share": "^8.0.3"
+  },
+  "devDependencies": {
+    "@capacitor/assets": "^4.0.0",
+    "@capacitor/cli": "^8.6.2"
+  }
+}
