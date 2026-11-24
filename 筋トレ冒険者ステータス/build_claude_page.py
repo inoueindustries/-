@@ -113,3 +113,44 @@ write_app(dq, "play")
 mf = json.loads((here.parent / "quest" / "manifest.webmanifest").read_text(encoding="utf-8"))
 (here.parent / "play" / "manifest.webmanifest").write_text(json.dumps(mf, ensure_ascii=False, indent=2), encoding="utf-8")
 shutil.copy(here / "images" / "chars" / "lineup.png", here.parent / "play" / "chars-lineup.png")   # はじめかた（play/guide.html）の絵
+
+# ---- スマホ保存版（GitHub Pages の app/）：きろくを スマホの中に しまう。スプシも Apps Script も いらない ----
+def seed_js():
+    master, coef, food, sec = [], {}, [], None
+    for line in (here / "local" / "seed_src.txt").read_text(encoding="utf-8").splitlines():
+        if not line.strip(): continue
+        if line.startswith("#"): sec = line.split()[0][1:]; continue
+        f = line.split("|")
+        if sec == "MASTER": master.append(f[:5] + [[int(x) for x in f[5].split()]])
+        elif sec == "COEF": coef[f[0]] = [f[1], float(f[2])]
+        elif sec == "FOOD": food.append(f)
+    for m in master: assert m[1] in coef, m[1]
+    return "var QS_SEED = " + json.dumps({"master": master, "coef": coef, "food": food}, ensure_ascii=False) + ";\n"
+local_head = dist_head.replace("window.QS_DIST = true;", "window.QS_DIST = true; window.QS_LOCAL = true;")
+lq = base_q.replace("<title>筋トレ冒険者ステータス</title>", local_head, 1)
+lq = lq.replace(AVATAR_URL, "chars/c1/stand.png").replace("ちゃんズ", "ぼうけんしゃ")
+lq = re.sub(r"var SHEET_ID = '[^']*';", "var SHEET_ID = '';", lq)
+assert '<script id="qs-compute">' in lq
+lq = lq.replace('<script id="qs-compute">', '<script id="qs-local">' + seed_js() + (here / "local" / "local-store.js").read_text(encoding="utf-8") + '</script>\n<script id="qs-compute">', 1)
+# ネットが なくても うごくように、絵と文字（フォント）を 同じ場所に おく
+RAWI = "https://raw.githubusercontent.com/inoueindustries/-/main/%E7%AD%8B%E3%83%88%E3%83%AC%E5%86%92%E9%99%BA%E8%80%85%E3%82%B9%E3%83%86%E3%83%BC%E3%82%BF%E3%82%B9/images/"
+for sub, dst in (("exercises/", "ex/"), ("scenes/", "scenes/"), ("workout/", "workout/")):
+    assert "'" + RAWI + sub + "'" in lq, sub
+    lq = lq.replace("'" + RAWI + sub + "'", "'" + dst + "'")
+fl = re.search(r'<link rel="preconnect" href="https://fonts.googleapis.com">.*?display=swap" rel="stylesheet">', lq, re.S)
+assert fl
+lq = lq.replace(fl.group(0), '<link href="fonts/dotgothic16.css" rel="stylesheet">')
+assert "fonts.googleapis" not in lq
+write_app(lq, "app")
+A = here.parent / "app"
+for sub, dst, pat in (("exercises", "ex", "*.webp"), ("scenes", "scenes", "*.webp"), ("workout", "workout", "*.png")):
+    if (A / dst).exists(): shutil.rmtree(A / dst)
+    (A / dst).mkdir()
+    for f in (here / "images" / sub).glob(pat): shutil.copy(f, A / dst / f.name)
+if (A / "fonts").exists(): shutil.rmtree(A / "fonts")
+shutil.copytree(here / "local" / "fonts", A / "fonts")
+left = [u for u in re.findall(r"https://[^'\"\s)]+", lq) if "creativecommons" not in u and "commons.wikimedia" not in u and "script.google" not in u]
+print("app: のこった外部URL", sorted(set(left))[:10])
+amf = dict(mf); amf["start_url"] = "./"; amf["scope"] = "./"
+(here.parent / "app" / "manifest.webmanifest").write_text(json.dumps(amf, ensure_ascii=False, indent=2), encoding="utf-8")
+for n in (180, 192, 512): shutil.copy(here.parent / "play" / f"icon-{n}.png", here.parent / "app" / f"icon-{n}.png")
