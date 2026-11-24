@@ -12,8 +12,19 @@
  *   backfillHistory()     … 過去90日分の履歴をトレーニングログから再計算して埋める（最初に1回だけ実行）
  */
 
+/**
+ * このスクリプトが つながっている スプシを開く。
+ * スプシに紐づいた Apps Script（拡張機能 → Apps Script）なら、そのスプシを使う。
+ * スプシをコピーして配った先でも、コピーしたスプシが使われる（下の SPREADSHEET_ID は 紐づいていないときだけ使う）
+ */
+function qsBook_() {
+  let book = null;
+  try { book = SpreadsheetApp.getActiveSpreadsheet(); } catch (e) {}
+  return book || SpreadsheetApp.openById(QS_CONFIG.SPREADSHEET_ID);
+}
+
 const QS_CONFIG = {
-  // スプシに紐づいたGAS（拡張機能 → Apps Script で作った場合）なら空でもOK
+  // スプシに紐づいていない Apps Script で使うときだけ必要（紐づいていれば 無視されます）
   SPREADSHEET_ID: '12XB0Ye3BNMW1jcXyGaBrtQHHczCjL5PHkMS5TxBTjOE',
   PLAYER_NAME: 'ちゃんズ',
   TIMEZONE: 'Asia/Tokyo',
@@ -71,7 +82,7 @@ function doGet(e) {
   // アプリの機能を足しても このスクリプトの再デプロイは いらない。r=範囲（A1形式）を いくつでも
   if (p.format === 'ranges') {
     if (!appKey) return ContentService.createTextOutput(JSON.stringify({ error: '先に setupAppKey を実行してください' })).setMimeType(ContentService.MimeType.JSON);
-    const book = SpreadsheetApp.openById(QS_CONFIG.SPREADSHEET_ID);
+    const book = qsBook_();
     const out = ((e.parameters && e.parameters.r) || []).slice(0, 12).map(a1 => {
       try {
         const v = book.getRange(a1).getDisplayValues();
@@ -130,7 +141,7 @@ function doPost(e) {
     if (body.key !== appKey) return out({ error: '合言葉がちがいます' });
     const allowed = [QS_CONFIG.SHEET_LOG, QS_CONFIG.SHEET_BODY, '食事・PFCログ'];
     if (allowed.indexOf(body.sheet) < 0) return out({ error: 'このシートには書きこめません' });
-    const book = SpreadsheetApp.openById(QS_CONFIG.SPREADSHEET_ID);
+    const book = qsBook_();
     const sh = book.getSheetByName(body.sheet);
     if (!sh) return out({ error: 'シートが見つかりません' });
     const tz = book.getSpreadsheetTimeZone();
@@ -178,7 +189,7 @@ function doPost(e) {
 
 /** ---- トレーニングログへの書きこみ（足す・なおす・とりけす）。式の入った列（E・I〜K・M〜Q）には さわらない ---- */
 function logSheet_() {
-  return SpreadsheetApp.openById(QS_CONFIG.SPREADSHEET_ID).getSheetByName(QS_CONFIG.SHEET_LOG);
+  return qsBook_().getSheetByName(QS_CONFIG.SHEET_LOG);
 }
 // 入力規則（プルダウン）で はじかれたら、そのセルだけ 規則を いったん外して書き、すぐ もどす
 function putCell_(sh, r, c, v) {
@@ -357,7 +368,7 @@ const QS = (() => {
 
   // ---------- 読み込み ----------
   function openBook() {
-    return C.SPREADSHEET_ID ? SpreadsheetApp.openById(C.SPREADSHEET_ID) : SpreadsheetApp.getActiveSpreadsheet();
+    return qsBook_();
   }
 
   function findHeaderRow(values, test, maxRows) {

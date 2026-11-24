@@ -1,0 +1,117 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>筋トレクエストの はじめかた</title>
+<link rel="icon" href="icon-192.png">
+<style>
+:root { --bg:#0b1020; --card:#121a33; --line:#2a3663; --fg:#eef2ff; --muted:#a8b3d6; --gold:#ffd75e; --cyan:#7fd8ff; --ok:#4fd18b;
+  --sans:"Hiragino Kaku Gothic ProN","Hiragino Sans","Yu Gothic","Noto Sans JP",system-ui,sans-serif; color-scheme: dark; }
+* { box-sizing: border-box; }
+body { margin:0; background:var(--bg); color:var(--fg); font-family:var(--sans); font-size:16px; line-height:1.75;
+  padding-block:24px 48px; padding-left:max(16px, env(safe-area-inset-left, 0px)); padding-right:max(16px, env(safe-area-inset-right, 0px)); }
+main { max-width:720px; margin:0 auto; display:grid; gap:18px; }
+header { display:flex; gap:14px; align-items:center; }
+header img { width:64px; height:64px; border-radius:14px; flex:none; }
+h1 { margin:0; font-size:22px; line-height:1.35; text-wrap:balance; }
+.lead { margin:4px 0 0; color:var(--muted); font-size:14px; }
+section { background:var(--card); border:1px solid var(--line); border-radius:12px; padding:16px; }
+h2 { margin:0 0 8px; font-size:17px; color:var(--gold); display:flex; gap:10px; align-items:baseline; }
+h2 .n { font-size:13px; color:var(--bg); background:var(--gold); border-radius:999px; padding:1px 9px; flex:none; }
+ol, ul { margin:6px 0 0; padding-left:1.3em; }
+li { margin:4px 0; }
+p { margin:6px 0 0; }
+.note { color:var(--muted); font-size:14px; }
+.btn { display:inline-block; margin-top:10px; padding:12px 18px; border-radius:10px; background:var(--gold); color:#221a00; font-weight:700; text-decoration:none; }
+.btn:focus-visible, a:focus-visible { outline:3px solid var(--cyan); outline-offset:2px; }
+a { color:var(--cyan); }
+code { font-family:ui-monospace,Menlo,monospace; font-size:14px; background:#0a1026; border:1px solid var(--line); border-radius:5px; padding:0 5px; overflow-wrap:anywhere; }
+.chars { display:block; width:100%; max-width:100%; border-radius:10px; margin-top:8px; image-rendering:pixelated; background:#0f1838; }
+.warn { border-color:#6b5a1d; }
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <img src="icon-192.png" alt="">
+    <div><h1>筋トレクエストの はじめかた</h1><p class="lead">筋トレ・食事・体の記録で、ドット絵のキャラがレベルアップする記録アプリです。記録は、あなた自身の Google スプレッドシートに保存されます。</p></div>
+  </header>
+
+  <section>
+    <h2>用意するもの</h2>
+    <ul>
+      <li>Google アカウント（Gmail のアカウントで大丈夫です）</li>
+      <li>パソコン（最初の準備だけ。15分ほど）</li>
+      <li>ふだん使う iPhone や Android</li>
+    </ul>
+    <img class="chars" src="chars-lineup.png" alt="選べるキャラクター6人（男性3人・女性3人）">
+    <p class="note">キャラは6人から選べて、服の色も9色から選べます。</p>
+  </section>
+
+  <section>
+    <h2><span class="n">1</span>記録用のスプレッドシートを自分用にコピーする</h2>
+    <ol>
+      <li>パソコンで、下のボタンを押す（Google にログインした状態で）</li>
+      <li>「コピーを作成」を押す。あなたの Google ドライブに、あなた専用のスプレッドシートができます</li>
+    </ol>
+    <a class="btn" href="https://docs.google.com/spreadsheets/d/1EITlIfttnhoocvv4bhjgpXe-VdKYxvUERskZq6Y3koE/copy" target="_blank" rel="noopener">ひな形をコピーする</a>
+    <p class="note">コピーした中身は、あなたにしか見えません。</p>
+  </section>
+
+  <section>
+    <h2><span class="n">2</span>アプリとつなぐ準備（Apps Script）</h2>
+    <ol>
+      <li>コピーしたスプレッドシートで、上のメニューの「拡張機能 → Apps Script」を開く</li>
+      <li>右上の青い「デプロイ」→「新しいデプロイ」を押す</li>
+      <li>左上の歯車 →「ウェブアプリ」を選ぶ</li>
+      <li>「次のユーザーとして実行」は「自分」、「アクセスできるユーザー」は「全員」にして「デプロイ」</li>
+      <li>「アクセスを承認」と出たら、自分のアカウントを選んで許可する</li>
+      <li>完了画面の「ウェブアプリ」の URL（<code>/exec</code> で終わるもの）をコピーして、メモしておく</li>
+    </ol>
+    <p class="note">「このアプリは Google で確認されていません」と出たら、左下の「詳細」→「（安全ではないページ）に移動」→「許可」です。あなた自身のスプレッドシートの中にあるプログラムなので、この表示が出ます。</p>
+  </section>
+
+  <section>
+    <h2><span class="n">3</span>合言葉（あいことば）を作る</h2>
+    <ol>
+      <li>Apps Script の画面の上、「実行」ボタンの右の欄で <code>setupAppKey</code> を選ぶ</li>
+      <li>「実行」を押す</li>
+      <li>下に出る「実行ログ」の <code>key=</code> から始まる英数字をコピーして、メモしておく</li>
+    </ol>
+    <p class="note">合言葉は、あなたのアプリだけが記録を読み書きするための鍵です。人に教えないでください。</p>
+  </section>
+
+  <section>
+    <h2><span class="n">4</span>スマホでアプリを開く</h2>
+    <ol>
+      <li>スマホのブラウザ（iPhone は Safari）で、下のボタンからアプリを開く</li>
+      <li>「さいしょの せってい」に、①ウェブアプリの URL、②合言葉、③あなたの名前を入れて「ほぞんして よみこむ」</li>
+      <li>キャラづくりの画面が開くので、好きなキャラと服の色を選ぶ</li>
+      <li>iPhone は共有ボタン →「ホーム画面に追加」、Android はメニュー →「ホーム画面に追加」</li>
+    </ol>
+    <a class="btn" href="./">筋トレクエストを開く</a>
+  </section>
+
+  <section>
+    <h2><span class="n">5</span>さいしょの記録</h2>
+    <ul>
+      <li>まずスプレッドシートの「体組成ログ」に、日付と体重を1回入れてください。懸垂や腕立てふせのような自重の種目は、体重をもとに経験値を計算します</li>
+      <li>筋トレは「ぶい」→「＋ きんトレを きろくする」、食事は「ごはん」→「＋ ごはんを きろくする」から記録できます</li>
+      <li>目標のカロリーやたんぱく質は、スプレッドシートの「ダッシュボード」で変えられます</li>
+    </ul>
+  </section>
+
+  <section class="warn">
+    <h2>こまったときは</h2>
+    <ul>
+      <li><b>「よみこめませんでした」と出る</b>：①の URL が <code>/exec</code> で終わっているか、②の合言葉が正しいかを確かめてください</li>
+      <li><b>「Load failed」と出て記録できない</b>：手順2のデプロイで「アクセスできるユーザー」が「全員」になっているか確かめてください</li>
+      <li><b>合言葉を忘れた</b>：手順3をもう一度実行すると新しい合言葉が出ます。アプリの「URLを いれなおす」から入れ直してください</li>
+    </ul>
+  </section>
+
+  <p class="note">絵や文字の出どころは、アプリの「きろく」→「クレジット」に載っています。</p>
+</main>
+</body>
+</html>

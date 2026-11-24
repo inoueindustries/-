@@ -39,6 +39,13 @@ assert "/*@@EXDATA@@*/null" in s
 s = s.replace("/*@@EXDATA@@*/null", json.dumps(ex_data, ensure_ascii=False))
 outfits = {k: "data:image/png;base64," + base64.b64encode((here / "images" / "outfits" / f"{k}.png").read_bytes()).decode()
            for k in ("white_tank", "business_suit", "orange_gi", "hero_cape", "running")}
+chars = {}
+for n in range(1, 7):
+    d = here / "images" / "chars" / f"c{n}"
+    u = lambda p: "data:image/png;base64," + base64.b64encode(p.read_bytes()).decode()
+    chars[f"c{n}"] = {"stand": u(d / "stand.png"), **{k: [u(d / f"{k}-{i}.png") for i in range(4)] for k in ("pullup", "pushup", "squat")}}
+assert "/*@@CHARS@@*/null" in s
+s = s.replace("/*@@CHARS@@*/null", json.dumps(chars))
 assert "/*@@OUTFITS@@*/null" in s
 s = s.replace("/*@@OUTFITS@@*/null", json.dumps(outfits))
 osprites = {o: {k: ["data:image/png;base64," + base64.b64encode((here / "images" / "workout" / o / f"{k}-{i}.png").read_bytes()).decode() for i in range(4)]
@@ -80,13 +87,29 @@ head = """<title>筋トレクエスト</title>
 })();
 </script>"""
 assert "<title>筋トレ冒険者ステータス</title>" in q
-q = q.replace("<title>筋トレ冒険者ステータス</title>", head, 1)
-import hashlib
-build = hashlib.sha1(q.encode("utf-8")).hexdigest()[:10]
-q = q.replace("@@BUILD@@", build)
-out = here.parent / "quest"
-out.mkdir(exist_ok=True)
-(out / "index.html").write_text(q, encoding="utf-8")
-(out / "version.json").write_text(json.dumps({"v": build}), encoding="utf-8")
-print("build", build)
-print("quest/index.html", len(q.encode()), "bytes")
+import hashlib, shutil
+base_q = q
+def write_app(q, folder):
+    build = hashlib.sha1(q.encode("utf-8")).hexdigest()[:10]
+    q = q.replace("@@BUILD@@", build)
+    out = here.parent / folder
+    out.mkdir(exist_ok=True)
+    (out / "index.html").write_text(q, encoding="utf-8")
+    (out / "version.json").write_text(json.dumps({"v": build}), encoding="utf-8")
+    # オリジナルキャラの絵は 同じ場所に おく（色を ぬりかえるため。別のサイトの絵は ぬりかえられない）
+    if (out / "chars").exists(): shutil.rmtree(out / "chars")
+    shutil.copytree(here / "images" / "chars", out / "chars", ignore=shutil.ignore_patterns("original", "lineup.png"))
+    print(folder + "/index.html", len(q.encode()), "bytes", "build", build)
+
+write_app(base_q.replace("<title>筋トレ冒険者ステータス</title>", head, 1), "quest")
+
+# ---- 配布版（GitHub Pages の play/）：だれでも つかえるように、個人の名前・似顔絵・似ている恐れのある ふくを はずす ----
+dist_head = head.replace("window.QS_STANDALONE = true;", "window.QS_STANDALONE = true; window.QS_DIST = true;")
+dq = base_q.replace("<title>筋トレ冒険者ステータス</title>", dist_head, 1)
+dq = dq.replace(AVATAR_URL, "chars/c1/stand.png")
+dq = dq.replace("ちゃんズ", "ぼうけんしゃ")
+dq = re.sub(r"var SHEET_ID = '[^']*';", "var SHEET_ID = '';", dq)
+write_app(dq, "play")
+mf = json.loads((here.parent / "quest" / "manifest.webmanifest").read_text(encoding="utf-8"))
+(here.parent / "play" / "manifest.webmanifest").write_text(json.dumps(mf, ensure_ascii=False, indent=2), encoding="utf-8")
+shutil.copy(here / "images" / "chars" / "lineup.png", here.parent / "play" / "chars-lineup.png")   # はじめかた（play/guide.html）の絵
