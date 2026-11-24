@@ -13,7 +13,7 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="筋トレクエスト">
 <meta name="apple-mobile-web-app-status-bar-style" content="black">
-<script>window.QS_STANDALONE = true; window.QS_BUILD = "c3bead3bc0";
+<script>window.QS_STANDALONE = true; window.QS_BUILD = "fa3ddb3a7f";
 // あたらしい版が でていたら 読みなおす（ホーム画面のアプリは 古いページを おぼえたままに なりやすいので）。
 // version.json は キャッシュを使わずに読み、ちがえば ?v=版 を つけて 読みなおす。入力中（ダイアログが開いている）は しない
 (function () {
@@ -273,6 +273,8 @@
   .recbtn { font: inherit; font-size: 12px; color: #2a1600; background: var(--gold); border: 0; border-radius: 6px; padding: 4px 10px; margin-top: 4px; cursor: pointer; }
   .recbtn:focus-visible, .fld input:focus-visible, .fld select:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
   .fine-hint { font-size: 11px; color: var(--muted); margin: 0 0 6px; }
+  .quick { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; margin-top: 6px; }
+  .quick button { font: inherit; font-size: 13px; padding: 4px 2px; border-radius: 6px; border: 2px solid var(--gold); background: #0a1030; color: var(--gold); cursor: pointer; }
   .recopen { display: block; width: 100%; margin-top: 10px; color: var(--gold); border-color: var(--gold); }
   .rec-img { display: block; width: 100%; max-height: 170px; object-fit: contain; background: #fff; border-radius: 8px; margin-bottom: 8px; }
   .fld { display: grid; gap: 2px; font-size: 12px; color: var(--muted); margin-bottom: 8px; min-width: 0; }
@@ -535,6 +537,11 @@
             <button type="button" data-pose="pushup" aria-pressed="false">うでたて</button>
             <button type="button" data-pose="squat" aria-pressed="false">スクワット</button>
           </div>
+          <div class="quick" id="quick" hidden>
+            <button type="button" data-q="rec">＋ きんトレ</button>
+            <button type="button" data-q="meal">＋ ごはん</button>
+            <button type="button" data-q="body">＋ たいじゅう</button>
+          </div>
         </div>
         <div class="ticker"><span class="tk-ic" aria-hidden="true">📜</span><div class="tk-track"><span id="ticker">―</span></div></div>
       </div>
@@ -545,6 +552,29 @@
           <p class="rule">この たんまつに おぼえます。スプシは かわりません。</p>
           <button class="refresh" type="submit" id="name-save">けってい</button> <button class="refresh" type="button" id="name-reset">もとに もどす</button> <button class="refresh" type="button" id="name-cancel">やめる</button>
         </form>
+      </dialog>
+      <dialog class="win dlg" id="body-dlg">
+        <div class="win-title">からだの きろく</div>
+        <form id="body-form" novalidate>
+          <label class="fld">ひづけ<input type="date" id="body-date" required></label>
+          <div class="fld4">
+            <label class="fld">体重(kg)<input type="number" id="body-w" inputmode="decimal" min="20" max="300" step="0.1"></label>
+            <label class="fld">体脂肪率(%)<input type="number" id="body-f" inputmode="decimal" min="1" max="70" step="0.1"></label>
+            <label class="fld">筋肉率(%)<input type="number" id="body-m" inputmode="decimal" min="1" max="90" step="0.1"></label>
+          </div>
+          <p class="rule">体脂肪率と筋肉率は、わからなければ からで OK。おなじ日に もういちど いれると うわがきします。</p>
+          <p class="rec-msg" id="body-msg" role="status"></p>
+          <div class="rec-btns">
+            <button type="submit" class="refresh rec-save" id="body-save">きろくする</button>
+            <button type="button" class="refresh" id="body-close">とじる</button>
+          </div>
+        </form>
+        <div id="body-list"></div>
+      </dialog>
+      <dialog class="win dlg" id="data-dlg">
+        <div class="win-title">データと せってい</div>
+        <div class="credits" id="data-body"></div>
+        <form method="dialog"><button class="refresh" type="submit">とじる</button></form>
       </dialog>
       <dialog class="win dlg" id="credits-dlg">
         <div class="win-title">クレジット</div>
@@ -630,10 +660,12 @@
         <div class="win-title">からだの じょうたい</div>
         <div class="body-row" id="body"></div>
         <div class="bodychart chart" id="bodychart"></div>
+        <button type="button" class="refresh mealopen" id="body-open" hidden>＋ 体重を きろくする</button>
       </div>
       <div class="foot">
         <span id="asof">―</span>
         <button class="refresh" id="refresh" type="button">さいしんの じょうほう</button>
+        <button class="refresh" id="data-open" type="button" hidden>データ・せってい</button>
         <button class="refresh" id="credits-open" type="button">クレジット</button>
       </div>
     </section>
@@ -1325,7 +1357,7 @@ if (typeof module !== 'undefined') module.exports = QSWeb;
     $('rec-msg').textContent = '';
   }
   // きろくの入力画面と おしらせは、どの画面（ぶい・きろく）からでも 出せるように、画面の外がわへ うつす
-  ['rec-dlg', 'meal-dlg', 'credits-dlg', 'outfit-dlg', 'titles-dlg', 'name-dlg', 'toast'].forEach(function (id) { document.querySelector('.wrap').appendChild($(id)); });
+  ['rec-dlg', 'meal-dlg', 'body-dlg', 'data-dlg', 'credits-dlg', 'outfit-dlg', 'titles-dlg', 'name-dlg', 'toast'].forEach(function (id) { document.querySelector('.wrap').appendChild($(id)); });
   var editing = null, dupOk = null;   // editing：なおしている きろく（なければ 新しい きろく）
   function recKey(x) { return [x.date, x.ex, x.w || 0, x.r || '', x.s || 1, x.memo || ''].join('|'); }
   function openRec(name, item) {
@@ -1383,7 +1415,10 @@ if (typeof module !== 'undefined') module.exports = QSWeb;
   });
   // きろくを 足す（add）・なおす（update）・とりけす（delete）。開き方ごとに 送り先が ちがう
   function sendLog(action, rec, ok, ng) {
-    if (isGas) {
+    if (LOCAL) {
+      var er = action === 'add' ? QSLocal.addLog(rec) : QSLocal.changeLog(action, rec);
+      if (er) ng(er); else { ok(); loadLocal(); }
+    } else if (isGas) {
       var fn = action === 'add' ? 'addLogEntry' : action === 'update' ? 'updateLogEntry' : 'deleteLogEntry';
       google.script.run.withSuccessHandler(function (json) { var d = JSON.parse(json); if (d.error) return ng(d.error); ok(); render(d); })
         .withFailureHandler(function (er) { ng('かきこめませんでした（' + (er && er.message || er) + '）', true); })[fn](rec);
@@ -1567,6 +1602,7 @@ if (typeof module !== 'undefined') module.exports = QSWeb;
   });
   // 1食ぶんの行（日付〜食塩）と、その日が 1日ごとの合計表に まだ なければ 合計の行も 書く
   function sendMeal(action, rec, old, ok, ng) {
+    if (LOCAL) { var er = QSLocal.changeMeal(action, rec, old); if (er) ng(er); else { ok(); loadLocal(); } return; }
     var m = state.meals, c0 = m.cols.first, dc = m.cols.daily;
     var vals = action === 'delete' ? ['', '', '', '', '', '', '', '', '', '', ''] : [rec.date, rec.kind, rec.menu, rec.kcal, rec.p, rec.f, rec.c, rec.fiber, rec.salt];
     var L = function (i) { return colA1(c0 + i); };   // 1食の表の i 番めの列（0＝日付）
@@ -1758,7 +1794,12 @@ if (typeof module !== 'undefined') module.exports = QSWeb;
   }
 
   function renderBody(b) {
-    if (!b) { $('bodywin').hidden = true; return; }
+    $('body-open').hidden = !LOCAL;
+    if (!b) {
+      $('bodywin').hidden = !LOCAL;
+      if (LOCAL) { $('body').innerHTML = ''; $('bodychart').innerHTML = '<p class="rule">体重を きろくすると、ここに からだの じょうたいと グラフが 出ます。自重の しゅもく（けんすい・うでたて など）の けいけんちも、体重から けいさんします。</p>'; }
+      return;
+    }
     $('bodywin').hidden = false;
     var delta = function (v, unit) {
       if (v == null || isNaN(v)) return '';
@@ -2301,6 +2342,7 @@ if (typeof module !== 'undefined') module.exports = QSWeb;
   };
   var CACHE = { staleTime: 60 * 1000, gcTime: 7 * 24 * 3600 * 1000 };
   var isGas = !!(window.google && google.script && google.script.run);
+  var LOCAL = !!window.QS_LOCAL && typeof QSLocal !== 'undefined';   // スマホ保存版：きろくを この たんまつに しまう
   var mcp = null, watching = false, got = {}, stamps = {};
 
   function showLoading(text) {
@@ -2414,6 +2456,8 @@ if (typeof module !== 'undefined') module.exports = QSWeb;
         .withSuccessHandler(function (json) { btn.disabled = false; btn.textContent = 'さいしんの じょうほう'; render(JSON.parse(json)); })
         .withFailureHandler(function (e) { btn.disabled = false; btn.textContent = 'さいしんの じょうほう'; render({ error: e && e.message || String(e) }); })
         .getStatusJson();
+    } else if (LOCAL) {
+      loadLocal();
     } else if (mcp) {
       refreshAll();
     } else if (window.QS_STANDALONE) {
@@ -2489,8 +2533,164 @@ if (typeof module !== 'undefined') module.exports = QSWeb;
     });
   }
 
+  // ---------- スマホ保存版：きろくを この たんまつに しまう ----------
+  var BACKUP_KEY = 'qs.lastBackup', backupNagged = false;
+  function loadLocal(done) {
+    var d;
+    try { d = QSWeb.compute(QSLocal.ranges()); } catch (e) { showProblem('きろくを よみとれませんでした（' + e.message + '）'); if (done) done(); return; }
+    d.local = true; d.fetchedAt = Date.now();
+    $('notice').innerHTML = '';
+    render(d);
+    if (done) done();
+    // しばらく バックアップして いなければ、1回だけ おしらせ
+    if (!backupNagged) {
+      backupNagged = true;
+      var c = QSLocal.counts(), last = 0; try { last = +localStorage.getItem(BACKUP_KEY) || 0; } catch (e) {}
+      if (c.log + c.meal + c.body >= 20 && Date.now() - last > 14 * 86400000) setTimeout(function () { toast('きろくが たまってきました。「きろく」→「データ・せってい」で バックアップを とっておくと あんしんです。'); }, 4000);
+    }
+  }
+  $('quick').addEventListener('click', function (ev) {
+    var b = ev.target.closest('button[data-q]'); if (!b || !state || state.error) return;
+    var q = b.getAttribute('data-q');
+    if (q === 'rec') openRec(null); else if (q === 'meal') openMeal(null); else $('body-open').click();
+  });
+  function startLocal() {
+    $('data-open').hidden = false; $('quick').hidden = false;
+    var started = false; try { started = !!localStorage.getItem('qs.started'); } catch (e) {}
+    if (started || QSLocal.hasData()) { QSLocal.persist(); loadLocal(); return; }
+    // はじめて ひらいたとき：なまえを きいてから はじめる
+    $('loading').hidden = true; $('main').hidden = true; document.querySelector('.cmd').hidden = true;
+    var box = $('notice'); box.innerHTML = '';
+    var w = document.createElement('div'); w.className = 'win notice';
+    var st = 'width:100%;font:inherit;font-size:15px;padding:8px;border-radius:6px;border:2px solid var(--line);background:#0a1030;color:var(--text);margin:4px 0 12px';
+    w.innerHTML = '<div class="win-title">ようこそ</div>' +
+      '<p>きんトレ・ごはん・体重を きろくすると、きたえた ぶいに けいけんちが たまって レベルが あがります。やすむと けいけんちは へっていきます。</p>' +
+      '<p style="font-size:12px;color:var(--muted)">きろくは この スマホの中だけに しまいます。とうろくや ログインは いりません。</p>' +
+      '<label style="display:block;font-size:13px">あなたの なまえ（12文字まで。あとから かえられます）<input id="name-first" type="text" maxlength="12" autocomplete="off" placeholder="ぼうけんしゃ" style="' + st + '"></label>' +
+      '<button type="button" class="refresh" id="local-start">ぼうけんを はじめる</button>' +
+      '<p style="font-size:12px;margin:14px 0 0">ほかの スマホから うつす：<button type="button" class="linkbtn" id="local-restore">バックアップから もどす</button></p>';
+    box.appendChild(w);
+    $('local-start').addEventListener('click', function () {
+      var nv = $('name-first').value.trim().slice(0, 12);
+      if (nv) { customName = nv; try { localStorage.setItem(NAME_KEY, nv); } catch (e) {} }
+      try { localStorage.setItem('qs.started', '1'); } catch (e) {}
+      QSLocal.persist();
+      document.querySelector('.cmd').hidden = false;
+      loadLocal();
+    });
+    $('local-restore').addEventListener('click', function () { pickBackup(function () { try { localStorage.setItem('qs.started', '1'); localStorage.setItem('qs.designed', '1'); } catch (e) {} document.querySelector('.cmd').hidden = false; loadLocal(); }); });
+  }
+  // ファイルを わたす：iPhone では「共有」から ファイル・LINE・メールなどに おくれる。できなければ ダウンロード
+  function saveFile(name, text, type) {
+    var blob = new Blob([text], { type: type });
+    try {
+      var f = new File([blob], name, { type: type });
+      if (navigator.canShare && navigator.share && navigator.canShare({ files: [f] })) return navigator.share({ files: [f], title: name }).then(function () { return true; }, function (e) { return !(e && e.name === 'AbortError') ? download() : false; });
+    } catch (e) {}
+    return Promise.resolve(download());
+    function download() {
+      var a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = name;
+      document.body.appendChild(a); a.click(); setTimeout(function () { URL.revokeObjectURL(a.href); a.remove(); }, 1500);
+      return true;
+    }
+  }
+  function pickBackup(after) {
+    var inp = document.createElement('input'); inp.type = 'file'; inp.accept = '.json,application/json,text/plain';
+    inp.addEventListener('change', function () {
+      var f = inp.files && inp.files[0]; if (!f) return;
+      var rd = new FileReader();
+      rd.onload = function () {
+        var er = QSLocal.importJson(String(rd.result || ''));
+        if (er) { toast(er); return; }
+        toast('バックアップから もどしました！');
+        if (after) after(); else loadLocal();
+      };
+      rd.readAsText(f);
+    });
+    inp.click();
+  }
+  function stamp() { var n = new Date(), p = function (x) { return ('0' + x).slice(-2); }; return n.getFullYear() + p(n.getMonth() + 1) + p(n.getDate()); }
+  // からだの きろく
+  function renderBodyList() {
+    var list = LOCAL ? QSLocal.bodyRecent() : [];
+    $('body-list').innerHTML = list.length ? '<h3 class="mc-h">さいきんの きろく</h3>' + list.map(function (b) {
+      return '<div class="rc-row"><div class="rc-main"><b>' + esc(b.date.slice(5)) + '　' + b.w + 'kg</b><small>' + (b.f ? '体脂肪率 ' + b.f + '%　' : '') + (b.m ? '筋肉率 ' + b.m + '%' : '') + '</small></div><button type="button" data-bdel="' + b.id + '">けす</button></div>';
+    }).join('') : '';
+  }
+  $('body-open').addEventListener('click', function () {
+    var n = new Date(), p = function (x) { return ('0' + x).slice(-2); };
+    $('body-date').value = n.getFullYear() + '-' + p(n.getMonth() + 1) + '-' + p(n.getDate());
+    var last = state && state.body && state.body.series && state.body.series[state.body.series.length - 1];
+    $('body-w').value = ''; $('body-f').value = ''; $('body-m').value = '';
+    $('body-w').placeholder = last && last.w ? String(last.w) : '';
+    $('body-msg').textContent = ''; $('body-save').disabled = false;
+    renderBodyList();
+    var dlg = $('body-dlg'); if (dlg.showModal) dlg.showModal(); else dlg.setAttribute('open', '');
+  });
+  $('body-close').addEventListener('click', function () { $('body-dlg').close(); });
+  $('body-form').addEventListener('submit', function (ev) {
+    ev.preventDefault();
+    var er = QSLocal.addBody({ date: $('body-date').value, w: $('body-w').value, f: $('body-f').value, m: $('body-m').value });
+    if (er) { $('body-msg').textContent = er; return; }
+    $('body-dlg').close(); toast('体重を きろくした！'); loadLocal();
+  });
+  $('body-list').addEventListener('click', function (ev) {
+    var b = ev.target.closest('button[data-bdel]'); if (!b) return;
+    if (!b.classList.contains('sure')) { b.classList.add('sure'); b.textContent = 'ほんとうに けす'; return; }
+    var er = QSLocal.deleteBody(+b.getAttribute('data-bdel'));
+    if (er) { toast(er); return; }
+    renderBodyList(); loadLocal();
+  });
+  // データと せってい（もくひょう・バックアップ・CSV・ぜんぶ けす）
+  function renderData() {
+    var c = QSLocal.counts(), t = QSLocal.target(), last = 0;
+    try { last = +localStorage.getItem(BACKUP_KEY) || 0; } catch (e) {}
+    var st = 'width:100%;font:inherit;font-size:14px;padding:6px;border-radius:6px;border:2px solid var(--line);background:#0a1030;color:var(--text)';
+    var fld = function (k, label, step) { return '<label class="fld">' + label + '<input type="number" inputmode="decimal" step="' + step + '" min="0" id="tg-' + k + '" value="' + t[k] + '" style="' + st + '"></label>'; };
+    $('data-body').innerHTML =
+      '<h3>きろくの おき場</h3><p>きろくは この スマホの中だけに あります（筋トレ ' + c.log + '件・ごはん ' + c.meal + '件・体重 ' + c.body + '件）。アプリを けしたり、機種を かえたりすると きえるので、ときどき バックアップを とってください。</p>' +
+      '<p>さいごの バックアップ：' + (last ? new Date(last).toLocaleDateString('ja-JP') : 'まだ とっていません') + '</p>' +
+      '<p><button type="button" class="refresh" id="bk-save">バックアップを ほぞん</button> <button type="button" class="refresh" id="bk-load">バックアップから もどす</button></p>' +
+      '<h3>1日の もくひょう（ごはん）</h3><div class="fld4">' + fld('kcal', 'カロリー(kcal)', 10) + fld('p', 'たんぱく質(g)', 1) + fld('f', '脂質(g)', 1) + fld('c', '炭水化物(g)', 1) + '</div>' +
+      '<div class="fld4">' + fld('fiber', '食物繊維(g)', 1) + fld('salt', '塩分(g)', 0.1) + '</div>' +
+      '<p><button type="button" class="refresh" id="tg-save">もくひょうを ほぞん</button></p>' +
+      '<h3>表計算ソフトに 書き出す（CSV）</h3><p>Excel・Googleスプレッドシート・Numbers で ひらけます。</p>' +
+      '<p><button type="button" class="refresh" data-csv="log">筋トレ</button> <button type="button" class="refresh" data-csv="meal">ごはん</button> <button type="button" class="refresh" data-csv="body">体重</button></p>' +
+      '<h3>ぜんぶ けす</h3><p>この スマホの きろくを すべて けします。もとに もどせません。</p><p><button type="button" class="refresh" id="wipe">きろくを ぜんぶ けす</button></p>';
+    $('bk-save').addEventListener('click', function () {
+      saveFile('muscle-quest-backup-' + stamp() + '.json', QSLocal.exportJson(), 'application/json').then(function (okd) {
+        if (okd === false) return;
+        try { localStorage.setItem(BACKUP_KEY, String(Date.now())); } catch (e) {}
+        toast('バックアップを わたしました。「ファイル」アプリなどに ほぞんしてください。'); renderData();
+      });
+    });
+    $('bk-load').addEventListener('click', function () {
+      if (QSLocal.hasData() && !confirm('いまの きろくは バックアップの なかみで おきかわります。よろしいですか？')) return;
+      pickBackup(function () { $('data-dlg').close(); loadLocal(); });
+    });
+    $('tg-save').addEventListener('click', function () {
+      var o = {}; ['kcal', 'p', 'f', 'c', 'fiber', 'salt'].forEach(function (k) { o[k] = $('tg-' + k).value; });
+      QSLocal.setTarget(o); toast('もくひょうを ほぞんしました'); loadLocal();
+    });
+    $('data-body').querySelectorAll('[data-csv]').forEach(function (b) {
+      b.addEventListener('click', function () { var k = b.getAttribute('data-csv'); saveFile('muscle-quest-' + ({ log: 'training', meal: 'meals', body: 'body' })[k] + '-' + stamp() + '.csv', QSLocal.exportCsv(k), 'text/csv'); });
+    });
+    $('wipe').addEventListener('click', function () {
+      if (!confirm('きろくを ぜんぶ けします。もとに もどせません。よろしいですか？')) return;
+      if (!confirm('ほんとうに けしますか？（バックアップは とりましたか？）')) return;
+      QSLocal.wipe(); $('data-dlg').close(); toast('きろくを ぜんぶ けしました'); loadLocal();
+    });
+  }
+  $('data-open').addEventListener('click', function () {
+    if (!LOCAL) return;
+    renderData();
+    var dlg = $('data-dlg'); if (dlg.showModal) dlg.showModal(); else dlg.setAttribute('open', '');
+  });
+
   // ---------- 起動 ----------
-  if (window.QS_STANDALONE) {
+  if (LOCAL) {
+    startLocal();
+  } else if (window.QS_STANDALONE) {
     loadApi();
   } else if (isGas) {
     var boot = null;
