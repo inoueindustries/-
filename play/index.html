@@ -13,7 +13,7 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="筋トレクエスト">
 <meta name="apple-mobile-web-app-status-bar-style" content="black">
-<script>window.QS_STANDALONE = true; window.QS_DIST = true; window.QS_BUILD = "18fa2e2761";
+<script>window.QS_STANDALONE = true; window.QS_DIST = true; window.QS_BUILD = "a2be1b904b";
 // あたらしい版が でていたら 読みなおす（ホーム画面のアプリは 古いページを おぼえたままに なりやすいので）。
 // version.json は キャッシュを使わずに読み、ちがえば ?v=版 を つけて 読みなおす。入力中（ダイアログが開いている）は しない
 (function () {
@@ -62,7 +62,7 @@
     font-size: 15px;
     line-height: 1.6;
     -webkit-font-smoothing: none;
-    padding-block: 12px calc(84px + env(safe-area-inset-bottom, 0px));
+    padding-block: calc(12px + env(safe-area-inset-top, 0px)) calc(84px + env(safe-area-inset-bottom, 0px));
     padding-left: max(16px, env(safe-area-inset-left, 0px));
     padding-right: max(16px, env(safe-area-inset-right, 0px));
   }
@@ -2112,6 +2112,8 @@ if (typeof module !== 'undefined') module.exports = QSWeb;
   // 1) TRAINING COMPLETE（立ち姿で止まり、EXPバーが満タンまで伸びる）→ 2) LEVEL UP! → 3) 次の場面へ、Lv が上がる
   function playLevelUp(from, to, d) {
     lvTimers.forEach(clearTimeout); lvTimers = [];
+    var NV = typeof QSLocal !== 'undefined' && QSLocal.native;   // iPhone アプリでは ブルッと ふるえる
+    if (NV && NV.Haptics && to > from) { try { NV.Haptics.notification({ type: 'SUCCESS' }).catch(function () {}); } catch (e) {} }
     clearTimeout(poseTimer);
     var box = $('lvup'), tc = $('tc'), bar = $('expbar'), t = d.total, resumeKey = poseKey;
     var newTitle = titleOfLv(d, to), oldTitle = titleOfLv(d, from);
@@ -2556,8 +2558,14 @@ if (typeof module !== 'undefined') module.exports = QSWeb;
   });
   function startLocal() {
     $('data-open').hidden = false; $('quick').hidden = false;
+    QSLocal.restoreNative().then(function (fixed) {
+      if (fixed) { location.reload(); return; }   // なまえ・キャラの せっていを もどしたので 読みなおす
+      startLocal2();
+    });
+  }
+  function startLocal2() {
     var started = false; try { started = !!localStorage.getItem('qs.started'); } catch (e) {}
-    if (started || QSLocal.hasData()) { QSLocal.persist(); loadLocal(); return; }
+    if (started || QSLocal.hasData()) { QSLocal.persist(); loadLocal(); scheduleRemind(); return; }
     // はじめて ひらいたとき：なまえを きいてから はじめる
     $('loading').hidden = true; $('main').hidden = true; document.querySelector('.cmd').hidden = true;
     var box = $('notice'); box.innerHTML = '';
@@ -2582,6 +2590,12 @@ if (typeof module !== 'undefined') module.exports = QSWeb;
   }
   // ファイルを わたす：iPhone では「共有」から ファイル・LINE・メールなどに おくれる。できなければ ダウンロード
   function saveFile(name, text, type) {
+    var NV = QSLocal.native;
+    if (NV && NV.Filesystem && NV.Share) {   // iPhone アプリ：いちど ファイルに してから「共有」で わたす
+      return NV.Filesystem.writeFile({ path: name, data: text, directory: 'CACHE', encoding: 'utf8' })
+        .then(function (r) { return NV.Share.share({ title: name, url: r.uri, dialogTitle: name }); })
+        .then(function () { return true; }, function (e) { if (/cancel/i.test((e && e.message) || '')) return false; toast('わたせませんでした（' + ((e && e.message) || e) + '）'); return false; });
+    }
     var blob = new Blob([text], { type: type });
     try {
       var f = new File([blob], name, { type: type });
@@ -2610,6 +2624,18 @@ if (typeof module !== 'undefined') module.exports = QSWeb;
     inp.click();
   }
   function stamp() { var n = new Date(), p = function (x) { return ('0' + x).slice(-2); }; return n.getFullYear() + p(n.getMonth() + 1) + p(n.getDate()); }
+  // しゅぎょうの おしらせ（iPhone アプリだけ）：まいにち きまった 時間に 1回
+  function remindTime() { try { return localStorage.getItem('qs.remind') || ''; } catch (e) { return ''; } }
+  function scheduleRemind() {
+    var LN = QSLocal.native && QSLocal.native.LocalNotifications; if (!LN) return;
+    var v = remindTime();
+    LN.cancel({ notifications: [{ id: 1 }] }).catch(function () {}).then(function () {
+      if (!v) return;
+      var hm = v.split(':');
+      return LN.schedule({ notifications: [{ id: 1, title: '筋トレクエスト', body: 'きょうの しゅぎょうは すんだかな？ けいけんちが へる前に きたえよう！',
+        schedule: { on: { hour: +hm[0], minute: +hm[1] }, allowWhileIdle: true } }] });
+    }).catch(function () {});
+  }
   // からだの きろく
   function renderBodyList() {
     var list = LOCAL ? QSLocal.bodyRecent() : [];
@@ -2654,8 +2680,11 @@ if (typeof module !== 'undefined') module.exports = QSWeb;
       '<h3>1日の もくひょう（ごはん）</h3><div class="fld4">' + fld('kcal', 'カロリー(kcal)', 10) + fld('p', 'たんぱく質(g)', 1) + fld('f', '脂質(g)', 1) + fld('c', '炭水化物(g)', 1) + '</div>' +
       '<div class="fld4">' + fld('fiber', '食物繊維(g)', 1) + fld('salt', '塩分(g)', 0.1) + '</div>' +
       '<p><button type="button" class="refresh" id="tg-save">もくひょうを ほぞん</button></p>' +
+      (QSLocal.native && QSLocal.native.LocalNotifications ? '<h3>しゅぎょうの おしらせ</h3><p>まいにち きまった 時間に「きょうの しゅぎょう」を おしらせします。</p>' +
+        '<p><input type="time" id="rm-time" value="' + (remindTime() || '20:00') + '" style="' + st + ';width:auto"> <button type="button" class="refresh" id="rm-on">' + (remindTime() ? 'じかんを かえる' : 'おしらせを うける') + '</button>' + (remindTime() ? ' <button type="button" class="refresh" id="rm-off">やめる</button>' : '') + '</p>' : '') +
       '<h3>表計算ソフトに 書き出す（CSV）</h3><p>Excel・Googleスプレッドシート・Numbers で ひらけます。</p>' +
       '<p><button type="button" class="refresh" data-csv="log">筋トレ</button> <button type="button" class="refresh" data-csv="meal">ごはん</button> <button type="button" class="refresh" data-csv="body">体重</button></p>' +
+      '<h3>プライバシー</h3><p>きろくは この スマホの外には おくりません。<a href="https://inoueindustries.github.io/-/app/privacy.html" target="_blank" rel="noopener">プライバシーポリシー</a></p>' +
       '<h3>ぜんぶ けす</h3><p>この スマホの きろくを すべて けします。もとに もどせません。</p><p><button type="button" class="refresh" id="wipe">きろくを ぜんぶ けす</button></p>';
     $('bk-save').addEventListener('click', function () {
       saveFile('muscle-quest-backup-' + stamp() + '.json', QSLocal.exportJson(), 'application/json').then(function (okd) {
@@ -2674,6 +2703,19 @@ if (typeof module !== 'undefined') module.exports = QSWeb;
     });
     $('data-body').querySelectorAll('[data-csv]').forEach(function (b) {
       b.addEventListener('click', function () { var k = b.getAttribute('data-csv'); saveFile('muscle-quest-' + ({ log: 'training', meal: 'meals', body: 'body' })[k] + '-' + stamp() + '.csv', QSLocal.exportCsv(k), 'text/csv'); });
+    });
+    if ($('rm-on')) $('rm-on').addEventListener('click', function () {
+      var v = $('rm-time').value; if (!/^\d{2}:\d{2}$/.test(v)) return;
+      var LN = QSLocal.native.LocalNotifications;
+      LN.requestPermissions().then(function (r) {
+        if (!r || r.display !== 'granted') { toast('おしらせが 許可されていません。iPhone の「設定」→「通知」→「筋トレクエスト」で オンに してください。'); return; }
+        try { localStorage.setItem('qs.remind', v); } catch (e) {}
+        scheduleRemind(); toast('まいにち ' + v + ' に おしらせします'); renderData();
+      }, function () { toast('おしらせを せっていできませんでした'); });
+    });
+    if ($('rm-off')) $('rm-off').addEventListener('click', function () {
+      try { localStorage.removeItem('qs.remind'); } catch (e) {}
+      scheduleRemind(); toast('おしらせを やめました'); renderData();
     });
     $('wipe').addEventListener('click', function () {
       if (!confirm('きろくを ぜんぶ けします。もとに もどせません。よろしいですか？')) return;

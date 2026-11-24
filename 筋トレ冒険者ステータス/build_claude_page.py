@@ -149,6 +149,11 @@ for sub, dst, pat in (("exercises", "ex", "*.webp"), ("scenes", "scenes", "*.web
     for f in (here / "images" / sub).glob(pat): shutil.copy(f, A / dst / f.name)
 if (A / "fonts").exists(): shutil.rmtree(A / "fonts")
 shutil.copytree(here / "local" / "fonts", A / "fonts")
+contact_f = here / "local" / "contact.txt"   # お問い合わせ先（メールアドレスや フォームのURL）。なければ App Store のページから
+contact = contact_f.read_text(encoding="utf-8").strip() if contact_f.exists() else ""
+if contact.startswith("http"): contact = '<a href="' + contact + '">' + contact + '</a>'
+elif "@" in contact: contact = '<a href="mailto:' + contact + '">' + contact + '</a>'
+(A / "privacy.html").write_text((here / "local" / "privacy.html").read_text(encoding="utf-8").replace("@@CONTACT@@", contact or "App Store の このアプリのページにある「Appサポート」から ご連絡ください。"), encoding="utf-8")
 left = [u for u in re.findall(r"https://[^'\"\s)]+", lq) if "creativecommons" not in u and "commons.wikimedia" not in u and "script.google" not in u]
 print("app: のこった外部URL", sorted(set(left))[:10])
 amf = dict(mf); amf["start_url"] = "./"; amf["scope"] = "./"
